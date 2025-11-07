@@ -1,0 +1,8 @@
+// File Header: Global stylesheet initializing Tailwind layers and shared utilities.
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.centered-layout {
+  @apply flex min-h-screen items-center justify-center;
+}
