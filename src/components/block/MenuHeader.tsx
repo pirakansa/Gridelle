@@ -16,12 +16,12 @@ export default function MenuHeader({
     <header className="sticky top-0 z-10 w-full border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-4 md:px-10">
         <div className="flex items-center gap-3">
-          <span className="text-base font-semibold text-slate-900">Table Settings</span>
+          <span className="text-base font-semibold text-slate-900">Gridelle</span>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
-            設定メニュー
+            アプリケーションメニュー
           </span>
         </div>
-        <nav aria-label="設定メニュー" className="flex items-center gap-3">
+        <nav aria-label="Gridelleメニュー" className="flex items-center gap-3">
           <button type="button" className={ghostButtonClass} onClick={onYamlInputClick}>
             YAML入力 / プレビュー
           </button>
