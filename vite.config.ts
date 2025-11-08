@@ -6,6 +6,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from 'tailwindcss'
 import autoprefixer from 'autoprefixer'
 import tailwindConfig from './tailwind.config'
+import vitePwaConfig from './vite-pwa.config'
 
 const ROOT_DIR = resolve(__dirname, 'src')
 
@@ -13,43 +14,7 @@ export default defineConfig({
   plugins: [
     react(),
     visualizer({ filename: 'bundle-analysis.html' }),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: [
-        '/images/favicon.png',
-        '/images/apple-touch-icon.png',
-        '/assets/logo-*.jpeg'
-      ],
-      manifest: {
-        name: "Gridelle",
-        short_name: "Gridelle",
-        description: "Gridelle's sandbox application.",
-        start_url: "/",
-        scope: "/",
-        display: "standalone",
-        lang: "ja",
-        background_color: "#fafbf5",
-        icons: [
-          {
-            src: "/images/icon-192x192.png",
-            sizes: "192x192",
-            type: "image/png"
-          },
-          {
-            src: "/images/icon-512x512.png",
-            sizes: "512x512",
-            type: "image/png"
-          }
-        ]
-      },
-      devOptions: {
-        enabled: false,
-      },
-      workbox: {
-        // ignoreURLParametersMatching: [/.*/],
-        navigateFallbackDenylist: [/\/login\.html/],
-      }
-    })
+    VitePWA(vitePwaConfig)
   ],
   css: {
     postcss: {
@@ -67,7 +32,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        index: resolve(ROOT_DIR, 'index.html'),
+        top: resolve(ROOT_DIR, 'top.html'),
       },
       output: {
         manualChunks: {},
