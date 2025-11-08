@@ -1,277 +1,264 @@
 # AGENTS.md
 
-このドキュメントは **AI コーディングエージェント用 README** です。人間開発者向けの `README.md` を補完し、エージェントが安全かつ効率的に開発を行うための指針を示します。
+This document is the **README for AI coding agents**. It complements the human-facing README.md so that agents can develop safely and efficiently.
 
 ---
 
-## 1. セットアップ手順
+## 1. Setup Steps
 
-* 推奨環境：VS Code Dev Container / GitHub Codespaces（`.devcontainer/` のイメージを使用）
-* 初回起動時：プロジェクトルートで `npm install` を実行し、依存関係を確認
-* タスクランナー：`npm`（CI では後述の npm ターゲットを使用）
-
----
-
-## 2. ビルドと実行
-
-* ビルド：`npm run build`
-* Lint：`npm run lint`
-* テスト：`npm run test`
-* 開発中の実行：`npm run dev`
-* クリーンアップ：ビルド成果物（例：`./dist/`）を削除  
-  `rm -rf ./dist/`（`npm run clean` と同等）
+* Recommended: VS Code Dev Container / GitHub Codespaces (use the `.devcontainer/` image).
+* On the first run, execute `npm install` at the project root to make sure dependencies are intact.
+* Task runner: `npm` (CI uses the `npm` targets described later).
 
 ---
 
-## 3. プロジェクト構成
+## 2. Build & Run
 
-プロジェクト構成方針は以下の通りです。
+* Build: `npm run build`
+* Type check : `npm run type-check`
+* Lint: `npm run lint`
+* Test: `npm run test`
+* Run during development: `npm run dev`
+* Cleanup: remove build artifacts (such as `./dist/`) with `rm -rf ./dist/` (equivalent to `npm run clean`).
+
+---
+
+## 3. Project Structure
+
+We follow the project layout.
 
 ```
-
 .
-├─ src/<name>.html         # Rollup エントリーポイント
+├─ src/<name>.html         # Rollup entry point
 ├─ src/<name>.tsx
-├─ src/assets/            # 画像やスタイルシートなどの静的アセット
+├─ src/assets/            # Static assets such as images and stylesheets
 │   └── images/
-├─ src/utils/             # ヘルパー関数やユーティリティ
+├─ src/utils/             # Helper functions and utilities
 │   ├── Global.scss
-│   ├── Theme.ts
+│   ├── Theme.tx
 │   └── responseUtils.ts
-├─ src/pages/<name>/      # ページ固有のレイアウトとコンポーネント
-│   └── App.tsx
-├─ src/components/        # 再利用可能な React コンポーネント
+├─ src/pages/<name>/      # Page-specific layouts and content components
+│   ├── App.tsx
+│   └── <name>.module.scss
+├─ src/components/        # Reusable React components
 │   ├── atom/
 │   │  ├── SearchText.tsx
 │   │  └── Button.tsx
 │   └── block/
 │       ├── UserLists.tsx
 │       └── Header.tsx
-├─ src/services/          # API リクエストや認証などのサービスロジック
+├─ src/services/          # Service logic such as API requests and authentication
 │   ├── api.ts
 │   └── models/
-├─ public/                # 静的ファイル（HTML、アイコンなど）
+├─ public/                # Static files (HTML, icons, etc.)
 │   ├── robots.txt
 │   └── images/favicon.png
-├─ dist/                  # ビルド成果物（自動生成、Git 管理対象外）
-├─ package.json           # ビルド / テスト / リリースタスク定義
-└─ docs/                  # ドキュメント類
-
+├─ dist/                  # Build artifacts (generated; not tracked by Git)
+├─ package.tson           # Build / test / release tasks
+└─ docs/                  # Documentation
 ```
 
-### 役割とガイドライン
+### Roles and Guidelines
 
-* 共有ロジックは `src/utils/` または `src/services/` に、共有UIは `src/components/` に配置する。小さなプリミティブは `atom/`、複合コンポーネントは `block/` に。
-* ページ固有コードは `src/pages/<name>/` に限定する。
-* `src/<name>.tsx` はブートストラップやルーティングのみに使用し、ビジネスロジックは記述しない。
-* API リクエストや認証、データモデルは `src/services/` 以下に配置。
-* 画像やグローバルスタイルは `src/assets/` に、完全な静的ファイル（`robots.txt` など）は `public/` に配置。
-* テストコードは対象コードと同じディレクトリ内に配置（例：`src/pages/<name>/__tests__/*.test.ts`）。
+* Place shared logic in `src/utils/` or `src/services/` and shared UI in `src/components/` (use `atom/` for small primitives and `block/` for composed pieces). Keep page-specific code under `src/pages/<name>/`.
+* Use `src/<name>.tsx` only for application bootstrapping and route/entry wiring; avoid putting business logic in entry files.
+* Put API requests, authentication and data models under `src/services/`.
+* Store static assets and global styles in `src/assets/` (images, `Global.scss`, theme files) and `public/` for true static files (`robots.txt`, favicon).
+* Co-locate tests with the code they exercise (e.g., `src/pages/<name>/__tests__/*.test.ts`).
 
-### エージェント専用ルール
+### Agent-Specific Rules
 
-* 新規ファイルは上記ディレクトリ構造に従って配置し、不要なトップレベルディレクトリは追加しない。
-* 既存関数を変更した場合は、ユニットテストを追加または更新し、`npm run test` が成功することを確認。
-* ファイル書き込みや外部リソースアクセス時は、一時ディレクトリを使用し、既存テストデータを上書きしない。
-
----
-
-## 4. コーディング規約
-
-* 常に `npm run lint` を実行して、Lint チェックを通過させ、フォーマットを統一する。
-* Lint 警告を残したままにしない（CI 必須条件）。
-* エラーを黙って無視しない。ユーザー向けのエラーメッセージには `console.error` を使用。
-* マジックナンバーやハードコードされたURLは意味のある定数としてモジュール内に定義。
-* 大規模かつ無関係なリファクタリングを避け、変更範囲を最小限に。
-* 以下を最低限の必須コメントとする：
-  * ファイルヘッダー
-  * 関数ヘッダー
-* 実装とコメントは常に同期させること。
+* Place new files according to the directory guidelines above; avoid introducing unnecessary top-level directories.
+* When modifying existing functions, add or update unit tests and confirm `npm run test` passes.
+* When writing files or accessing external resources, use temporary directories so existing test data is not overwritten.
 
 ---
 
-## 5. テストと検証
-
-* ユニットテスト：`npm run test`
-* コマンド動作に変更があった場合は、`README.md` の使用例および `test` 配下のフィクスチャと整合性を保つ。
-
-### 静的解析 / Lint / 脆弱性スキャン
-
-* 静的解析：`npm run type-check`
-* コード品質：`npm run lint`
-* 脆弱性スキャン：`npm audit`
+## 4. Coding Standards
+* Always run `npm run lint` to ensure code passes lint checks and is properly formatted.
+* Run `npm run lint` for static checks and ensure there are no warnings (CI requirement).
+* Do not silently discard errors.. Prefer `console.error` for user-facing messages.
+* Extract magic numbers and hard-coded URLs into constants with meaningful names within the module.
+* Avoid large, unrelated refactors and keep the impact of changes minimal.
+* The following comments are required:
+  * File header
+  * Function header
+* Implementation and comments must always be kept consistent.
 
 ---
 
-## 6. CI 要件
+## 5. Testing & Verification
 
-GitHub Actions（`.github/workflows/static.yml`）は以下を実行します：
+* Unit tests: `npm run test`
+* When command behavior changes, keep usage examples in `README.md` and fixtures under `test` consistent.
+
+### Static Analysis / Lint / Vulnerability Scanning
+
+* Static analysis: `npm run type-check`
+* Code quality: `npm run lint`
+* Vulnerability scanning: `npm audit`
+
+---
+
+## 6. CI Requirements
+
+GitHub Actions (`.github/workflows/static.yml`) runs the following:
 
 * `npm run type-check`
 * `npm run lint`
 * `npm run test`
 * `npm run build`
 
-PR 作成前にローカルでこれらがすべて成功することを確認してください。失敗した場合は、ローカルでフォーマット・検証を行い、再実行します。
+Confirm `npm run type-check` / `npm run lint` / `npm run test` / `npm run build` succeed locally before opening a PR. If they fail, format and validate locally, then rerun.
 
 ---
 
-## 7. セキュリティとデータ取扱い
+## 7. Security & Data Handling
 
-* 秘密情報や機密データをコミットしない。
-* 個人情報や認証情報をログやエラーメッセージに出力しない。
-* テストデータには架空のURLやパスワードを使用し、実サービスを呼び出さない。
-* 外部ネットワークアクセスは、ユーザー承認を得た場合のみ（デフォルトでは無効）。
-
----
-
-## 8. エージェント向け補足
-
-* 複数の `AGENTS.md` が存在する場合は、作業ディレクトリに最も近いものを参照（本リポジトリではトップレベルのみ）。
-* 指示が矛盾する場合は、明示的なユーザー指示を優先し、不明点は確認する。
-* 作業前後に `npm run type-check` `npm run lint` `npm run test` および `npm run build` の成功を確認。失敗した場合は原因と対処を報告。
+* Do not commit secrets or confidential information.
+* Do not log personal or authentication data in logs or error messages.
+* Use fictitious URLs and passwords in test data; avoid hitting real services.
+* Obtain user approval before accessing external networks (disabled by default in the agent environment).
 
 ---
 
-## 9. ブランチ運用（GitHub Flow）
+## 8. Agent Notes
 
-本プロジェクトは `main` を基軸とした **GitHub Flow** を採用しています。
-
-* **main ブランチ**：常にリリース可能。直接コミットは禁止し、PR経由でのみ変更。
-* **機能ブランチ（`feature/<topic>`）**：新機能・改善用。完了後に PR を作成。
-* **ホットフィックスブランチ（`hotfix/<issue>`）**：緊急修正用。CI 通過後すぐにマージ。
-
-### 運用ルール
-
-* すべての作業は `main` から分岐。
-* PR 作成時にはレビュー担当者を指定し、CI 通過後にのみマージ。
-* マージ後はブランチを削除して問題ありません。
+* If multiple `AGENTS.md` files exist, reference the one closest to your working directory (this repository only has the top-level file).
+* When instructions conflict, prioritize explicit user prompts and clarify any uncertainties.
+* Before and after your work, confirm `npm run type-check`, `npm run lint`, `npm run test` and `npm run build` succeed. If they fail, report the cause and mitigation.
 
 ---
 
-## 10. コミットメッセージ規約
+## 9. Branch Workflow (GitHub Flow)
 
-コミットメッセージは **Conventional Commits** に準拠します。コメント部は **英語** で記述してください。
+This project follows **GitHub Flow** based on `main`.
 
-### フォーマット
+* **main branch**: Always releasable. Direct commits are forbidden; use pull requests.
+* **Feature branches (`feature/<topic>`)**: Branch from `main` for new features or enhancements, then open a PR when done.
+* **Hotfix branches (`hotfix/<issue>`)**: Branch from `main` for urgent fixes, merge promptly after CI passes.
+
+### Rules
+
+* Always branch from `main`.
+* Assign reviewers when opening a PR and merge only after CI passes.
+* Feel free to delete branches after merging.
+
+---
+
+## 10. Commit Message Policy
+
+Commit messages follow **Conventional Commits**. Agents must comply. Write the comment section in **English**.
+
+### Format
 
 ```
-
 type(scope?): description
-
 ```
 
 * `type`: feat / fix / docs / style / refactor / test / chore
-* `scope`: 任意。モジュール名やディレクトリ名など。
-* `description`: 変更内容を英語で簡潔に記述。
+* `scope`: Optional; module or directory names, etc.
+* `description`: Describe the change concisely in English.
 
-### 本文
+### Body
 
-* WHY（変更理由）を英語1文で記載。
-* HOW（ファイルごとの変更点）を英語で箇条書き。
-
-```
-
-* internal/data/data.go: Added error return when YAML parsing fails
-* pkg/req/req.go: Strengthened HTTP timeout configuration
+* Write the WHY (reason for the change) in a single English sentence.
+* List the HOW (per-file changes) in English.
 
 ```
-
-### 粒度
-
-* 原則、1つの意味的変更につき1コミット。
-* 自動生成コードは他の変更と混在させない。
-
-### PR とコミット
-
-* PR の説明欄には英語で **Motivation / Design / Tests / Risks** を記載。
-* チームポリシーで明示されていない限り、レビュー後の squash は任意。
-
----
-
-## 11. ドキュメント運用方針
-
-* **トップレベルの README.md**：
-  * 概要、利用方法、インストール手順を記載。
-  * 開発手順やテスト方法も後半に記述。
-  * 初心者でも導入できる明快な内容に保つ。
-
-* **docs/**：
-  * 詳細設計書や補足資料を必要に応じて追加。構造・ファイル名は追加時に定義。
-
-* **運用ガイドライン**：
-  * コード変更と同時にドキュメントも更新。変更不要な場合は PR に「No documentation changes」と明記。
-  * サンプルコード・コマンド例の動作を確認。
-  * 自動生成ドキュメントを追加する場合は、生成スクリプトも含める。
-
----
-
-## 12. 依存関係管理方針
-
-* 依存追加時は `npm install <module>` を使用し、`package.json` / `package-lock.json` を同期。
-* 依存更新時は、対象モジュールと理由を PR 本文に明記。
-* 外部依存の脆弱性は `npm audit` でチェックし、必要に応じて報告。
-
----
-
-## 13. リリース手順
-
-* バージョン管理は **SemVer** に従う。
-* 新リリースは `git tag vX.Y.Z` でタグ付けし、`make release` の出力を確認。
-* `CHANGELOG.md` を更新し、リリースノートに反映（自動生成ツールを使用した場合はそのスクリプトも含む）。
-
-### 13.1 CHANGELOG.md 運用方針
-
-* **セクション分類**：`[Keep a Changelog]` に準拠 — `Added / Changed / Fixed / Deprecated / Removed / Security`
-* **言語**：英語
-* **記述原則**：
-  * 「ユーザーから見た変更点」を1文で説明し、実装詳細は必要な場合のみ。
-  * **Breaking Changes** は強調し、移行手順を記載。
-  * 可能な場合は PR / Issue 番号を付記（例：`(#123)`）。
-* **ワークフロー**：
-  1. 機能追加時、`Unreleased` セクションに追記。
-  2. リリースPRでバージョン番号と日付を更新。
-  3. タグ付け後、該当セクションをリリースノートに転記。
-* **リンク推奨**：
-  * ファイル末尾に比較リンクを追加。
-* **補助ツール（任意）**：
-  * `git-cliff` や `conventional-changelog` などで下書きを生成後、手動で整備。
-
----
-
-## 14. PR テンプレート
-
-PR 作成時には以下項目を含めること：
-
-* **Motivation**（動機）：なぜこの変更が必要か  
-* **Design**（設計）：どのように実装したか  
-* **Tests**（テスト）：どのテストを実施したか  
-* **Risks**（リスク）：懸念点・副作用など
-
-テンプレート例：
-
+- internal/data/data.go: Added error return when YAML parsing fails
+- pkg/req/req.go: Strengthened HTTP timeout configuration
 ```
 
+### Granularity
+
+* Default to one semantic change per commit.
+* Separate generated code into logical units; do not mix with other changes.
+
+### PRs and Commits
+
+* Always document **Motivation / Design / Tests / Risks** in English in the PR description.
+* Follow team policy on squashing after reviews; if none, keep the original commit structure.
+
+---
+
+## 11. Documentation Policy
+
+* **README.md (top level)**:
+  * Introduction: application overview, usage, installation.
+  * Later sections: developer build steps, testing instructions.
+  * Keep it accessible so first-time users can onboard smoothly.
+
+* **docs/**:
+  * Create detailed designs or supplemental docs as needed. None exist yet, so define structure and filenames when adding.
+
+* **Operational Guidelines**:
+  * Update documentation alongside code changes; if none are needed, note "No documentation changes" in the PR description.
+  * Verify sample code and command examples actually work.
+  * Include generation scripts when submitting auto-generated docs.
+
+---
+
+## 12. Dependency Management Policy
+
+* Add dependencies with `npm install <module>` and keep `package.json` / `package-lock.json` in sync.
+* For dependency updates, state the target module and reason in the PR body.
+* Check external dependencies with `npm audit` and report as needed.
+
+---
+
+## 13. Release Process
+
+* Follow **SemVer** for versioning.
+* Tag new releases with `git tag vX.Y.Z` and verify `make release` outputs.
+* Update CHANGELOG.md and reflect the changes in the release notes (include generators in the PR if they were used).
+
+### 13.1 CHANGELOG.md Policy
+
+* **Sections**: Follow `[Keep a Changelog]` categories - `Added / Changed / Fixed / Deprecated / Removed / Security`.
+* **Language**: English.
+* **Writing Principles**:
+  * Describe "what changes for the user" in one sentence; include implementation details only when needed.
+  * Emphasize **breaking changes** in bold and provide migration steps.
+  * Include PR/Issue numbers when possible (e.g., `(#123)`).
+* **Workflow**:
+  1. Add entries to the `Unreleased` section in feature PRs.
+  2. Update the version number and date in release PRs.
+  3. After tagging, copy the relevant section into the release notes.
+* **Links (recommended)**:
+  * Add comparison links at the end of the file.
+* **Supporting Tools** (optional):
+  * Use tools like `git-cliff` or `conventional-changelog` to draft entries, then edit manually.
+
+---
+
+## 14. PR Template
+
+Include the following items when creating a PR:
+
+* **Motivation**: Why this change is needed.
+* **Design**: How you implemented it.
+* **Tests**: Which tests were run.
+* **Risks**: Potential side effects or concerns.
+
+Template example:
+
+```
 ### Motivation
-
 ...
 
 ### Design
-
 ...
 
 ### Tests
-
 ...
 
 ### Risks
-
 ...
-
 ```
 
 ---
 
-## 15. チェックリスト
+## 15. Checklist
 
 *
