@@ -25,6 +25,7 @@ describe('App', () => {
     render(<App />)
     expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('テーブル編集')
     expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('YAML Export')
+    expect(screen.getByTestId('sheet-name-input')).toHaveValue('バックログ')
   })
 
   it('設定メニューのヘッダーを表示する', () => {
@@ -69,13 +70,14 @@ describe('App', () => {
     await user.clear(textarea)
     await user.type(
       textarea,
-      '- feature: 新規カード{enter}  owner: Carol{enter}  status: DONE{enter}  effort: 2{enter}',
+      '- name: 新シート{enter}  rows:{enter}    - feature: 新規カード{enter}      owner: Carol{enter}      status: DONE{enter}      effort: 2{enter}',
     )
 
     await user.click(screen.getByRole('button', { name: 'YAMLを反映' }))
 
     expect(await screen.findByTestId('cell-display-0-feature')).toHaveTextContent('新規カード')
     expect(screen.getByTestId('cell-display-0-owner')).toHaveTextContent('Carol')
+    expect(screen.getByTestId('sheet-name-input')).toHaveValue('新シート')
   })
 
   it('セルを編集するとYAML出力に反映される', async () => {
@@ -190,5 +192,42 @@ describe('App', () => {
     const summary = screen.getByTestId('selection-summary')
     expect(summary.textContent).toContain('4セル選択中')
     expect(summary.textContent).toContain('R3〜3')
+  })
+
+  it('シートを切り替えると別データが表示される', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+  await user.selectOptions(screen.getByTestId('sheet-select'), '1')
+
+    expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('リリースノート作成')
+    expect(screen.getByTestId('sheet-name-input')).toHaveValue('完了済み')
+  })
+
+  it('シート名を変更できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const input = screen.getByTestId('sheet-name-input') as HTMLInputElement
+    await user.clear(input)
+    await user.type(input, 'メインシート{enter}')
+
+    expect(screen.getByTestId('sheet-name-input')).toHaveValue('メインシート')
+    expect(await screen.findByText('シート名を「メインシート」に更新しました。')).toBeInTheDocument()
+  })
+
+  it('シートを追加すると空のシートが生成される', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('add-sheet-button'))
+
+    const options = Array.from(
+      (screen.getByTestId('sheet-select') as HTMLSelectElement).options,
+    ).map((option) => option.textContent)
+    expect(options).toContain('Sheet 3')
+
+  await user.selectOptions(screen.getByTestId('sheet-select'), '2')
+    expect(screen.getByText('表示するデータがありません。')).toBeInTheDocument()
   })
 })

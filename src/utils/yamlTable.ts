@@ -3,8 +3,13 @@ import { dump, load } from 'js-yaml'
 
 export type TableRow = Record<string, string>
 
-// Function Header: Parses a YAML string into an array of table rows (records of string values).
-export function parseYamlTable(source: string): TableRow[] {
+export type TableSheet = {
+  name: string
+  rows: TableRow[]
+}
+
+// Function Header: Parses a YAML string into an array of sheets containing table rows.
+export function parseYamlWorkbook(source: string): TableSheet[] {
   const trimmed = source.trim()
   if (!trimmed) {
     return []
@@ -15,24 +20,41 @@ export function parseYamlTable(source: string): TableRow[] {
     throw new Error('YAMLのルート要素は配列である必要があります。')
   }
 
-  return parsed.map((entry, index) => normalizeRow(entry, index))
+  const looksLikeLegacyRows = parsed.every((entry) => {
+    if (!entry || typeof entry !== 'object') {
+      return false
+    }
+    const candidate = entry as Record<string, unknown>
+    return !('rows' in candidate) && !('name' in candidate)
+  })
+
+  if (looksLikeLegacyRows) {
+    return [
+      {
+        name: 'Sheet 1',
+        rows: parsed.map((entry, index) => normalizeRow(entry, index)),
+      },
+    ]
+  }
+
+  return parsed.map((entry, index) => normalizeSheet(entry, index))
 }
 
-// Function Header: Serializes table rows back into a YAML string.
-export function stringifyYamlTable(rows: TableRow[]): string {
-  if (!rows.length) {
+// Function Header: Serializes workbook sheets back into a YAML string.
+export function stringifyYamlWorkbook(sheets: TableSheet[]): string {
+  if (!sheets.length) {
     return '[]\n'
   }
 
-  const normalizedRows = rows.map((row) => {
-    const nextRow: TableRow = {}
-    Object.entries(row).forEach(([key, value]) => {
-      nextRow[key] = value ?? ''
-    })
-    return nextRow
+  const normalizedSheets = sheets.map((sheet, index) => {
+    const name = sheet.name.trim() ? sheet.name : `Sheet ${index + 1}`
+    return {
+      name,
+      rows: sheet.rows.map((row, rowIndex) => normalizeRow(row, rowIndex)),
+    }
   })
 
-  const yamlText = dump(normalizedRows, {
+  const yamlText = dump(normalizedSheets, {
     lineWidth: 120,
     noRefs: true,
     skipInvalid: true,
@@ -49,6 +71,32 @@ export function deriveColumns(rows: TableRow[]): string[] {
     Object.keys(row).forEach((key) => columnSet.add(key))
   })
   return Array.from(columnSet)
+}
+
+function normalizeSheet(entry: unknown, index: number): TableSheet {
+  if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+    const record = entry as Record<string, unknown>
+    const nameRaw = record.name
+    const rowsRaw = record.rows
+    const name = typeof nameRaw === 'string' && nameRaw.trim().length > 0 ? nameRaw : `Sheet ${
+      index + 1
+    }`
+    const rowsSource = Array.isArray(rowsRaw) ? rowsRaw : []
+    const rows = rowsSource.map((rowEntry, rowIndex) => normalizeRow(rowEntry, rowIndex))
+    return { name, rows }
+  }
+
+  if (Array.isArray(entry)) {
+    return {
+      name: `Sheet ${index + 1}`,
+      rows: entry.map((rowEntry, rowIndex) => normalizeRow(rowEntry, rowIndex)),
+    }
+  }
+
+  return {
+    name: `Sheet ${index + 1}`,
+    rows: [normalizeRow(entry, 0)],
+  }
 }
 
 function normalizeRow(entry: unknown, index: number): TableRow {

@@ -32,6 +32,12 @@ export default function App(): React.ReactElement {
       <main className={layoutTheme.contentWrapper}>
         <TableEditorPanel
           notice={spreadsheet.notice}
+          sheetNames={spreadsheet.sheets.map((sheet) => sheet.name)}
+          activeSheetIndex={spreadsheet.activeSheetIndex}
+          onSelectSheet={spreadsheet.handleSelectSheet}
+          currentSheetName={spreadsheet.currentSheetName}
+          onRenameSheet={spreadsheet.handleRenameSheet}
+          onAddSheet={spreadsheet.handleAddSheet}
           newColumnName={spreadsheet.newColumnName}
           onColumnNameChange={spreadsheet.setNewColumnName}
           onAddRow={spreadsheet.handleAddRow}
