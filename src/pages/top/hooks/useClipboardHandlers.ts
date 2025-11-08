@@ -11,6 +11,7 @@ import {
 type UseClipboardHandlersParams = {
   columns: string[]
   rows: TableRow[]
+  selection: SelectionRange | null
   setColumnOrder: React.Dispatch<React.SetStateAction<string[]>>
   updateRows: UpdateRows
   setNotice: React.Dispatch<React.SetStateAction<Notice | null>>
@@ -20,7 +21,7 @@ type UseClipboardHandlersParams = {
 }
 
 type UseClipboardHandlersResult = {
-  handleCopyCell: (_value: string) => Promise<void>
+  handleCopySelection: () => Promise<void>
   handlePaste: (_event: React.ClipboardEvent<HTMLDivElement>) => void
 }
 
@@ -28,6 +29,7 @@ type UseClipboardHandlersResult = {
 export const useClipboardHandlers = ({
   columns,
   rows,
+  selection,
   setColumnOrder,
   updateRows,
   setNotice,
@@ -35,21 +37,55 @@ export const useClipboardHandlers = ({
   setAnchorCell,
   getSelectionAnchor,
 }: UseClipboardHandlersParams): UseClipboardHandlersResult => {
-  const handleCopyCell = React.useCallback(
-    async (value: string): Promise<void> => {
+  const handleCopySelection = React.useCallback(
+    async (): Promise<void> => {
       if (!navigator.clipboard) {
         setNotice({ text: 'クリップボードAPIが利用できません。', tone: 'error' })
         return
       }
 
+      if (!columns.length || !rows.length) {
+        setNotice({ text: 'コピーできるセルがありません。', tone: 'error' })
+        return
+      }
+
+      const anchor = getSelectionAnchor()
+      const activeRange = selection ?? {
+        startRow: anchor.rowIndex,
+        endRow: anchor.rowIndex,
+        startCol: anchor.columnIndex,
+        endCol: anchor.columnIndex,
+      }
+
+      const maxRowIndex = rows.length - 1
+      const maxColIndex = columns.length - 1
+      const boundedRange: SelectionRange = {
+        startRow: Math.max(0, Math.min(activeRange.startRow, maxRowIndex)),
+        endRow: Math.max(0, Math.min(activeRange.endRow, maxRowIndex)),
+        startCol: Math.max(0, Math.min(activeRange.startCol, maxColIndex)),
+        endCol: Math.max(0, Math.min(activeRange.endCol, maxColIndex)),
+      }
+
+      const rowStrings: string[] = []
+      for (let rowIndex = boundedRange.startRow; rowIndex <= boundedRange.endRow; rowIndex += 1) {
+        const sourceRow = rows[rowIndex] ?? {}
+        const cellValues: string[] = []
+        for (let columnIndex = boundedRange.startCol; columnIndex <= boundedRange.endCol; columnIndex += 1) {
+          const columnKey = columns[columnIndex]
+          const value = sourceRow[columnKey]
+          cellValues.push(value === undefined || value === null ? '' : String(value))
+        }
+        rowStrings.push(cellValues.join('\t'))
+      }
+
       try {
-        await navigator.clipboard.writeText(value ?? '')
+        await navigator.clipboard.writeText(rowStrings.join('\n'))
         setNotice({ text: 'セルの値をコピーしました。', tone: 'success' })
       } catch {
         setNotice({ text: 'セルのコピーに失敗しました。', tone: 'error' })
       }
     },
-    [setNotice],
+    [columns, rows, selection, getSelectionAnchor, setNotice],
   )
 
   const handlePaste = React.useCallback(
@@ -107,5 +143,5 @@ export const useClipboardHandlers = ({
     [columns, rows, getSelectionAnchor, setColumnOrder, updateRows, setNotice, setSelection, setAnchorCell],
   )
 
-  return { handleCopyCell, handlePaste }
+  return { handleCopySelection, handlePaste }
 }

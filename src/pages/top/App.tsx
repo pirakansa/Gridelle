@@ -60,7 +60,6 @@ export default function App(): React.ReactElement {
             onTableKeyDown={spreadsheet.handleTableKeyDown}
             onStartFillDrag={spreadsheet.startFillDrag}
             onCellChange={spreadsheet.handleCellChange}
-            onCopyCell={spreadsheet.handleCopyCell}
             onPaste={spreadsheet.handlePaste}
             onMoveColumn={spreadsheet.moveColumn}
             onDeleteRow={spreadsheet.handleDeleteRow}

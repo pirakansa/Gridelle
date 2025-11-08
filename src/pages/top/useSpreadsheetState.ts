@@ -55,7 +55,6 @@ type UseSpreadsheetState = {
   handleTableKeyDown: (_event: React.KeyboardEvent<HTMLDivElement>) => void
   startFillDrag: (_event: React.PointerEvent<HTMLButtonElement>) => void
   handleCellChange: (_rowIndex: number, _column: string, _value: string) => void
-  handleCopyCell: (_value: string) => Promise<void>
   handlePaste: (_event: React.ClipboardEvent<HTMLDivElement>) => void
   isFillDragActive: boolean
   editingCell: CellPosition | null
@@ -124,7 +123,6 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     editingCell,
     clearSelection,
     applyBulkInput,
-    handleCopyCell,
     handleCellPointerDown,
     handleCellPointerEnter,
     handleCellClick,
@@ -187,7 +185,6 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleTableKeyDown,
     startFillDrag,
     handleCellChange,
-    handleCopyCell,
     handlePaste,
     isFillDragActive,
     editingCell,
