@@ -46,7 +46,7 @@ type UseSpreadsheetInteractionController = {
   startFillDrag: (_event: React.PointerEvent<HTMLButtonElement>) => void
   handlePaste: (_event: React.ClipboardEvent<HTMLDivElement>) => void
   handleCellEditorBlur: () => void
-  handleCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLInputElement>) => void
+  handleCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }
 
 // Function Header: Orchestrates selection state and spreadsheet interaction handlers.
@@ -423,12 +423,20 @@ export const useSpreadsheetInteractionController = ({
     setEditingCell(null)
   }, [])
 
-  const handleCellEditorKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (event.key === 'Enter' || event.key === 'Escape') {
-      event.preventDefault()
-      setEditingCell(null)
-    }
-  }, [])
+  const handleCellEditorKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setEditingCell(null)
+        return
+      }
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault()
+        setEditingCell(null)
+      }
+    },
+    [],
+  )
 
   React.useEffect(() => {
     if (!editingCell) {

@@ -37,7 +37,7 @@ type Props = {
   onMoveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   onDeleteRow: (_rowIndex: number) => void
   onCellEditorBlur: () => void
-  onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLInputElement>) => void
+  onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }
 
 // Function Header: Renders the spreadsheet grid complete with selection/fill affordances.
@@ -155,13 +155,13 @@ export default function SpreadsheetTable({
                     >
                       <div className="relative flex items-center gap-1 px-1">
                         {isEditing ? (
-                          <input
-                            type="text"
+                          <textarea
                             value={row[column] ?? ''}
                             onChange={(event) => onCellChange(rowIndex, column, event.target.value)}
                             data-testid={`cell-${rowIndex}-${column}`}
-                            className="w-full flex-1 border-none bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            className="w-full flex-1 resize-y rounded border border-blue-100 bg-white px-2 py-2 text-sm leading-relaxed focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                             autoFocus
+                            rows={Math.max(1, (row[column] ?? '').split('\n').length)}
                             onBlur={onCellEditorBlur}
                             onKeyDown={onCellEditorKeyDown}
                             onPointerDown={(event) => event.stopPropagation()}
@@ -169,7 +169,7 @@ export default function SpreadsheetTable({
                           />
                         ) : (
                           <div
-                            className="w-full flex-1 rounded px-2 py-2 text-left text-sm"
+                            className="w-full flex-1 rounded px-2 py-2 text-left text-sm whitespace-pre-wrap break-words"
                             data-testid={`cell-display-${rowIndex}-${column}`}
                           >
                             {row[column] ?? ''}

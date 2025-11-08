@@ -60,7 +60,7 @@ type UseSpreadsheetState = {
   isFillDragActive: boolean
   editingCell: CellPosition | null
   handleCellEditorBlur: () => void
-  handleCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLInputElement>) => void
+  handleCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }
 
 const DEFAULT_SHEETS: TableSheet[] = [
