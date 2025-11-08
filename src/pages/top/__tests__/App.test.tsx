@@ -29,11 +29,10 @@ describe('App', () => {
 
   it('各行に行番号を表示する', () => {
     render(<App />)
-    const rowNumbers = [
-      screen.getByTestId('row-number-0').textContent,
-      screen.getByTestId('row-number-1').textContent,
-    ]
-    expect(rowNumbers).toEqual(['1', '2'])
+    const rowNumbers = Array.from({ length: 5 }, (_, index) =>
+      screen.getByTestId(`row-number-${index}`).textContent,
+    )
+    expect(rowNumbers).toEqual(['1', '2', '3', '4', '5'])
   })
 
   it('YAML入力を反映するとテーブル内容が更新される', async () => {

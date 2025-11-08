@@ -20,6 +20,9 @@ export type SelectionRange = {
 const DEFAULT_ROWS: TableRow[] = [
   { feature: 'テーブル編集', owner: 'Alice', status: 'READY', effort: '3' },
   { feature: 'YAML Export', owner: 'Bob', status: 'REVIEW', effort: '5' },
+  { feature: 'CSVインポート', owner: 'Carol', status: 'BACKLOG', effort: '2' },
+  { feature: '権限管理', owner: 'Dave', status: 'DOING', effort: '8' },
+  { feature: '操作ガイド作成', owner: 'Eve', status: 'DONE', effort: '1' },
 ]
 
 const buildSelectionRange = (start: CellPosition, end: CellPosition): SelectionRange => ({
