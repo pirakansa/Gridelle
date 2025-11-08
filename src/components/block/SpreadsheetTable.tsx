@@ -16,6 +16,7 @@ type Props = {
   fillPreview: SelectionRange | null
   isFillDragActive: boolean
   editingCell: CellPosition | null
+  onRowNumberClick: (_rowIndex: number, _extend: boolean) => void
   onPointerDown: (
     _event: React.PointerEvent<HTMLTableCellElement>,
     _rowIndex: number,
@@ -48,6 +49,7 @@ export default function SpreadsheetTable({
   fillPreview,
   isFillDragActive,
   editingCell,
+  onRowNumberClick,
   onPointerDown,
   onPointerEnter,
   onCellClick,
@@ -94,7 +96,6 @@ export default function SpreadsheetTable({
                   </div>
                 </th>
               ))}
-              <th aria-label="actions">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -105,7 +106,27 @@ export default function SpreadsheetTable({
                   className="row-number-cell"
                   data-testid={`row-number-${rowIndex}`}
                 >
-                  {rowIndex + 1}
+                  <div className="row-number-content">
+                    <button
+                      type="button"
+                      className="row-number-button"
+                      aria-label={`行${rowIndex + 1}を選択`}
+                      onClick={(event) => onRowNumberClick(rowIndex, event.shiftKey)}
+                    >
+                      {rowIndex + 1}
+                    </button>
+                    <button
+                      type="button"
+                      className="row-number-delete-button"
+                      aria-label={`行${rowIndex + 1}を削除`}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onDeleteRow(rowIndex)
+                      }}
+                    >
+                      削除
+                    </button>
+                  </div>
                 </th>
                 {columns.map((column, columnIndex) => {
                   const className = deriveCellClassName({
@@ -180,16 +201,6 @@ export default function SpreadsheetTable({
                     </td>
                   )
                 })}
-                <td className="border border-slate-200 text-center">
-                  <button
-                    type="button"
-                    aria-label={`行${rowIndex + 1}を削除`}
-                    className="text-xs font-semibold text-red-500 hover:text-red-600"
-                    onClick={() => onDeleteRow(rowIndex)}
-                  >
-                    削除
-                  </button>
-                </td>
               </tr>
             ))}
           </tbody>

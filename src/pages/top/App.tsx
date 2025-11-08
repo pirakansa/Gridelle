@@ -51,6 +51,7 @@ export default function App(): React.ReactElement {
             fillPreview={spreadsheet.fillPreview}
             isFillDragActive={spreadsheet.isFillDragActive}
             editingCell={spreadsheet.editingCell}
+            onRowNumberClick={spreadsheet.handleRowNumberClick}
             onPointerDown={spreadsheet.handleCellPointerDown}
             onPointerEnter={spreadsheet.handleCellPointerEnter}
             onCellClick={spreadsheet.handleCellClick}

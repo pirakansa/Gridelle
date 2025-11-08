@@ -29,6 +29,7 @@ type UseSpreadsheetInteractionController = {
   clearSelection: () => void
   applyBulkInput: () => void
   handleCopyCell: (_value: string) => Promise<void>
+  handleRowNumberClick: (_rowIndex: number, _extend: boolean) => void
   handleCellPointerDown: (
     _event: React.PointerEvent<HTMLTableCellElement>,
     _rowIndex: number,
@@ -229,6 +230,38 @@ export const useSpreadsheetInteractionController = ({
     [beginSelection, isFillDragActive],
   )
 
+  const handleRowNumberClick = React.useCallback(
+    (rowIndex: number, extend: boolean): void => {
+      if (!columns.length) {
+        return
+      }
+      const lastColumnIndex = columns.length - 1
+      if (extend && selection) {
+        const startRow = Math.min(selection.startRow, rowIndex)
+        const endRow = Math.max(selection.endRow, rowIndex)
+        setSelection({
+          startRow,
+          endRow,
+          startCol: 0,
+          endCol: lastColumnIndex,
+        })
+        setAnchorCell({ rowIndex: startRow, columnIndex: 0 })
+      } else {
+        setAnchorCell({ rowIndex, columnIndex: 0 })
+        setSelection({
+          startRow: rowIndex,
+          endRow: rowIndex,
+          startCol: 0,
+          endCol: lastColumnIndex,
+        })
+      }
+      setIsSelecting(false)
+      setEditingCell(null)
+      setFillPreview(null)
+    },
+    [columns.length, selection],
+  )
+
   const handleCellPointerEnter = React.useCallback(
     (rowIndex: number, columnIndex: number): void => {
       if (isFillDragActive && selection) {
@@ -415,6 +448,7 @@ export const useSpreadsheetInteractionController = ({
     editingCell,
     clearSelection,
     applyBulkInput,
+    handleRowNumberClick,
     handleCopyCell,
     handleCellPointerDown,
     handleCellPointerEnter,

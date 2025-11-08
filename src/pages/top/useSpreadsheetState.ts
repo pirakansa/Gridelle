@@ -27,6 +27,7 @@ type UseSpreadsheetState = {
   bulkValue: string
   setBulkValue: React.Dispatch<React.SetStateAction<string>>
   applyBulkInput: () => void
+  handleRowNumberClick: (_rowIndex: number, _extend: boolean) => void
   selection: SelectionRange | null
   activeRange: SelectionRange | null
   selectionSummary: string
@@ -109,6 +110,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handlePaste,
     handleCellEditorBlur,
     handleCellEditorKeyDown,
+    handleRowNumberClick,
   } = useSpreadsheetInteractionController({
     columns,
     rows,
@@ -138,6 +140,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     bulkValue,
     setBulkValue,
     applyBulkInput,
+  handleRowNumberClick,
     selection,
     activeRange,
     fillPreview,

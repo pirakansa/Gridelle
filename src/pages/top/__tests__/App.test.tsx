@@ -29,13 +29,15 @@ describe('App', () => {
 
   it('設定メニューのヘッダーを表示する', () => {
     render(<App />)
-    expect(screen.getByLabelText('設定メニュー')).toBeInTheDocument()
+    expect(screen.getByLabelText('Gridelleメニュー')).toBeInTheDocument()
   })
 
   it('各行に行番号を表示する', () => {
     render(<App />)
     const rowNumbers = Array.from({ length: 5 }, (_, index) =>
-      screen.getByTestId(`row-number-${index}`).textContent,
+      within(screen.getByTestId(`row-number-${index}`)).getByRole('button', {
+        name: `行${index + 1}を選択`,
+      }).textContent,
     )
     expect(rowNumbers).toEqual(['1', '2', '3', '4', '5'])
   })
@@ -175,5 +177,18 @@ describe('App', () => {
     fireEvent.pointerUp(window)
 
     expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('テーブル編集')
+  })
+
+  it('行番号をクリックすると行全体が選択される', () => {
+    render(<App />)
+    const rowButton = within(screen.getByTestId('row-number-2')).getByRole('button', {
+      name: '行3を選択',
+    })
+
+    fireEvent.click(rowButton)
+
+    const summary = screen.getByTestId('selection-summary')
+    expect(summary.textContent).toContain('4セル選択中')
+    expect(summary.textContent).toContain('R3〜3')
   })
 })
