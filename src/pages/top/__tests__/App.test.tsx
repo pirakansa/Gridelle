@@ -61,6 +61,11 @@ describe('App', () => {
     })
   })
 
+  it('YAML出力画面のトリガーを表示しない', () => {
+    render(<App />)
+    expect(screen.queryByRole('button', { name: 'YAML出力' })).not.toBeInTheDocument()
+  })
+
   it('YAML入力を反映するとテーブル内容が更新される', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -78,20 +83,6 @@ describe('App', () => {
     expect(await screen.findByTestId('cell-display-0-feature')).toHaveTextContent('新規カード')
     expect(screen.getByTestId('cell-display-0-owner')).toHaveTextContent('Carol')
     expect(screen.getByTestId('sheet-name-input')).toHaveValue('新シート')
-  })
-
-  it('セルを編集するとYAML出力に反映される', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    const editableBox = screen.getByTestId('cell-box-0-feature')
-    fireEvent.doubleClick(editableBox)
-  const targetCell = (await screen.findByTestId('cell-0-feature')) as HTMLTextAreaElement
-    fireEvent.change(targetCell, { target: { value: 'API Design' } })
-
-    await user.click(screen.getByRole('button', { name: 'YAML出力' }))
-    const dialog = await screen.findByRole('dialog', { name: 'YAML出力' })
-    expect(within(dialog).getByText(/API Design/)).toBeInTheDocument()
   })
 
   it('セルに複数行のテキストを入力できる', async () => {

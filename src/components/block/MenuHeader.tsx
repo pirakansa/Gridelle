@@ -4,14 +4,10 @@ import { ghostButtonClass } from '../constants'
 
 type Props = {
   onYamlInputClick: () => void
-  onYamlOutputClick: () => void
 }
 
 // Function Header: Renders the sticky menu bar for invoking YAML related panels.
-export default function MenuHeader({
-  onYamlInputClick,
-  onYamlOutputClick,
-}: Props): React.ReactElement {
+export default function MenuHeader({ onYamlInputClick }: Props): React.ReactElement {
   return (
     <header className="sticky top-0 z-10 w-full border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-4 md:px-10">
@@ -24,9 +20,6 @@ export default function MenuHeader({
         <nav aria-label="Gridelleメニュー" className="flex items-center gap-3">
           <button type="button" className={ghostButtonClass} onClick={onYamlInputClick}>
             YAML入力 / プレビュー
-          </button>
-          <button type="button" className={ghostButtonClass} onClick={onYamlOutputClick}>
-            YAML出力
           </button>
         </nav>
       </div>
