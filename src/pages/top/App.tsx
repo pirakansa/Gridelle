@@ -2,7 +2,6 @@
 import React from 'react'
 import { layoutTheme } from '../../utils/Theme'
 import { useSpreadsheetState } from './useSpreadsheetState'
-import HeroSection from '../../components/block/HeroSection'
 import TableEditorPanel from '../../components/block/TableEditorPanel'
 import SpreadsheetTable from '../../components/block/SpreadsheetTable'
 import MenuHeader from '../../components/block/MenuHeader'
@@ -31,7 +30,6 @@ export default function App(): React.ReactElement {
     <div className={layoutTheme.pageShell}>
       <MenuHeader onYamlInputClick={openYamlInput} onYamlOutputClick={openYamlOutput} />
       <main className={layoutTheme.contentWrapper}>
-        <HeroSection />
         <TableEditorPanel
           notice={spreadsheet.notice}
           newColumnName={spreadsheet.newColumnName}
