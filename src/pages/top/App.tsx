@@ -6,14 +6,30 @@ import HeroSection from '../../components/block/HeroSection'
 import TableEditorPanel from '../../components/block/TableEditorPanel'
 import SpreadsheetTable from '../../components/block/SpreadsheetTable'
 import MenuHeader from '../../components/block/MenuHeader'
+import YamlPanel from '../../components/block/YamlPanel'
+import OutputPanel from '../../components/block/OutputPanel'
+import SettingsOverlay from '../../components/block/SettingsOverlay'
 
 // Function Header: Composes the top page using modular sub-components wired to state hooks.
 export default function App(): React.ReactElement {
   const spreadsheet = useSpreadsheetState()
+  const [activePanel, setActivePanel] = React.useState<'input' | 'output' | null>(null)
+
+  const openYamlInput = React.useCallback(() => {
+    setActivePanel('input')
+  }, [])
+
+  const openYamlOutput = React.useCallback(() => {
+    setActivePanel('output')
+  }, [])
+
+  const closePanel = React.useCallback(() => {
+    setActivePanel(null)
+  }, [])
 
   return (
     <div className={layoutTheme.pageShell}>
-      <MenuHeader />
+      <MenuHeader onYamlInputClick={openYamlInput} onYamlOutputClick={openYamlOutput} />
       <main className={layoutTheme.contentWrapper}>
         <HeroSection />
         <TableEditorPanel
@@ -53,6 +69,34 @@ export default function App(): React.ReactElement {
           />
         </TableEditorPanel>
       </main>
+      {activePanel === 'input' && (
+        <SettingsOverlay
+          title="YAML入力 / プレビュー"
+          description="YAMLを編集してテーブルへ反映できます。"
+          onClose={closePanel}
+          panelId="yaml-input"
+        >
+          <YamlPanel
+            yamlBuffer={spreadsheet.yamlBuffer}
+            notice={spreadsheet.notice}
+            onChange={spreadsheet.setYamlBuffer}
+            onApply={spreadsheet.applyYamlBuffer}
+            onFileUpload={spreadsheet.handleFileUpload}
+            onDownload={spreadsheet.handleDownloadYaml}
+            onCopy={spreadsheet.handleCopyYaml}
+          />
+        </SettingsOverlay>
+      )}
+      {activePanel === 'output' && (
+        <SettingsOverlay
+          title="YAML出力"
+          description="現在のテーブル状態をYAMLで確認できます。"
+          onClose={closePanel}
+          panelId="yaml-output"
+        >
+          <OutputPanel tableYaml={spreadsheet.tableYaml} />
+        </SettingsOverlay>
+      )}
     </div>
   )
 }

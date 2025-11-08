@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import App from '../App'
@@ -43,6 +43,51 @@ describe('App', () => {
   it('メイン画面にYAML入力エリアを表示しない', () => {
     render(<App />)
     expect(screen.queryByTestId('yaml-textarea')).not.toBeInTheDocument()
+  })
+
+  it('メニューからYAML入力パネルを開閉できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'YAML入力 / プレビュー' }))
+    expect(await screen.findByRole('dialog', { name: 'YAML入力 / プレビュー' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '閉じる' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'YAML入力 / プレビュー' })).not.toBeInTheDocument()
+    })
+  })
+
+  it('YAML入力を反映するとテーブル内容が更新される', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'YAML入力 / プレビュー' }))
+    const textarea = (await screen.findByTestId('yaml-textarea')) as HTMLTextAreaElement
+    await user.clear(textarea)
+    await user.type(
+      textarea,
+      '- feature: 新規カード{enter}  owner: Carol{enter}  status: DONE{enter}  effort: 2{enter}',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'YAMLを反映' }))
+
+    expect(await screen.findByTestId('cell-display-0-feature')).toHaveTextContent('新規カード')
+    expect(screen.getByTestId('cell-display-0-owner')).toHaveTextContent('Carol')
+  })
+
+  it('セルを編集するとYAML出力に反映される', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const editableBox = screen.getByTestId('cell-box-0-feature')
+    fireEvent.doubleClick(editableBox)
+    const targetCell = (await screen.findByTestId('cell-0-feature')) as HTMLInputElement
+    fireEvent.change(targetCell, { target: { value: 'API Design' } })
+
+    await user.click(screen.getByRole('button', { name: 'YAML出力' }))
+    const dialog = await screen.findByRole('dialog', { name: 'YAML出力' })
+    expect(within(dialog).getByText(/API Design/)).toBeInTheDocument()
   })
 
   it('列の並べ替えができる', async () => {
