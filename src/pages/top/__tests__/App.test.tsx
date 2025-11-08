@@ -27,6 +27,11 @@ describe('App', () => {
     expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('YAML Export')
   })
 
+  it('設定メニューのヘッダーを表示する', () => {
+    render(<App />)
+    expect(screen.getByLabelText('設定メニュー')).toBeInTheDocument()
+  })
+
   it('各行に行番号を表示する', () => {
     render(<App />)
     const rowNumbers = Array.from({ length: 5 }, (_, index) =>

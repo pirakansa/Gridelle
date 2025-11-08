@@ -6,6 +6,7 @@ import HeroSection from '../../components/block/HeroSection'
 import YamlPanel from '../../components/block/YamlPanel'
 import TableEditorPanel from '../../components/block/TableEditorPanel'
 import SpreadsheetTable from '../../components/block/SpreadsheetTable'
+import MenuHeader from '../../components/block/MenuHeader'
 
 // Function Header: Composes the top page using modular sub-components wired to state hooks.
 export default function App(): React.ReactElement {
@@ -13,6 +14,7 @@ export default function App(): React.ReactElement {
 
   return (
     <div className={layoutTheme.pageShell}>
+      <MenuHeader />
       <main className={layoutTheme.contentWrapper}>
         <HeroSection />
         <YamlPanel
