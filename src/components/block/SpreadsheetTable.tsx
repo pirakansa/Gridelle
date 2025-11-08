@@ -16,6 +16,7 @@ type Props = {
   fillPreview: SelectionRange | null
   isFillDragActive: boolean
   editingCell: CellPosition | null
+  onRowNumberClick: (_rowIndex: number, _extend: boolean) => void
   onPointerDown: (
     _event: React.PointerEvent<HTMLTableCellElement>,
     _rowIndex: number,
@@ -36,7 +37,7 @@ type Props = {
   onMoveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   onDeleteRow: (_rowIndex: number) => void
   onCellEditorBlur: () => void
-  onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLInputElement>) => void
+  onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }
 
 // Function Header: Renders the spreadsheet grid complete with selection/fill affordances.
@@ -48,6 +49,7 @@ export default function SpreadsheetTable({
   fillPreview,
   isFillDragActive,
   editingCell,
+  onRowNumberClick,
   onPointerDown,
   onPointerEnter,
   onCellClick,
@@ -94,7 +96,6 @@ export default function SpreadsheetTable({
                   </div>
                 </th>
               ))}
-              <th aria-label="actions">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -105,7 +106,27 @@ export default function SpreadsheetTable({
                   className="row-number-cell"
                   data-testid={`row-number-${rowIndex}`}
                 >
-                  {rowIndex + 1}
+                  <div className="row-number-content">
+                    <button
+                      type="button"
+                      className="row-number-button"
+                      aria-label={`行${rowIndex + 1}を選択`}
+                      onClick={(event) => onRowNumberClick(rowIndex, event.shiftKey)}
+                    >
+                      {rowIndex + 1}
+                    </button>
+                    <button
+                      type="button"
+                      className="row-number-delete-button"
+                      aria-label={`行${rowIndex + 1}を削除`}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onDeleteRow(rowIndex)
+                      }}
+                    >
+                      削除
+                    </button>
+                  </div>
                 </th>
                 {columns.map((column, columnIndex) => {
                   const className = deriveCellClassName({
@@ -134,13 +155,13 @@ export default function SpreadsheetTable({
                     >
                       <div className="relative flex items-center gap-1 px-1">
                         {isEditing ? (
-                          <input
-                            type="text"
+                          <textarea
                             value={row[column] ?? ''}
                             onChange={(event) => onCellChange(rowIndex, column, event.target.value)}
                             data-testid={`cell-${rowIndex}-${column}`}
-                            className="w-full flex-1 border-none bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            className="w-full flex-1 resize-y rounded border border-blue-100 bg-white px-2 py-2 text-sm leading-relaxed focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                             autoFocus
+                            rows={Math.max(1, (row[column] ?? '').split('\n').length)}
                             onBlur={onCellEditorBlur}
                             onKeyDown={onCellEditorKeyDown}
                             onPointerDown={(event) => event.stopPropagation()}
@@ -148,7 +169,7 @@ export default function SpreadsheetTable({
                           />
                         ) : (
                           <div
-                            className="w-full flex-1 rounded px-2 py-2 text-left text-sm"
+                            className="w-full flex-1 rounded px-2 py-2 text-left text-sm whitespace-pre-wrap break-words"
                             data-testid={`cell-display-${rowIndex}-${column}`}
                           >
                             {row[column] ?? ''}
@@ -180,16 +201,6 @@ export default function SpreadsheetTable({
                     </td>
                   )
                 })}
-                <td className="border border-slate-200 text-center">
-                  <button
-                    type="button"
-                    aria-label={`行${rowIndex + 1}を削除`}
-                    className="text-xs font-semibold text-red-500 hover:text-red-600"
-                    onClick={() => onDeleteRow(rowIndex)}
-                  >
-                    削除
-                  </button>
-                </td>
               </tr>
             ))}
           </tbody>

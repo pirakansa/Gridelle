@@ -1,12 +1,10 @@
-// Index landing bundle entry point responsible for mounting the index view.
+// Top page bundle entry point responsible for mounting the splash view.
 import React from 'react'
 import * as ReactDOM from 'react-dom/client'
-import App from './pages/index/App'
+import App from './pages/top/App'
 import './utils/Global.scss'
 
-/**
- * Mounts the index landing page into the root DOM container.
- */
+// Render the top page application inside the root container.
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <App />

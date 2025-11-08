@@ -29,6 +29,7 @@ type UseSpreadsheetInteractionController = {
   clearSelection: () => void
   applyBulkInput: () => void
   handleCopyCell: (_value: string) => Promise<void>
+  handleRowNumberClick: (_rowIndex: number, _extend: boolean) => void
   handleCellPointerDown: (
     _event: React.PointerEvent<HTMLTableCellElement>,
     _rowIndex: number,
@@ -45,7 +46,7 @@ type UseSpreadsheetInteractionController = {
   startFillDrag: (_event: React.PointerEvent<HTMLButtonElement>) => void
   handlePaste: (_event: React.ClipboardEvent<HTMLDivElement>) => void
   handleCellEditorBlur: () => void
-  handleCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLInputElement>) => void
+  handleCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }
 
 // Function Header: Orchestrates selection state and spreadsheet interaction handlers.
@@ -229,6 +230,38 @@ export const useSpreadsheetInteractionController = ({
     [beginSelection, isFillDragActive],
   )
 
+  const handleRowNumberClick = React.useCallback(
+    (rowIndex: number, extend: boolean): void => {
+      if (!columns.length) {
+        return
+      }
+      const lastColumnIndex = columns.length - 1
+      if (extend && selection) {
+        const startRow = Math.min(selection.startRow, rowIndex)
+        const endRow = Math.max(selection.endRow, rowIndex)
+        setSelection({
+          startRow,
+          endRow,
+          startCol: 0,
+          endCol: lastColumnIndex,
+        })
+        setAnchorCell({ rowIndex: startRow, columnIndex: 0 })
+      } else {
+        setAnchorCell({ rowIndex, columnIndex: 0 })
+        setSelection({
+          startRow: rowIndex,
+          endRow: rowIndex,
+          startCol: 0,
+          endCol: lastColumnIndex,
+        })
+      }
+      setIsSelecting(false)
+      setEditingCell(null)
+      setFillPreview(null)
+    },
+    [columns.length, selection],
+  )
+
   const handleCellPointerEnter = React.useCallback(
     (rowIndex: number, columnIndex: number): void => {
       if (isFillDragActive && selection) {
@@ -390,12 +423,20 @@ export const useSpreadsheetInteractionController = ({
     setEditingCell(null)
   }, [])
 
-  const handleCellEditorKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (event.key === 'Enter' || event.key === 'Escape') {
-      event.preventDefault()
-      setEditingCell(null)
-    }
-  }, [])
+  const handleCellEditorKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setEditingCell(null)
+        return
+      }
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault()
+        setEditingCell(null)
+      }
+    },
+    [],
+  )
 
   React.useEffect(() => {
     if (!editingCell) {
@@ -415,6 +456,7 @@ export const useSpreadsheetInteractionController = ({
     editingCell,
     clearSelection,
     applyBulkInput,
+    handleRowNumberClick,
     handleCopyCell,
     handleCellPointerDown,
     handleCellPointerEnter,

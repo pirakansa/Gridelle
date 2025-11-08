@@ -1,6 +1,6 @@
 // File Header: Custom hook composing spreadsheet data and interaction controllers.
 import React from 'react'
-import type { TableRow } from '../../utils/yamlTable'
+import type { TableRow, TableSheet } from '../../utils/yamlTable'
 import { useSpreadsheetDataController } from './hooks/useSpreadsheetDataController'
 import { useSpreadsheetInteractionController } from './hooks/useSpreadsheetInteractionController'
 import type { CellPosition, Notice, SelectionRange } from './types'
@@ -12,6 +12,11 @@ type UseSpreadsheetState = {
   yamlBuffer: string
   setYamlBuffer: React.Dispatch<React.SetStateAction<string>>
   tableYaml: string
+  sheets: TableSheet[]
+  activeSheetIndex: number
+  setActiveSheetIndex: React.Dispatch<React.SetStateAction<number>>
+  handleSelectSheet: (_index: number) => void
+  currentSheetName: string
   rows: TableRow[]
   columns: string[]
   newColumnName: string
@@ -19,6 +24,8 @@ type UseSpreadsheetState = {
   handleAddRow: () => void
   handleAddColumn: () => void
   handleDeleteRow: (_rowIndex: number) => void
+  handleAddSheet: () => void
+  handleRenameSheet: (_name: string) => void
   moveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   applyYamlBuffer: () => void
   handleFileUpload: (_event: React.ChangeEvent<HTMLInputElement>) => void
@@ -27,6 +34,7 @@ type UseSpreadsheetState = {
   bulkValue: string
   setBulkValue: React.Dispatch<React.SetStateAction<string>>
   applyBulkInput: () => void
+  handleRowNumberClick: (_rowIndex: number, _extend: boolean) => void
   selection: SelectionRange | null
   activeRange: SelectionRange | null
   selectionSummary: string
@@ -52,15 +60,27 @@ type UseSpreadsheetState = {
   isFillDragActive: boolean
   editingCell: CellPosition | null
   handleCellEditorBlur: () => void
-  handleCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLInputElement>) => void
+  handleCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }
 
-const DEFAULT_ROWS: TableRow[] = [
-  { feature: 'テーブル編集', owner: 'Alice', status: 'READY', effort: '3' },
-  { feature: 'YAML Export', owner: 'Bob', status: 'REVIEW', effort: '5' },
-  { feature: 'CSVインポート', owner: 'Carol', status: 'BACKLOG', effort: '2' },
-  { feature: '権限管理', owner: 'Dave', status: 'DOING', effort: '8' },
-  { feature: '操作ガイド作成', owner: 'Eve', status: 'DONE', effort: '1' },
+const DEFAULT_SHEETS: TableSheet[] = [
+  {
+    name: 'バックログ',
+    rows: [
+      { feature: 'テーブル編集', owner: 'Alice', status: 'READY', effort: '3' },
+      { feature: 'YAML Export', owner: 'Bob', status: 'REVIEW', effort: '5' },
+      { feature: 'CSVインポート', owner: 'Carol', status: 'BACKLOG', effort: '2' },
+      { feature: '権限管理', owner: 'Dave', status: 'DOING', effort: '8' },
+      { feature: '操作ガイド作成', owner: 'Eve', status: 'DONE', effort: '1' },
+    ],
+  },
+  {
+    name: '完了済み',
+    rows: [
+      { feature: 'リリースノート作成', owner: 'Fiona', status: 'DONE', effort: '2' },
+      { feature: 'QAレビュー', owner: 'George', status: 'DONE', effort: '4' },
+    ],
+  },
 ]
 
 // Function Header: Provides high-level spreadsheet state by composing specialized hooks.
@@ -71,6 +91,9 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     yamlBuffer,
     setYamlBuffer,
     tableYaml,
+    sheets,
+    activeSheetIndex,
+    setActiveSheetIndex,
     rows,
     columns,
     setColumnOrder,
@@ -80,13 +103,15 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleAddRow,
     handleAddColumn,
     handleDeleteRow,
+    handleAddSheet,
+    handleRenameSheet,
     moveColumn,
     applyYamlBuffer,
     handleFileUpload,
     handleDownloadYaml,
     handleCopyYaml,
     handleCellChange,
-  } = useSpreadsheetDataController(DEFAULT_ROWS)
+  } = useSpreadsheetDataController(DEFAULT_SHEETS)
 
   const [bulkValue, setBulkValue] = React.useState<string>('')
 
@@ -109,6 +134,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handlePaste,
     handleCellEditorBlur,
     handleCellEditorKeyDown,
+    handleRowNumberClick,
   } = useSpreadsheetInteractionController({
     columns,
     rows,
@@ -123,6 +149,14 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     yamlBuffer,
     setYamlBuffer,
     tableYaml,
+  sheets,
+  activeSheetIndex,
+  setActiveSheetIndex,
+    handleSelectSheet: (index: number) => {
+      clearSelection()
+      setActiveSheetIndex(index)
+    },
+  currentSheetName: sheets[activeSheetIndex]?.name ?? '',
     rows,
     columns,
     newColumnName,
@@ -130,6 +164,8 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleAddRow,
     handleAddColumn,
     handleDeleteRow,
+  handleAddSheet,
+  handleRenameSheet,
     moveColumn,
     applyYamlBuffer,
     handleFileUpload,
@@ -138,6 +174,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     bulkValue,
     setBulkValue,
     applyBulkInput,
+    handleRowNumberClick,
     selection,
     activeRange,
     fillPreview,

@@ -2,12 +2,17 @@
 import React from 'react'
 import {
   deriveColumns,
-  parseYamlTable,
-  stringifyYamlTable,
+  parseYamlWorkbook,
+  stringifyYamlWorkbook,
   type TableRow,
+  type TableSheet,
 } from '../../../utils/yamlTable'
 import type { Notice } from '../types'
 import { createEmptyRow } from '../utils/spreadsheetTableUtils'
+
+type SheetState = TableSheet & {
+  columnOrder: string[]
+}
 
 type UseSpreadsheetDataController = {
   notice: Notice | null
@@ -15,6 +20,9 @@ type UseSpreadsheetDataController = {
   yamlBuffer: string
   setYamlBuffer: React.Dispatch<React.SetStateAction<string>>
   tableYaml: string
+  sheets: TableSheet[]
+  activeSheetIndex: number
+  setActiveSheetIndex: React.Dispatch<React.SetStateAction<number>>
   rows: TableRow[]
   columns: string[]
   columnOrder: string[]
@@ -25,6 +33,8 @@ type UseSpreadsheetDataController = {
   handleAddRow: () => void
   handleAddColumn: () => void
   handleDeleteRow: (_rowIndex: number) => void
+  handleAddSheet: () => void
+  handleRenameSheet: (_name: string) => void
   moveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   applyYamlBuffer: () => void
   handleFileUpload: (_event: React.ChangeEvent<HTMLInputElement>) => void
@@ -33,36 +43,78 @@ type UseSpreadsheetDataController = {
   handleCellChange: (_rowIndex: number, _columnKey: string, _value: string) => void
 }
 
-// Function Header: Manages rows/columns/YAML state and exposes primary data mutations.
-export const useSpreadsheetDataController = (initialRows: TableRow[]): UseSpreadsheetDataController => {
-  const [yamlBuffer, setYamlBuffer] = React.useState<string>(() => stringifyYamlTable(initialRows))
-  const [rows, setRows] = React.useState<TableRow[]>(() => initialRows.map((row) => ({ ...row })))
-  const [columnOrder, setColumnOrder] = React.useState<string[]>(() => deriveColumns(initialRows))
+// Function Header: Manages sheets/rows/YAML state and exposes primary data mutations.
+export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSpreadsheetDataController => {
+  const baseSheets = React.useMemo(() => createSheetState(initialSheets), [initialSheets])
+  const [sheets, setSheets] = React.useState<SheetState[]>(baseSheets)
+  const [activeSheetIndex, setActiveSheetIndex] = React.useState<number>(0)
+  const [yamlBuffer, setYamlBuffer] = React.useState<string>(() =>
+    stringifyYamlWorkbook(baseSheets.map(stripSheetState)),
+  )
   const [notice, setNotice] = React.useState<Notice | null>(null)
   const [newColumnName, setNewColumnName] = React.useState<string>('')
 
+  const activeSheet = sheets[activeSheetIndex] ?? sheets[0] ?? {
+    name: 'Sheet 1',
+    rows: [],
+    columnOrder: [],
+  }
+  const rows = activeSheet.rows
   const derivedColumns = React.useMemo(() => deriveColumns(rows), [rows])
+
   React.useEffect(() => {
-    setColumnOrder((current) => {
-      const filtered = current.filter((column) => derivedColumns.includes(column))
-      const appended = derivedColumns.filter((column) => !filtered.includes(column))
-      if (appended.length === 0 && filtered.length === current.length) {
+    setSheets((current) => {
+      if (!current.length) {
         return current
       }
-      return [...filtered, ...appended]
+      const targetIndex = Math.min(activeSheetIndex, current.length - 1)
+      const targetSheet = current[targetIndex]
+      const nextOrder = syncColumnOrder(targetSheet.columnOrder, derivedColumns)
+      if (arraysEqual(nextOrder, targetSheet.columnOrder)) {
+        return current
+      }
+      const next = [...current]
+      next[targetIndex] = { ...targetSheet, columnOrder: nextOrder }
+      return next
     })
-  }, [derivedColumns])
+  }, [activeSheetIndex, derivedColumns])
 
+  const columnOrder = activeSheet.columnOrder.length
+    ? activeSheet.columnOrder
+    : syncColumnOrder([], derivedColumns)
   const columns = columnOrder.length ? columnOrder : derivedColumns
-  const tableYaml = React.useMemo(() => stringifyYamlTable(rows), [rows])
+  const tableYaml = React.useMemo(
+    () => stringifyYamlWorkbook(sheets.map(stripSheetState)),
+    [sheets],
+  )
+
+  const rebuildYamlBuffer = React.useCallback((nextSheets: SheetState[]) => {
+    setYamlBuffer(stringifyYamlWorkbook(nextSheets.map(stripSheetState)))
+  }, [])
 
   const updateRows = React.useCallback(
     (nextRows: TableRow[]) => {
-      setRows(nextRows)
-      setYamlBuffer(stringifyYamlTable(nextRows))
-      setNotice(null)
+      setSheets((current) => {
+        if (!current.length) {
+          return current
+        }
+        const targetIndex = Math.min(activeSheetIndex, current.length - 1)
+        const updatedRows = nextRows.map((row) => ({ ...row }))
+        const next = current.map((sheet, index) =>
+          index === targetIndex
+            ? {
+                ...sheet,
+                rows: updatedRows,
+                columnOrder: syncColumnOrder(sheet.columnOrder, deriveColumns(updatedRows)),
+              }
+            : sheet,
+        )
+        rebuildYamlBuffer(next)
+        setNotice(null)
+        return next
+      })
     },
-    [],
+    [activeSheetIndex, rebuildYamlBuffer],
   )
 
   const handleAddRow = React.useCallback((): void => {
@@ -91,7 +143,6 @@ export const useSpreadsheetDataController = (initialRows: TableRow[]): UseSpread
           }))
 
     updateRows(nextRows)
-    setColumnOrder((current) => [...current, trimmed])
     setNewColumnName('')
     setNotice({ text: `列「${trimmed}」を追加しました。`, tone: 'success' })
   }, [columns, newColumnName, rows, updateRows])
@@ -104,37 +155,122 @@ export const useSpreadsheetDataController = (initialRows: TableRow[]): UseSpread
     [rows, updateRows],
   )
 
+  const handleAddSheet = React.useCallback((): void => {
+    setSheets((current) => {
+      const sheetName = generateSheetName(current)
+      const next: SheetState[] = [
+        ...current,
+        {
+          name: sheetName,
+          rows: [],
+          columnOrder: [],
+        },
+      ]
+      rebuildYamlBuffer(next)
+      setNotice({ text: `シート「${sheetName}」を追加しました。`, tone: 'success' })
+      setActiveSheetIndex(next.length - 1)
+      return next
+    })
+  }, [rebuildYamlBuffer])
+
+  const handleRenameSheet = React.useCallback(
+    (name: string): void => {
+      const trimmed = name.trim()
+      if (!trimmed) {
+        setNotice({ text: 'シート名を入力してください。', tone: 'error' })
+        return
+      }
+      setSheets((current) => {
+        if (!current.length) {
+          return current
+        }
+        const targetIndex = Math.min(activeSheetIndex, current.length - 1)
+        const next = current.map((sheet, index) =>
+          index === targetIndex
+            ? {
+                ...sheet,
+                name: trimmed,
+              }
+            : sheet,
+        )
+        rebuildYamlBuffer(next)
+        setNotice({ text: `シート名を「${trimmed}」に更新しました。`, tone: 'success' })
+        return next
+      })
+    },
+    [activeSheetIndex, rebuildYamlBuffer])
+
   const moveColumn = React.useCallback(
     (columnKey: string, direction: 'left' | 'right'): void => {
-      setColumnOrder((current) => {
-        const index = current.indexOf(columnKey)
+      setSheets((current) => {
+        if (!current.length) {
+          return current
+        }
+        const targetIndex = Math.min(activeSheetIndex, current.length - 1)
+        const targetSheet = current[targetIndex]
+        const index = targetSheet.columnOrder.indexOf(columnKey)
         if (index === -1) {
           return current
         }
-        const targetIndex = direction === 'left' ? index - 1 : index + 1
-        if (targetIndex < 0 || targetIndex >= current.length) {
+        const delta = direction === 'left' ? -1 : 1
+        const swapIndex = index + delta
+        if (swapIndex < 0 || swapIndex >= targetSheet.columnOrder.length) {
           return current
         }
-        const nextOrder = [...current]
+        const nextOrder = [...targetSheet.columnOrder]
         const [moved] = nextOrder.splice(index, 1)
-        nextOrder.splice(targetIndex, 0, moved)
+        nextOrder.splice(swapIndex, 0, moved)
+        const next = current.map((sheet, sheetIndex) =>
+          sheetIndex === targetIndex ? { ...sheet, columnOrder: nextOrder } : sheet,
+        )
         setNotice({ text: `列「${columnKey}」を移動しました。`, tone: 'success' })
-        return nextOrder
+        return next
       })
     },
-    [],
+    [activeSheetIndex],
+  )
+
+  const setColumnOrder = React.useCallback(
+    (updater: React.SetStateAction<string[]>) => {
+      setSheets((current) => {
+        if (!current.length) {
+          return current
+        }
+        const targetIndex = Math.min(activeSheetIndex, current.length - 1)
+        const currentOrder = current[targetIndex].columnOrder
+        const nextOrder =
+          typeof updater === 'function' ? (updater as (_order: string[]) => string[])(currentOrder) : updater
+        const next = current.map((sheet, index) =>
+          index === targetIndex
+            ? {
+                ...sheet,
+                columnOrder: nextOrder,
+              }
+            : sheet,
+        )
+        return next
+      })
+    },
+    [activeSheetIndex],
   )
 
   const applyYamlBuffer = React.useCallback((): void => {
     try {
-      const parsed = parseYamlTable(yamlBuffer)
-      updateRows(parsed)
+      const parsed = parseYamlWorkbook(yamlBuffer)
+      const next = createSheetState(parsed)
+      setSheets(next)
+      rebuildYamlBuffer(next)
+      setActiveSheetIndex((prev) => {
+        if (!next.length) {
+          return 0
+        }
+        return Math.min(prev, next.length - 1)
+      })
+      setNotice({ text: 'YAMLをテーブルに反映しました。', tone: 'success' })
     } catch (error) {
       setNotice({ text: (error as Error).message, tone: 'error' })
-      return
     }
-    setNotice({ text: 'YAMLをテーブルに反映しました。', tone: 'success' })
-  }, [yamlBuffer, updateRows])
+  }, [rebuildYamlBuffer, yamlBuffer])
 
   const handleFileUpload = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -148,8 +284,15 @@ export const useSpreadsheetDataController = (initialRows: TableRow[]): UseSpread
         const content = String(reader.result ?? '')
         setYamlBuffer(content)
         try {
-          const parsed = parseYamlTable(content)
-          updateRows(parsed)
+          const parsed = createSheetState(parseYamlWorkbook(content))
+          setSheets(parsed)
+          rebuildYamlBuffer(parsed)
+          setActiveSheetIndex((prev) => {
+            if (!parsed.length) {
+              return 0
+            }
+            return Math.min(prev, parsed.length - 1)
+          })
           setNotice({ text: 'ファイルを読み込みました。', tone: 'success' })
         } catch (error) {
           setNotice({
@@ -161,7 +304,7 @@ export const useSpreadsheetDataController = (initialRows: TableRow[]): UseSpread
       reader.readAsText(file)
       event.target.value = ''
     },
-    [updateRows],
+    [rebuildYamlBuffer],
   )
 
   const handleDownloadYaml = React.useCallback((): void => {
@@ -203,6 +346,9 @@ export const useSpreadsheetDataController = (initialRows: TableRow[]): UseSpread
     yamlBuffer,
     setYamlBuffer,
     tableYaml,
+    sheets: sheets.map(stripSheetState),
+    activeSheetIndex,
+    setActiveSheetIndex,
     rows,
     columns,
     columnOrder,
@@ -213,6 +359,8 @@ export const useSpreadsheetDataController = (initialRows: TableRow[]): UseSpread
     handleAddRow,
     handleAddColumn,
     handleDeleteRow,
+    handleAddSheet,
+    handleRenameSheet,
     moveColumn,
     applyYamlBuffer,
     handleFileUpload,
@@ -220,4 +368,51 @@ export const useSpreadsheetDataController = (initialRows: TableRow[]): UseSpread
     handleCopyYaml,
     handleCellChange,
   }
+}
+
+function createSheetState(sheets: TableSheet[]): SheetState[] {
+  const safeSheets = sheets.length
+    ? sheets
+    : [
+        {
+          name: 'Sheet 1',
+          rows: [],
+        },
+      ]
+  return safeSheets.map((sheet) => {
+    const rows = sheet.rows.map((row) => ({ ...row }))
+    return {
+      name: sheet.name,
+      rows,
+      columnOrder: deriveColumns(rows),
+    }
+  })
+}
+
+function stripSheetState(sheet: SheetState): TableSheet {
+  return { name: sheet.name, rows: sheet.rows }
+}
+
+function syncColumnOrder(currentOrder: string[], derivedColumns: string[]): string[] {
+  const filtered = currentOrder.filter((column) => derivedColumns.includes(column))
+  const appended = derivedColumns.filter((column) => !filtered.includes(column))
+  return [...filtered, ...appended]
+}
+
+function generateSheetName(sheets: SheetState[]): string {
+  const existing = new Set(sheets.map((sheet) => sheet.name))
+  let index = sheets.length + 1
+  let candidate = `Sheet ${index}`
+  while (existing.has(candidate)) {
+    index += 1
+    candidate = `Sheet ${index}`
+  }
+  return candidate
+}
+
+function arraysEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) {
+    return false
+  }
+  return a.every((value, index) => value === b[index])
 }

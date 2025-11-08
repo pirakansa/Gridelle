@@ -9,6 +9,12 @@ import {
 
 type Props = {
   notice: { text: string; tone: 'error' | 'success' } | null
+  sheetNames: string[]
+  activeSheetIndex: number
+  onSelectSheet: (_index: number) => void
+  currentSheetName: string
+  onRenameSheet: (_name: string) => void
+  onAddSheet: () => void
   newColumnName: string
   onColumnNameChange: React.Dispatch<React.SetStateAction<string>>
   onAddRow: () => void
@@ -24,6 +30,12 @@ type Props = {
 
 // Function Header: Renders table-level actions and wraps the spreadsheet table children.
 export default function TableEditorPanel({
+  sheetNames,
+  activeSheetIndex,
+  onSelectSheet,
+  currentSheetName,
+  onRenameSheet,
+  onAddSheet,
   newColumnName,
   onColumnNameChange,
   onAddRow,
@@ -37,9 +49,75 @@ export default function TableEditorPanel({
   children,
   notice,
 }: Props): React.ReactElement {
+  const [sheetNameDraft, setSheetNameDraft] = React.useState<string>(currentSheetName)
+
+  React.useEffect(() => {
+    setSheetNameDraft(currentSheetName)
+  }, [currentSheetName])
+
+  const commitSheetName = React.useCallback(() => {
+    const trimmed = sheetNameDraft.trim()
+    if (!trimmed) {
+      onRenameSheet(sheetNameDraft)
+      setSheetNameDraft(currentSheetName)
+      return
+    }
+    if (trimmed !== currentSheetName) {
+      onRenameSheet(trimmed)
+    }
+  }, [sheetNameDraft, currentSheetName, onRenameSheet])
+
   return (
     <section className="flex flex-col gap-4">
       <div className={layoutTheme.card}>
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <label htmlFor="sheet-select" className="font-medium text-slate-700">
+              シート
+            </label>
+            <select
+              id="sheet-select"
+              value={activeSheetIndex}
+              onChange={(event) => onSelectSheet(Number(event.target.value))}
+              className="rounded border border-slate-200 px-2 py-1 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              data-testid="sheet-select"
+            >
+              {sheetNames.map((name, index) => (
+                <option key={`${name}-${index}`} value={index}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className={ghostButtonClass}
+              onClick={onAddSheet}
+              data-testid="add-sheet-button"
+            >
+              シートを追加
+            </button>
+          </div>
+          <div className="flex flex-1 items-center gap-2">
+            <label htmlFor="sheet-name" className="text-sm text-slate-600">
+              シート名
+            </label>
+            <input
+              id="sheet-name"
+              type="text"
+              value={sheetNameDraft}
+              onChange={(event) => setSheetNameDraft(event.target.value)}
+              onBlur={commitSheetName}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  commitSheetName()
+                }
+              }}
+              className="w-full max-w-xs rounded border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              data-testid="sheet-name-input"
+            />
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-4">
           <div>
             <h2 className={layoutTheme.sectionTitle}>テーブル編集</h2>
