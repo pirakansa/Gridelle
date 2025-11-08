@@ -6,29 +6,24 @@ import TableEditorPanel from '../../components/block/TableEditorPanel'
 import SpreadsheetTable from '../../components/block/SpreadsheetTable'
 import MenuHeader from '../../components/block/MenuHeader'
 import YamlPanel from '../../components/block/YamlPanel'
-import OutputPanel from '../../components/block/OutputPanel'
 import SettingsOverlay from '../../components/block/SettingsOverlay'
 
 // Function Header: Composes the top page using modular sub-components wired to state hooks.
 export default function App(): React.ReactElement {
   const spreadsheet = useSpreadsheetState()
-  const [activePanel, setActivePanel] = React.useState<'input' | 'output' | null>(null)
+  const [isYamlInputOpen, setYamlInputOpen] = React.useState<boolean>(false)
 
   const openYamlInput = React.useCallback(() => {
-    setActivePanel('input')
-  }, [])
-
-  const openYamlOutput = React.useCallback(() => {
-    setActivePanel('output')
+    setYamlInputOpen(true)
   }, [])
 
   const closePanel = React.useCallback(() => {
-    setActivePanel(null)
+    setYamlInputOpen(false)
   }, [])
 
   return (
     <div className={layoutTheme.pageShell}>
-      <MenuHeader onYamlInputClick={openYamlInput} onYamlOutputClick={openYamlOutput} />
+      <MenuHeader onYamlInputClick={openYamlInput} />
       <main className={layoutTheme.contentWrapper}>
         <TableEditorPanel
           notice={spreadsheet.notice}
@@ -74,7 +69,7 @@ export default function App(): React.ReactElement {
           />
         </TableEditorPanel>
       </main>
-      {activePanel === 'input' && (
+      {isYamlInputOpen && (
         <SettingsOverlay
           title="YAML入力 / プレビュー"
           description="YAMLを編集してテーブルへ反映できます。"
@@ -90,16 +85,6 @@ export default function App(): React.ReactElement {
             onDownload={spreadsheet.handleDownloadYaml}
             onCopy={spreadsheet.handleCopyYaml}
           />
-        </SettingsOverlay>
-      )}
-      {activePanel === 'output' && (
-        <SettingsOverlay
-          title="YAML出力"
-          description="現在のテーブル状態をYAMLで確認できます。"
-          onClose={closePanel}
-          panelId="yaml-output"
-        >
-          <OutputPanel tableYaml={spreadsheet.tableYaml} />
         </SettingsOverlay>
       )}
     </div>
