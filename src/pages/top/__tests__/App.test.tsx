@@ -27,6 +27,15 @@ describe('App', () => {
     expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('YAML Export')
   })
 
+  it('各行に行番号を表示する', () => {
+    render(<App />)
+    const rowNumbers = [
+      screen.getByTestId('row-number-0').textContent,
+      screen.getByTestId('row-number-1').textContent,
+    ]
+    expect(rowNumbers).toEqual(['1', '2'])
+  })
+
   it('YAML入力を反映するとテーブル内容が更新される', async () => {
     const user = userEvent.setup()
     render(<App />)

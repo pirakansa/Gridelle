@@ -23,6 +23,14 @@ body {
   @apply px-0 py-0;
 }
 
+.row-number-header {
+  @apply w-12 text-center text-xs font-semibold text-slate-500;
+}
+
+.row-number-cell {
+  @apply bg-slate-50 px-2 py-2 text-center text-xs font-semibold text-slate-500;
+}
+
 .selected-cell {
   @apply bg-blue-50/80 ring-1 ring-inset ring-blue-200;
 }

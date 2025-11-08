@@ -76,6 +76,9 @@ export default function SpreadsheetTable({
         <table className="spreadsheet-table">
           <thead>
             <tr>
+              <th className="row-number-header" aria-label="行番号">
+                #
+              </th>
               {columns.map((column, columnIndex) => (
                 <th key={column} data-testid="column-header">
                   <div className="flex items-center gap-2">
@@ -97,6 +100,13 @@ export default function SpreadsheetTable({
           <tbody>
             {rows.map((row, rowIndex) => (
               <tr key={`row-${rowIndex}`} className="border-t border-slate-200">
+                <th
+                  scope="row"
+                  className="row-number-cell"
+                  data-testid={`row-number-${rowIndex}`}
+                >
+                  {rowIndex + 1}
+                </th>
                 {columns.map((column, columnIndex) => {
                   const className = deriveCellClassName({
                     activeRange,
