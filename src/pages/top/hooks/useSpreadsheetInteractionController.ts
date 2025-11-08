@@ -26,7 +26,6 @@ type UseSpreadsheetInteractionController = {
   editingCell: CellPosition | null
   clearSelection: () => void
   applyBulkInput: () => void
-  handleCopyCell: (_value: string) => Promise<void>
   handleRowNumberClick: (_rowIndex: number, _extend: boolean) => void
   handleCellPointerDown: (
     _event: React.PointerEvent<HTMLTableCellElement>,
@@ -237,6 +236,18 @@ export const useSpreadsheetInteractionController = ({
     [beginSelectionWithReset, setEditingCell, setIsSelecting],
   )
 
+  const { handleCopySelection, handlePaste } = useClipboardHandlers({
+    columns,
+    rows,
+    selection,
+    setColumnOrder,
+    updateRows,
+    setNotice,
+    setSelection,
+    setAnchorCell,
+    getSelectionAnchor,
+  })
+
   const handleTableKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>): void => {
       if (event.key === 'Escape') {
@@ -247,25 +258,22 @@ export const useSpreadsheetInteractionController = ({
         clearSelection()
         return
       }
+      if ((event.key === 'c' || event.key === 'C') && (event.ctrlKey || event.metaKey)) {
+        if (editingCell) {
+          return
+        }
+        event.preventDefault()
+        void handleCopySelection()
+        return
+      }
       if (event.key === 'Enter' && !editingCell) {
         event.preventDefault()
         const target = getSelectionAnchor()
         setEditingCell(target)
       }
     },
-    [clearSelection, editingCell, getSelectionAnchor, setEditingCell],
+    [clearSelection, editingCell, getSelectionAnchor, handleCopySelection, setEditingCell],
   )
-
-  const { handleCopyCell, handlePaste } = useClipboardHandlers({
-    columns,
-    rows,
-    setColumnOrder,
-    updateRows,
-    setNotice,
-    setSelection,
-    setAnchorCell,
-    getSelectionAnchor,
-  })
 
   const { handleCellEditorBlur, handleCellEditorKeyDown } = useCellEditingHandlers({
     editingCell,
@@ -287,7 +295,6 @@ export const useSpreadsheetInteractionController = ({
     clearSelection,
     applyBulkInput,
     handleRowNumberClick,
-    handleCopyCell,
     handleCellPointerDown,
     handleCellPointerEnter,
     handleCellClick,

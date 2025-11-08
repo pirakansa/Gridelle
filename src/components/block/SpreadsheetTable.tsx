@@ -3,10 +3,7 @@ import React from 'react'
 import type { CellPosition, SelectionRange } from '../../pages/top/useSpreadsheetState'
 import type { TableRow } from '../../utils/yamlTable'
 import { layoutTheme } from '../../utils/Theme'
-import {
-  columnIconButtonClass,
-  copyCellButtonClass,
-} from '../constants'
+import { columnIconButtonClass } from '../constants'
 
 type Props = {
   rows: TableRow[]
@@ -32,7 +29,6 @@ type Props = {
   onTableKeyDown: (_event: React.KeyboardEvent<HTMLDivElement>) => void
   onStartFillDrag: (_event: React.PointerEvent<HTMLButtonElement>) => void
   onCellChange: (_rowIndex: number, _column: string, _value: string) => void
-  onCopyCell: (_value: string) => Promise<void>
   onPaste: (_event: React.ClipboardEvent<HTMLDivElement>) => void
   onMoveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   onDeleteRow: (_rowIndex: number) => void
@@ -57,7 +53,6 @@ export default function SpreadsheetTable({
   onTableKeyDown,
   onStartFillDrag,
   onCellChange,
-  onCopyCell,
   onPaste,
   onMoveColumn,
   onDeleteRow,
@@ -175,16 +170,6 @@ export default function SpreadsheetTable({
                             {row[column] ?? ''}
                           </div>
                         )}
-                        <button
-                          type="button"
-                          className={copyCellButtonClass}
-                          aria-label={`行${rowIndex + 1}列${column}をコピー`}
-                          data-testid={`copy-${rowIndex}-${column}`}
-                          onClick={() => onCopyCell(row[column] ?? '')}
-                          onPointerDown={(event) => event.stopPropagation()}
-                        >
-                          ⧉
-                        </button>
                         {selection &&
                           !isFillDragActive &&
                           rowIndex === selection.endRow &&

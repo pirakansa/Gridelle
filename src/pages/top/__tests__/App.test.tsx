@@ -126,7 +126,11 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByTestId('copy-0-feature'))
+    const targetCell = screen.getByTestId('cell-box-0-feature')
+    await user.click(targetCell)
+    const shell = screen.getByTestId('interactive-table-shell')
+    shell.focus()
+    await user.keyboard('{Control>}c{/Control}')
 
     expect(await screen.findByText('セルの値をコピーしました。')).toBeInTheDocument()
   })

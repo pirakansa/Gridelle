@@ -9,8 +9,5 @@ export const ghostButtonClass =
 export const columnIconButtonClass =
   'rounded-full border border-slate-200 p-1 text-[10px] text-slate-500 transition hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent'
 
-export const copyCellButtonClass =
-  'inline-flex items-center rounded-full border border-transparent px-2 text-xs text-slate-400 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-200'
-
 export const subtleButtonClass =
   'rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 disabled:opacity-50'
