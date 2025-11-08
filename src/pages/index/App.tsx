@@ -9,12 +9,20 @@ import logoUrl from '../../assets/logo.jpg'
  */
 const App: React.FC = () => (
   <main className={styles.root}>
-    <div
-      className={styles.logoContainer}
-      role="img"
-      aria-label="Gridelle logo"
-      style={{ background: `url(${logoUrl}) center / cover no-repeat` }}
-    />
+    <a
+      className={styles.logoLink}
+      href="/top.html"
+      aria-label="Gridelleトップページへ移動"
+    >
+      <img
+        className={styles.logoImage}
+        src={logoUrl}
+        alt="Gridelle ロゴ"
+        width={360}
+        height={360}
+        loading="lazy"
+      />
+    </a>
   </main>
 )
 
