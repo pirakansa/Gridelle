@@ -40,35 +40,9 @@ describe('App', () => {
     expect(rowNumbers).toEqual(['1', '2', '3', '4', '5'])
   })
 
-  it('YAML入力を反映するとテーブル内容が更新される', async () => {
-    const user = userEvent.setup()
+  it('メイン画面にYAML入力エリアを表示しない', () => {
     render(<App />)
-
-    const textarea = screen.getByTestId('yaml-textarea') as HTMLTextAreaElement
-    await user.clear(textarea)
-    await user.type(
-      textarea,
-      '- feature: 新規カード{enter}  owner: Carol{enter}  status: DONE{enter}  effort: 2{enter}',
-    )
-
-    await user.click(screen.getByRole('button', { name: 'YAMLを反映' }))
-
-    expect(await screen.findByTestId('cell-display-0-feature')).toHaveTextContent('新規カード')
-    expect(screen.getByTestId('cell-display-0-owner')).toHaveTextContent('Carol')
-  })
-
-  it('セルを編集するとYAMLテキストにも反映される', async () => {
-    render(<App />)
-
-    const editableBox = screen.getByTestId('cell-box-0-feature')
-    fireEvent.doubleClick(editableBox)
-    const targetCell = (await screen.findByTestId('cell-0-feature')) as HTMLInputElement
-    fireEvent.change(targetCell, { target: { value: 'API Design' } })
-
-    const textarea = screen.getByTestId('yaml-textarea') as HTMLTextAreaElement
-    await waitFor(() => {
-      expect(textarea.value).toContain('API Design')
-    })
+    expect(screen.queryByTestId('yaml-textarea')).not.toBeInTheDocument()
   })
 
   it('列の並べ替えができる', async () => {

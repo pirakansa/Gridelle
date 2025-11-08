@@ -8,6 +8,7 @@ import {
 } from '../constants'
 
 type Props = {
+  notice: { text: string; tone: 'error' | 'success' } | null
   newColumnName: string
   onColumnNameChange: React.Dispatch<React.SetStateAction<string>>
   onAddRow: () => void
@@ -34,6 +35,7 @@ export default function TableEditorPanel({
   onBulkValueChange,
   onBulkApply,
   children,
+  notice,
 }: Props): React.ReactElement {
   return (
     <section className="flex flex-col gap-4">
@@ -61,6 +63,15 @@ export default function TableEditorPanel({
             </div>
           </div>
         </div>
+        {notice && (
+          <p
+            className={`mt-3 text-sm ${notice.tone === 'error' ? 'text-red-600' : 'text-emerald-600'}`}
+            role={notice.tone === 'error' ? 'alert' : 'status'}
+            data-testid="table-notice"
+          >
+            {notice.text}
+          </p>
+        )}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
           <p data-testid="selection-summary" className="font-medium text-slate-700">
             {selectionSummary}

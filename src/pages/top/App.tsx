@@ -3,7 +3,6 @@ import React from 'react'
 import { layoutTheme } from '../../utils/Theme'
 import { useSpreadsheetState } from './useSpreadsheetState'
 import HeroSection from '../../components/block/HeroSection'
-import YamlPanel from '../../components/block/YamlPanel'
 import TableEditorPanel from '../../components/block/TableEditorPanel'
 import SpreadsheetTable from '../../components/block/SpreadsheetTable'
 import MenuHeader from '../../components/block/MenuHeader'
@@ -17,16 +16,8 @@ export default function App(): React.ReactElement {
       <MenuHeader />
       <main className={layoutTheme.contentWrapper}>
         <HeroSection />
-        <YamlPanel
-          yamlBuffer={spreadsheet.yamlBuffer}
-          notice={spreadsheet.notice}
-          onChange={spreadsheet.setYamlBuffer}
-          onApply={spreadsheet.applyYamlBuffer}
-          onFileUpload={spreadsheet.handleFileUpload}
-          onDownload={spreadsheet.handleDownloadYaml}
-          onCopy={spreadsheet.handleCopyYaml}
-        />
         <TableEditorPanel
+          notice={spreadsheet.notice}
           newColumnName={spreadsheet.newColumnName}
           onColumnNameChange={spreadsheet.setNewColumnName}
           onAddRow={spreadsheet.handleAddRow}
