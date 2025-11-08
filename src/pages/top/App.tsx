@@ -6,7 +6,6 @@ import HeroSection from '../../components/block/HeroSection'
 import YamlPanel from '../../components/block/YamlPanel'
 import TableEditorPanel from '../../components/block/TableEditorPanel'
 import SpreadsheetTable from '../../components/block/SpreadsheetTable'
-import OutputPanel from '../../components/block/OutputPanel'
 
 // Function Header: Composes the top page using modular sub-components wired to state hooks.
 export default function App(): React.ReactElement {
@@ -60,7 +59,6 @@ export default function App(): React.ReactElement {
             onCellEditorKeyDown={spreadsheet.handleCellEditorKeyDown}
           />
         </TableEditorPanel>
-        <OutputPanel tableYaml={spreadsheet.tableYaml} />
       </main>
     </div>
   )

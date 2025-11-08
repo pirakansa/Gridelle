@@ -73,7 +73,6 @@ export function useSpreadsheetState(): {
   notice: Notice | null
   yamlBuffer: string
   setYamlBuffer: React.Dispatch<React.SetStateAction<string>>
-  tableYaml: string
   rows: TableRow[]
   columns: string[]
   newColumnName: string
@@ -637,7 +636,6 @@ export function useSpreadsheetState(): {
     notice,
     yamlBuffer,
     setYamlBuffer,
-    tableYaml,
     rows,
     columns,
     newColumnName,
