@@ -44,9 +44,11 @@ export default function App(): React.ReactElement {
             selection={spreadsheet.selection}
             fillPreview={spreadsheet.fillPreview}
             isFillDragActive={spreadsheet.isFillDragActive}
+            editingCell={spreadsheet.editingCell}
             onPointerDown={spreadsheet.handleCellPointerDown}
             onPointerEnter={spreadsheet.handleCellPointerEnter}
             onCellClick={spreadsheet.handleCellClick}
+            onCellDoubleClick={spreadsheet.handleCellDoubleClick}
             onTableKeyDown={spreadsheet.handleTableKeyDown}
             onStartFillDrag={spreadsheet.startFillDrag}
             onCellChange={spreadsheet.handleCellChange}
@@ -54,6 +56,8 @@ export default function App(): React.ReactElement {
             onPaste={spreadsheet.handlePaste}
             onMoveColumn={spreadsheet.moveColumn}
             onDeleteRow={spreadsheet.handleDeleteRow}
+            onCellEditorBlur={spreadsheet.handleCellEditorBlur}
+            onCellEditorKeyDown={spreadsheet.handleCellEditorKeyDown}
           />
         </TableEditorPanel>
         <OutputPanel tableYaml={spreadsheet.tableYaml} />

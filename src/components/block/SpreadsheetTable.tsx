@@ -1,6 +1,6 @@
 // File Header: Spreadsheet-like table rendering selection, fill, and editing interactions.
 import React from 'react'
-import type { SelectionRange } from '../../pages/top/useSpreadsheetState'
+import type { CellPosition, SelectionRange } from '../../pages/top/useSpreadsheetState'
 import type { TableRow } from '../../utils/yamlTable'
 import { layoutTheme } from '../../utils/Theme'
 import {
@@ -15,6 +15,7 @@ type Props = {
   selection: SelectionRange | null
   fillPreview: SelectionRange | null
   isFillDragActive: boolean
+  editingCell: CellPosition | null
   onPointerDown: (
     _event: React.PointerEvent<HTMLTableCellElement>,
     _rowIndex: number,
@@ -26,6 +27,7 @@ type Props = {
     _rowIndex: number,
     _columnIndex: number,
   ) => void
+  onCellDoubleClick: (_rowIndex: number, _columnIndex: number) => void
   onTableKeyDown: (_event: React.KeyboardEvent<HTMLDivElement>) => void
   onStartFillDrag: (_event: React.PointerEvent<HTMLButtonElement>) => void
   onCellChange: (_rowIndex: number, _column: string, _value: string) => void
@@ -33,6 +35,8 @@ type Props = {
   onPaste: (_event: React.ClipboardEvent<HTMLDivElement>) => void
   onMoveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   onDeleteRow: (_rowIndex: number) => void
+  onCellEditorBlur: () => void
+  onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLInputElement>) => void
 }
 
 // Function Header: Renders the spreadsheet grid complete with selection/fill affordances.
@@ -43,9 +47,11 @@ export default function SpreadsheetTable({
   selection,
   fillPreview,
   isFillDragActive,
+  editingCell,
   onPointerDown,
   onPointerEnter,
   onCellClick,
+  onCellDoubleClick,
   onTableKeyDown,
   onStartFillDrag,
   onCellChange,
@@ -53,6 +59,8 @@ export default function SpreadsheetTable({
   onPaste,
   onMoveColumn,
   onDeleteRow,
+  onCellEditorBlur,
+  onCellEditorKeyDown,
 }: Props): React.ReactElement {
   return (
     <div
@@ -97,6 +105,8 @@ export default function SpreadsheetTable({
                     rowIndex,
                     columnIndex,
                   })
+                  const isEditing =
+                    editingCell?.rowIndex === rowIndex && editingCell?.columnIndex === columnIndex
                   return (
                     <td
                       key={`${column}-${rowIndex}`}
@@ -110,16 +120,30 @@ export default function SpreadsheetTable({
                       onPointerDown={(event) => onPointerDown(event, rowIndex, columnIndex)}
                       onPointerEnter={() => onPointerEnter(rowIndex, columnIndex)}
                       onClick={(event) => onCellClick(event, rowIndex, columnIndex)}
+                      onDoubleClick={() => onCellDoubleClick(rowIndex, columnIndex)}
                     >
                       <div className="relative flex items-center gap-1 px-1">
-                        <input
-                          type="text"
-                          value={row[column] ?? ''}
-                          onChange={(event) => onCellChange(rowIndex, column, event.target.value)}
-                          data-testid={`cell-${rowIndex}-${column}`}
-                          className="w-full flex-1 border-none bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                          onPointerDown={(event) => event.stopPropagation()}
-                        />
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={row[column] ?? ''}
+                            onChange={(event) => onCellChange(rowIndex, column, event.target.value)}
+                            data-testid={`cell-${rowIndex}-${column}`}
+                            className="w-full flex-1 border-none bg-transparent px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            autoFocus
+                            onBlur={onCellEditorBlur}
+                            onKeyDown={onCellEditorKeyDown}
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onDoubleClick={(event) => event.stopPropagation()}
+                          />
+                        ) : (
+                          <div
+                            className="w-full flex-1 rounded px-2 py-2 text-left text-sm"
+                            data-testid={`cell-display-${rowIndex}-${column}`}
+                          >
+                            {row[column] ?? ''}
+                          </div>
+                        )}
                         <button
                           type="button"
                           className={copyCellButtonClass}

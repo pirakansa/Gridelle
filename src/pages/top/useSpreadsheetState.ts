@@ -102,12 +102,16 @@ export function useSpreadsheetState(): {
     _rowIndex: number,
     _columnIndex: number,
   ) => void
+  handleCellDoubleClick: (_rowIndex: number, _columnIndex: number) => void
   handleTableKeyDown: (_event: React.KeyboardEvent<HTMLDivElement>) => void
   startFillDrag: (_event: React.PointerEvent<HTMLButtonElement>) => void
   handleCellChange: (_rowIndex: number, _column: string, _value: string) => void
   handleCopyCell: (_value: string) => Promise<void>
   handlePaste: (_event: React.ClipboardEvent<HTMLDivElement>) => void
   isFillDragActive: boolean
+  editingCell: CellPosition | null
+  handleCellEditorBlur: () => void
+  handleCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLInputElement>) => void
 } {
   const [yamlBuffer, setYamlBuffer] = React.useState<string>(stringifyYamlTable(DEFAULT_ROWS))
   const [rows, setRows] = React.useState<TableRow[]>(() =>
@@ -122,6 +126,7 @@ export function useSpreadsheetState(): {
   const [bulkValue, setBulkValue] = React.useState<string>('')
   const [isFillDragActive, setIsFillDragActive] = React.useState<boolean>(false)
   const [fillPreview, setFillPreview] = React.useState<SelectionRange | null>(null)
+  const [editingCell, setEditingCell] = React.useState<CellPosition | null>(null)
 
   const derivedColumns = React.useMemo(() => deriveColumns(rows), [rows])
   React.useEffect(() => {
@@ -163,10 +168,12 @@ export function useSpreadsheetState(): {
     setIsSelecting(false)
     setIsFillDragActive(false)
     setFillPreview(null)
+    setEditingCell(null)
   }, [])
 
   const beginSelection = React.useCallback(
     (position: CellPosition, preserveAnchor = false) => {
+      setEditingCell(null)
       const baseAnchor = preserveAnchor ? getSelectionAnchor() : position
       setAnchorCell(baseAnchor)
       setSelection(buildSelectionRange(baseAnchor, position))
@@ -503,13 +510,33 @@ export function useSpreadsheetState(): {
     [beginSelection, isFillDragActive],
   )
 
+  const handleCellDoubleClick = React.useCallback(
+    (rowIndex: number, columnIndex: number): void => {
+      const cellPosition: CellPosition = { rowIndex, columnIndex }
+      beginSelection(cellPosition)
+      setIsSelecting(false)
+      setEditingCell(cellPosition)
+    },
+    [beginSelection],
+  )
+
   const handleTableKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>): void => {
       if (event.key === 'Escape') {
+        if (editingCell) {
+          setEditingCell(null)
+          return
+        }
         clearSelection()
+        return
+      }
+      if (event.key === 'Enter' && !editingCell) {
+        event.preventDefault()
+        const target = getSelectionAnchor()
+        setEditingCell(target)
       }
     },
-    [clearSelection],
+    [clearSelection, editingCell, getSelectionAnchor],
   )
 
   const startFillDrag = React.useCallback(
@@ -583,6 +610,25 @@ export function useSpreadsheetState(): {
 
   const activeRange = fillPreview ?? selection
   const selectionSummary = stringifySelection(activeRange)
+  const handleCellEditorBlur = React.useCallback((): void => {
+    setEditingCell(null)
+  }, [])
+
+  const handleCellEditorKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key === 'Enter' || event.key === 'Escape') {
+      event.preventDefault()
+      setEditingCell(null)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    if (!editingCell) {
+      return
+    }
+    if (editingCell.rowIndex >= rows.length || editingCell.columnIndex >= columns.length) {
+      setEditingCell(null)
+    }
+  }, [editingCell, rows.length, columns.length])
 
   return {
     notice,
@@ -612,11 +658,15 @@ export function useSpreadsheetState(): {
     handleCellPointerDown,
     handleCellPointerEnter,
     handleCellClick,
+    handleCellDoubleClick,
     handleTableKeyDown,
     startFillDrag,
     handleCellChange,
     handleCopyCell,
     handlePaste,
     isFillDragActive,
+    editingCell,
+    handleCellEditorBlur,
+    handleCellEditorKeyDown,
   }
 }

@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import App from '../App'
@@ -23,8 +23,8 @@ beforeEach(() => {
 describe('App', () => {
   it('初期表示でサンプルYAMLをテーブルにレンダリングする', () => {
     render(<App />)
-    expect(screen.getByDisplayValue('テーブル編集')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('YAML Export')).toBeInTheDocument()
+    expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('テーブル編集')
+    expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('YAML Export')
   })
 
   it('YAML入力を反映するとテーブル内容が更新される', async () => {
@@ -40,20 +40,22 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'YAMLを反映' }))
 
-    expect(await screen.findByDisplayValue('新規カード')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('Carol')).toBeInTheDocument()
+    expect(await screen.findByTestId('cell-display-0-feature')).toHaveTextContent('新規カード')
+    expect(screen.getByTestId('cell-display-0-owner')).toHaveTextContent('Carol')
   })
 
   it('セルを編集するとYAMLテキストにも反映される', async () => {
-    const user = userEvent.setup()
     render(<App />)
 
-    const targetCell = screen.getByTestId('cell-0-feature') as HTMLInputElement
-    await user.clear(targetCell)
-    await user.type(targetCell, 'API Design')
+    const editableBox = screen.getByTestId('cell-box-0-feature')
+    fireEvent.doubleClick(editableBox)
+    const targetCell = (await screen.findByTestId('cell-0-feature')) as HTMLInputElement
+    fireEvent.change(targetCell, { target: { value: 'API Design' } })
 
     const textarea = screen.getByTestId('yaml-textarea') as HTMLTextAreaElement
-    expect(textarea.value).toContain('API Design')
+    await waitFor(() => {
+      expect(textarea.value).toContain('API Design')
+    })
   })
 
   it('列の並べ替えができる', async () => {
@@ -90,7 +92,7 @@ describe('App', () => {
     expect(summary.textContent).toContain('4セル')
   })
 
-  it('貼り付けで複数セルに値を反映できる', () => {
+  it('貼り付けで複数セルに値を反映できる', async () => {
     render(<App />)
     const shell = screen.getByTestId('interactive-table-shell')
     shell.focus()
@@ -107,8 +109,10 @@ describe('App', () => {
 
     fireEvent(shell, pasteEvent)
 
-    expect(screen.getByDisplayValue('API')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('Dana')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('API')
+      expect(screen.getByTestId('cell-display-1-owner')).toHaveTextContent('Dana')
+    })
   })
 
   it('選択範囲に一括入力できる', async () => {
@@ -123,8 +127,8 @@ describe('App', () => {
     await user.type(bulkInput, 'DONE')
     await user.click(screen.getByTestId('bulk-apply'))
 
-    expect(screen.getByTestId('cell-0-feature')).toHaveValue('DONE')
-    expect(screen.getByTestId('cell-1-effort')).toHaveValue('DONE')
+    expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('DONE')
+    expect(screen.getByTestId('cell-display-1-effort')).toHaveTextContent('DONE')
   })
 
   it('フィルハンドルで下方向に値をコピーできる', () => {
@@ -138,6 +142,6 @@ describe('App', () => {
     fireEvent.pointerEnter(targetCell)
     fireEvent.pointerUp(window)
 
-    expect(screen.getByTestId('cell-1-feature')).toHaveValue('テーブル編集')
+    expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('テーブル編集')
   })
 })
