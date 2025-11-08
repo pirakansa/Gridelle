@@ -2,13 +2,11 @@
 import React from 'react'
 import type { TableRow } from '../../../utils/yamlTable'
 import type { CellPosition, Notice, SelectionRange, UpdateRows } from '../types'
-import {
-  buildSelectionRange,
-  createEmptyRow,
-  ensureColumnCapacity,
-  stringifySelection,
-  syncRowsToColumns,
-} from '../utils/spreadsheetTableUtils'
+import { stringifySelection } from '../utils/spreadsheetTableUtils'
+import { useClipboardHandlers } from './useClipboardHandlers'
+import { useCellEditingHandlers } from './useCellEditingHandlers'
+import { useFillController } from './useFillController'
+import { useSelectionController } from './useSelectionController'
 
 type UseSpreadsheetInteractionControllerParams = {
   columns: string[]
@@ -58,50 +56,42 @@ export const useSpreadsheetInteractionController = ({
   setColumnOrder,
   setNotice,
 }: UseSpreadsheetInteractionControllerParams): UseSpreadsheetInteractionController => {
-  const [selection, setSelection] = React.useState<SelectionRange | null>(null)
-  const [anchorCell, setAnchorCell] = React.useState<CellPosition | null>(null)
-  const [isSelecting, setIsSelecting] = React.useState<boolean>(false)
-  const [fillPreview, setFillPreview] = React.useState<SelectionRange | null>(null)
-  const [isFillDragActive, setIsFillDragActive] = React.useState<boolean>(false)
-  const [editingCell, setEditingCell] = React.useState<CellPosition | null>(null)
+  const {
+    selection,
+    setSelection,
+    setAnchorCell,
+    isSelecting,
+    setIsSelecting,
+    editingCell,
+    setEditingCell,
+    getSelectionAnchor,
+    beginSelection,
+    extendSelection,
+    clearSelectionState,
+  } = useSelectionController()
 
-  const getSelectionAnchor = React.useCallback((): CellPosition => {
-    if (selection) {
-      return { rowIndex: selection.startRow, columnIndex: selection.startCol }
-    }
-    if (anchorCell) {
-      return anchorCell
-    }
-    return { rowIndex: 0, columnIndex: 0 }
-  }, [selection, anchorCell])
+  const { fillPreview, isFillDragActive, startFillDrag, resetFillState, updateFillPreview } = useFillController({
+    columns,
+    rows,
+    selection,
+    setSelection,
+    setAnchorCell,
+    setIsSelecting,
+    updateRows,
+    setNotice,
+  })
 
   const clearSelection = React.useCallback((): void => {
-    setSelection(null)
-    setAnchorCell(null)
-    setIsSelecting(false)
-    setIsFillDragActive(false)
-    setFillPreview(null)
-    setEditingCell(null)
-  }, [])
+    resetFillState()
+    clearSelectionState()
+  }, [clearSelectionState, resetFillState])
 
-  const beginSelection = React.useCallback(
-    (position: CellPosition, preserveAnchor = false) => {
-      setEditingCell(null)
-      const baseAnchor = preserveAnchor ? getSelectionAnchor() : position
-      setAnchorCell(baseAnchor)
-      setSelection(buildSelectionRange(baseAnchor, position))
-      setIsSelecting(true)
-      setFillPreview(null)
+  const beginSelectionWithReset = React.useCallback(
+    (position: CellPosition, preserveAnchor = false): void => {
+      resetFillState()
+      beginSelection(position, preserveAnchor)
     },
-    [getSelectionAnchor],
-  )
-
-  const extendSelection = React.useCallback(
-    (position: CellPosition) => {
-      const base = anchorCell ?? getSelectionAnchor()
-      setSelection(buildSelectionRange(base, position))
-    },
-    [anchorCell, getSelectionAnchor],
+    [beginSelection, resetFillState],
   )
 
   const applyBulkInput = React.useCallback((): void => {
@@ -124,66 +114,6 @@ export const useSpreadsheetInteractionController = ({
     updateRows(nextRows)
     setNotice({ text: '選択セルを一括更新しました。', tone: 'success' })
   }, [bulkValue, columns, rows, selection, updateRows, setNotice])
-
-  const applyFillDown = React.useCallback(
-    (targetEndRow: number) => {
-      if (!selection || targetEndRow <= selection.endRow) {
-        return
-      }
-
-      const columnKeys = columns.slice(selection.startCol, selection.endCol + 1)
-      const patternRows = rows
-        .slice(selection.startRow, selection.endRow + 1)
-        .map((row) => ({ ...row }))
-      let nextRows = rows.map((row) => ({ ...row }))
-      while (nextRows.length <= targetEndRow) {
-        nextRows = [...nextRows, createEmptyRow(columns)]
-      }
-
-      for (let rowIndex = selection.endRow + 1; rowIndex <= targetEndRow; rowIndex += 1) {
-        const patternRow =
-          patternRows[((rowIndex - selection.startRow) % patternRows.length + patternRows.length) % patternRows.length]
-        const updatedRow = { ...nextRows[rowIndex] }
-        columnKeys.forEach((columnKey) => {
-          updatedRow[columnKey] = patternRow[columnKey] ?? ''
-        })
-        nextRows[rowIndex] = updatedRow
-      }
-
-      updateRows(nextRows)
-      setSelection((prev) =>
-        prev
-          ? {
-              ...prev,
-              endRow: targetEndRow,
-            }
-          : null,
-      )
-      setAnchorCell((prev) => (prev ? { rowIndex: prev.rowIndex, columnIndex: prev.columnIndex } : null))
-      setNotice({ text: 'フィルを適用しました。', tone: 'success' })
-    },
-    [columns, rows, selection, updateRows, setNotice],
-  )
-
-  React.useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-    const handlePointerUp = () => {
-      setIsSelecting(false)
-      if (isFillDragActive) {
-        if (fillPreview && selection && fillPreview.endRow > selection.endRow) {
-          applyFillDown(fillPreview.endRow)
-        }
-        setIsFillDragActive(false)
-        setFillPreview(null)
-      }
-    }
-    window.addEventListener('pointerup', handlePointerUp)
-    return () => {
-      window.removeEventListener('pointerup', handlePointerUp)
-    }
-  }, [isFillDragActive, fillPreview, selection, applyFillDown])
 
   React.useEffect(() => {
     if (!selection) {
@@ -209,7 +139,7 @@ export const useSpreadsheetInteractionController = ({
     ) {
       setSelection(nextRange)
     }
-  }, [rows.length, columns.length, selection, clearSelection])
+  }, [rows.length, columns.length, selection, clearSelection, setSelection])
 
   const handleCellPointerDown = React.useCallback(
     (
@@ -222,12 +152,12 @@ export const useSpreadsheetInteractionController = ({
       }
       const cellPosition: CellPosition = { rowIndex, columnIndex }
       if (event.shiftKey) {
-        beginSelection(cellPosition, true)
+        beginSelectionWithReset(cellPosition, true)
         return
       }
-      beginSelection(cellPosition)
+      beginSelectionWithReset(cellPosition)
     },
-    [beginSelection, isFillDragActive],
+    [beginSelectionWithReset, isFillDragActive],
   )
 
   const handleRowNumberClick = React.useCallback(
@@ -235,6 +165,7 @@ export const useSpreadsheetInteractionController = ({
       if (!columns.length) {
         return
       }
+      resetFillState()
       const lastColumnIndex = columns.length - 1
       if (extend && selection) {
         const startRow = Math.min(selection.startRow, rowIndex)
@@ -257,19 +188,14 @@ export const useSpreadsheetInteractionController = ({
       }
       setIsSelecting(false)
       setEditingCell(null)
-      setFillPreview(null)
     },
-    [columns.length, selection],
+    [columns.length, selection, resetFillState, setSelection, setAnchorCell, setIsSelecting, setEditingCell],
   )
 
   const handleCellPointerEnter = React.useCallback(
     (rowIndex: number, columnIndex: number): void => {
       if (isFillDragActive && selection) {
-        if (rowIndex > selection.endRow) {
-          setFillPreview({ ...selection, endRow: rowIndex })
-        } else {
-          setFillPreview(selection)
-        }
+        updateFillPreview(rowIndex)
         return
       }
       if (!isSelecting) {
@@ -277,7 +203,7 @@ export const useSpreadsheetInteractionController = ({
       }
       extendSelection({ rowIndex, columnIndex })
     },
-    [extendSelection, isFillDragActive, isSelecting, selection],
+    [extendSelection, isFillDragActive, isSelecting, selection, updateFillPreview],
   )
 
   const handleCellClick = React.useCallback(
@@ -291,24 +217,24 @@ export const useSpreadsheetInteractionController = ({
       }
       const cellPosition: CellPosition = { rowIndex, columnIndex }
       if (event.shiftKey) {
-        beginSelection(cellPosition, true)
+        beginSelectionWithReset(cellPosition, true)
         setIsSelecting(false)
         return
       }
-      beginSelection(cellPosition)
+      beginSelectionWithReset(cellPosition)
       setIsSelecting(false)
     },
-    [beginSelection, isFillDragActive],
+    [beginSelectionWithReset, isFillDragActive, setIsSelecting],
   )
 
   const handleCellDoubleClick = React.useCallback(
     (rowIndex: number, columnIndex: number): void => {
       const cellPosition: CellPosition = { rowIndex, columnIndex }
-      beginSelection(cellPosition)
+      beginSelectionWithReset(cellPosition)
       setIsSelecting(false)
       setEditingCell(cellPosition)
     },
-    [beginSelection],
+    [beginSelectionWithReset, setEditingCell, setIsSelecting],
   )
 
   const handleTableKeyDown = React.useCallback(
@@ -327,125 +253,29 @@ export const useSpreadsheetInteractionController = ({
         setEditingCell(target)
       }
     },
-    [clearSelection, editingCell, getSelectionAnchor],
+    [clearSelection, editingCell, getSelectionAnchor, setEditingCell],
   )
 
-  const startFillDrag = React.useCallback(
-    (event: React.PointerEvent<HTMLButtonElement>): void => {
-      event.preventDefault()
-      event.stopPropagation()
-      if (!selection) {
-        setNotice({ text: 'フィル対象のセルを選択してください。', tone: 'error' })
-        return
-      }
-      setIsFillDragActive(true)
-      setFillPreview(selection)
-    },
-    [selection, setNotice],
-  )
+  const { handleCopyCell, handlePaste } = useClipboardHandlers({
+    columns,
+    rows,
+    setColumnOrder,
+    updateRows,
+    setNotice,
+    setSelection,
+    setAnchorCell,
+    getSelectionAnchor,
+  })
 
-  const handleCopyCell = React.useCallback(
-    async (value: string): Promise<void> => {
-      if (!navigator.clipboard) {
-        setNotice({ text: 'クリップボードAPIが利用できません。', tone: 'error' })
-        return
-      }
-
-      try {
-        await navigator.clipboard.writeText(value ?? '')
-        setNotice({ text: 'セルの値をコピーしました。', tone: 'success' })
-      } catch {
-        setNotice({ text: 'セルのコピーに失敗しました。', tone: 'error' })
-      }
-    },
-    [setNotice],
-  )
-
-  const handlePaste = React.useCallback(
-    (event: React.ClipboardEvent<HTMLDivElement>): void => {
-      const text = event.clipboardData?.getData('text/plain') ?? ''
-      if (!text.trim()) {
-        return
-      }
-      event.preventDefault()
-      const normalized = text.replace(/\r/g, '')
-      const lines = normalized.split('\n')
-      const trimmedLines =
-        lines[lines.length - 1] === '' ? lines.slice(0, lines.length - 1) : lines.slice()
-      const matrix = trimmedLines
-        .filter((line, index) => !(line === '' && index === trimmedLines.length - 1))
-        .map((line) => line.split('\t'))
-      if (!matrix.length) {
-        return
-      }
-      const start = getSelectionAnchor()
-      const widths = matrix.map((row) => (row.length ? row.length : 1))
-      const requiredRows = start.rowIndex + matrix.length
-      const requiredColumns = start.columnIndex + Math.max(...widths)
-
-      let nextColumns = ensureColumnCapacity(columns, requiredColumns)
-      let nextRows = syncRowsToColumns(rows, nextColumns)
-      while (nextRows.length < requiredRows) {
-        nextRows = [...nextRows, createEmptyRow(nextColumns)]
-      }
-
-      matrix.forEach((rowValues, rowOffset) => {
-        const targetRowIndex = start.rowIndex + rowOffset
-        const updatedRow = { ...nextRows[targetRowIndex] }
-        rowValues.forEach((value, columnOffset) => {
-          const targetColumnIndex = start.columnIndex + columnOffset
-          const columnKey = nextColumns[targetColumnIndex]
-          updatedRow[columnKey] = value
-        })
-        nextRows[targetRowIndex] = updatedRow
-      })
-
-      setColumnOrder(nextColumns)
-      updateRows(nextRows)
-      const endRow = start.rowIndex + matrix.length - 1
-      const endCol = start.columnIndex + Math.max(...widths) - 1
-      setSelection({
-        startRow: start.rowIndex,
-        endRow,
-        startCol: start.columnIndex,
-        endCol,
-      })
-      setAnchorCell({ rowIndex: start.rowIndex, columnIndex: start.columnIndex })
-      setNotice({ text: '貼り付けを適用しました。', tone: 'success' })
-    },
-    [columns, rows, getSelectionAnchor, setColumnOrder, updateRows, setNotice],
-  )
+  const { handleCellEditorBlur, handleCellEditorKeyDown } = useCellEditingHandlers({
+    editingCell,
+    setEditingCell,
+    columnsLength: columns.length,
+    rowsLength: rows.length,
+  })
 
   const activeRange = fillPreview ?? selection
   const selectionSummary = stringifySelection(activeRange)
-
-  const handleCellEditorBlur = React.useCallback((): void => {
-    setEditingCell(null)
-  }, [])
-
-  const handleCellEditorKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        setEditingCell(null)
-        return
-      }
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault()
-        setEditingCell(null)
-      }
-    },
-    [],
-  )
-
-  React.useEffect(() => {
-    if (!editingCell) {
-      return
-    }
-    if (editingCell.rowIndex >= rows.length || editingCell.columnIndex >= columns.length) {
-      setEditingCell(null)
-    }
-  }, [editingCell, rows.length, columns.length])
 
   return {
     selection,
