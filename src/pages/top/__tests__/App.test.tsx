@@ -198,6 +198,21 @@ describe('App', () => {
     })
   })
 
+  it('DELキーで選択セルの内容を削除できる', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-0-feature'))
+    const shell = screen.getByTestId('interactive-table-shell')
+    shell.focus()
+
+    fireEvent.keyDown(shell, { key: 'Delete', code: 'Delete' })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature').textContent).toBe('')
+    })
+    expect(await screen.findByText('選択セルの内容を削除しました。')).toBeInTheDocument()
+  })
+
   it('選択範囲に一括入力できる', async () => {
     const user = userEvent.setup()
     render(<App />)

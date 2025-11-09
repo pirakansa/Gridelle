@@ -266,13 +266,44 @@ export const useSpreadsheetInteractionController = ({
         void handleCopySelection()
         return
       }
+      if ((event.key === 'Delete' || event.key === 'Backspace') && !editingCell) {
+        if (!selection) {
+          return
+        }
+        event.preventDefault()
+        const targetColumns = columns.slice(selection.startCol, selection.endCol + 1)
+        const nextRows = rows.map((row, rowIndex) => {
+          if (rowIndex < selection.startRow || rowIndex > selection.endRow) {
+            return row
+          }
+          const updated = { ...row }
+          targetColumns.forEach((columnKey) => {
+            updated[columnKey] = ''
+          })
+          return updated
+        })
+        updateRows(nextRows)
+        setNotice({ text: '選択セルの内容を削除しました。', tone: 'success' })
+        return
+      }
       if (event.key === 'Enter' && !editingCell) {
         event.preventDefault()
         const target = getSelectionAnchor()
         setEditingCell(target)
       }
     },
-    [clearSelection, editingCell, getSelectionAnchor, handleCopySelection, setEditingCell],
+    [
+      clearSelection,
+      columns,
+      editingCell,
+      getSelectionAnchor,
+      handleCopySelection,
+      rows,
+      selection,
+      setEditingCell,
+      setNotice,
+      updateRows,
+    ],
   )
 
   const { handleCellEditorBlur, handleCellEditorKeyDown } = useCellEditingHandlers({
