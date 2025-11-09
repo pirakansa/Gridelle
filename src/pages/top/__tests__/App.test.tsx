@@ -213,6 +213,41 @@ describe('App', () => {
     expect(await screen.findByText('選択セルの内容を削除しました。')).toBeInTheDocument()
   })
 
+  it('カーソルキーで選択セルを移動できる', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-0-feature'))
+    const shell = screen.getByTestId('interactive-table-shell')
+    shell.focus()
+
+    fireEvent.keyDown(shell, { key: 'ArrowDown', code: 'ArrowDown' })
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-box-1-feature')).toHaveAttribute('data-selected', 'true')
+    })
+    expect(screen.getByTestId('cell-box-0-feature')).not.toHaveAttribute('data-selected')
+
+    fireEvent.keyDown(shell, { key: 'ArrowRight', code: 'ArrowRight' })
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-box-1-owner')).toHaveAttribute('data-selected', 'true')
+    })
+  })
+
+  it('Shift+カーソルキーで選択範囲を拡張できる', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-0-feature'))
+    const shell = screen.getByTestId('interactive-table-shell')
+    shell.focus()
+
+    fireEvent.keyDown(shell, { key: 'ArrowDown', code: 'ArrowDown' })
+    fireEvent.keyDown(shell, { key: 'ArrowDown', code: 'ArrowDown', shiftKey: true })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-box-1-feature')).toHaveAttribute('data-selected', 'true')
+      expect(screen.getByTestId('cell-box-2-feature')).toHaveAttribute('data-selected', 'true')
+    })
+  })
+
   it('選択範囲に一括入力できる', async () => {
     const user = userEvent.setup()
     render(<App />)

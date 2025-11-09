@@ -266,6 +266,54 @@ export const useSpreadsheetInteractionController = ({
         void handleCopySelection()
         return
       }
+      if (
+        (event.key === 'ArrowUp' ||
+          event.key === 'ArrowDown' ||
+          event.key === 'ArrowLeft' ||
+          event.key === 'ArrowRight') &&
+        !editingCell
+      ) {
+        if (!columns.length || !rows.length) {
+          return
+        }
+        event.preventDefault()
+
+        const maxRow = rows.length - 1
+        const maxCol = columns.length - 1
+
+        const basePosition = selection
+          ? { rowIndex: selection.endRow, columnIndex: selection.endCol }
+          : getSelectionAnchor()
+
+        const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
+
+        const currentRow = clamp(basePosition.rowIndex, 0, maxRow)
+        const currentCol = clamp(basePosition.columnIndex, 0, maxCol)
+
+        let nextRow = currentRow
+        let nextCol = currentCol
+
+        switch (event.key) {
+          case 'ArrowUp':
+            nextRow = clamp(currentRow - 1, 0, maxRow)
+            break
+          case 'ArrowDown':
+            nextRow = clamp(currentRow + 1, 0, maxRow)
+            break
+          case 'ArrowLeft':
+            nextCol = clamp(currentCol - 1, 0, maxCol)
+            break
+          case 'ArrowRight':
+            nextCol = clamp(currentCol + 1, 0, maxCol)
+            break
+          default:
+            break
+        }
+
+        beginSelectionWithReset({ rowIndex: nextRow, columnIndex: nextCol }, event.shiftKey)
+        setIsSelecting(false)
+        return
+      }
       if ((event.key === 'Delete' || event.key === 'Backspace') && !editingCell) {
         if (!selection) {
           return
@@ -293,6 +341,7 @@ export const useSpreadsheetInteractionController = ({
       }
     },
     [
+      beginSelectionWithReset,
       clearSelection,
       columns,
       editingCell,
@@ -301,6 +350,7 @@ export const useSpreadsheetInteractionController = ({
       rows,
       selection,
       setEditingCell,
+      setIsSelecting,
       setNotice,
       updateRows,
     ],
