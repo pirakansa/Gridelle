@@ -42,6 +42,20 @@ export default function EditableCell({
   onCellEditorBlur,
   onCellEditorKeyDown,
 }: EditableCellProps): React.ReactElement {
+  const [draftValue, setDraftValue] = React.useState<string>(value)
+  const hasCommittedRef = React.useRef<boolean>(false)
+  const discardRef = React.useRef<boolean>(false)
+
+  const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.columnIndex === columnIndex
+
+  React.useEffect(() => {
+    if (isEditing) {
+      hasCommittedRef.current = false
+      discardRef.current = false
+    }
+    setDraftValue((current) => (current === value ? current : value))
+  }, [isEditing, value])
+
   const className = deriveCellClassName({
     activeRange,
     selection,
@@ -49,7 +63,36 @@ export default function EditableCell({
     rowIndex,
     columnIndex,
   })
-  const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.columnIndex === columnIndex
+
+  const commitDraftValue = React.useCallback(() => {
+    if (discardRef.current || hasCommittedRef.current) {
+      return
+    }
+    hasCommittedRef.current = true
+    if (draftValue !== value) {
+      onCellChange(rowIndex, column, draftValue)
+    }
+  }, [column, draftValue, onCellChange, rowIndex, value])
+
+  const handleEditorBlur = React.useCallback(() => {
+    commitDraftValue()
+    onCellEditorBlur()
+  }, [commitDraftValue, onCellEditorBlur])
+
+  const handleEditorKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.key === 'Escape') {
+        discardRef.current = true
+        hasCommittedRef.current = true
+        setDraftValue(value)
+      }
+      if (event.key === 'Enter' && !event.shiftKey) {
+        commitDraftValue()
+      }
+      onCellEditorKeyDown(event)
+    },
+    [commitDraftValue, onCellEditorKeyDown, value],
+  )
 
   return (
     <td
@@ -66,14 +109,14 @@ export default function EditableCell({
       <div className="relative flex items-center gap-1 px-1">
         {isEditing ? (
           <textarea
-            value={value}
-            onChange={(event) => onCellChange(rowIndex, column, event.target.value)}
+            value={draftValue}
+            onChange={(event) => setDraftValue(event.target.value)}
             data-testid={`cell-${rowIndex}-${column}`}
             className="w-full flex-1 resize-y rounded border border-blue-100 bg-white px-2 py-2 text-sm leading-relaxed focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
             autoFocus
-            rows={Math.max(1, value.split('\n').length)}
-            onBlur={onCellEditorBlur}
-            onKeyDown={onCellEditorKeyDown}
+            rows={Math.max(1, draftValue.split('\n').length)}
+            onBlur={handleEditorBlur}
+            onKeyDown={handleEditorKeyDown}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => event.stopPropagation()}
             onDoubleClick={(event) => event.stopPropagation()}
