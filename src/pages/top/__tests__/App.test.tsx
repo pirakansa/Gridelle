@@ -546,7 +546,7 @@ describe('App', () => {
     fireEvent.click(screen.getByTestId('cell-box-1-effort'), { shiftKey: true })
 
     await user.click(screen.getByTestId('menu-tab-selection'))
-    const bulkInput = screen.getByTestId('bulk-input') as HTMLInputElement
+  const bulkInput = screen.getByTestId('bulk-input') as HTMLTextAreaElement
     await user.clear(bulkInput)
     await user.type(bulkInput, 'DONE')
     await user.click(screen.getByTestId('bulk-apply'))
@@ -563,7 +563,7 @@ describe('App', () => {
     fireEvent.click(screen.getByTestId('cell-box-2-feature'), { shiftKey: true })
 
     await user.click(screen.getByTestId('menu-tab-selection'))
-    const bulkInput = screen.getByTestId('bulk-input') as HTMLInputElement
+  const bulkInput = screen.getByTestId('bulk-input') as HTMLTextAreaElement
     fireEvent.change(bulkInput, { target: { value: 'First\nSecond\nThird' } })
     await user.click(screen.getByTestId('bulk-apply'))
 
@@ -571,6 +571,24 @@ describe('App', () => {
       expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('First')
       expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('Second')
       expect(screen.getByTestId('cell-display-2-feature')).toHaveTextContent('Third')
+    })
+  })
+
+  it('一括入力で複数列を選択しても改行を含む文字列をそのまま適用できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-0-feature'))
+    fireEvent.click(screen.getByTestId('cell-box-0-owner'), { shiftKey: true })
+
+    await user.click(screen.getByTestId('menu-tab-selection'))
+    const bulkInput = screen.getByTestId('bulk-input') as HTMLTextAreaElement
+    fireEvent.change(bulkInput, { target: { value: 'Line1\nLine2' } })
+    await user.click(screen.getByTestId('bulk-apply'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature').textContent).toBe('Line1\nLine2')
+      expect(screen.getByTestId('cell-display-0-owner').textContent).toBe('Line1\nLine2')
     })
   })
 

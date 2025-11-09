@@ -2,6 +2,7 @@
 import React from 'react'
 import { layoutTheme } from '../../utils/Theme'
 import Button from '../atom/Button'
+import TextAreaField from '../atom/TextAreaField'
 import TextInput from '../atom/TextInput'
 
 type Props = {
@@ -175,8 +176,7 @@ export default function TableEditorPanel({
             <div className={ribbonGroupClass}>
               <span className={ribbonTitleClass}>一括入力</span>
               <div className="flex flex-col gap-3">
-                <TextInput
-                  type="text"
+                <TextAreaField
                   placeholder="選択セルへ一括入力"
                   value={bulkValue}
                   onChange={(event) => onBulkValueChange(event.target.value)}

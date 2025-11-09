@@ -29,16 +29,42 @@ export function useBulkInput({
     }
 
     const targetColumns = columns.slice(selection.startCol, selection.endCol + 1)
-  const parsedMatrixSource = bulkValue.length ? parseClipboardText(bulkValue) : []
+
+    const selectionRowCount = selection.endRow - selection.startRow + 1
+    const selectionColCount = targetColumns.length
+    const isSingleCellSelection = selectionRowCount === 1 && selectionColCount === 1
+
+    const parsedMatrixSource = bulkValue.length ? parseClipboardText(bulkValue) : []
     const parsedMatrix = (parsedMatrixSource.length ? parsedMatrixSource : [[bulkValue]]).map((rowValues) =>
       rowValues.length ? rowValues : ['']
     )
+    const matrixRowCount = parsedMatrix.length
+    const matrixHasMultipleColumns = parsedMatrix.some((row) => row.length > 1)
+    const hasExplicitTab = bulkValue.includes('\t')
+
+    const shouldBroadcastLiteral =
+      !isSingleCellSelection &&
+      !matrixHasMultipleColumns &&
+      !hasExplicitTab &&
+      (selectionColCount > 1 || matrixRowCount !== selectionRowCount)
 
     const nextRows = rows.map((row, rowIndex) => {
       if (rowIndex < selection.startRow || rowIndex > selection.endRow) {
         return row
       }
       const updatedRow = { ...row }
+      if (isSingleCellSelection) {
+        updatedRow[targetColumns[0]] = bulkValue
+        return updatedRow
+      }
+
+      if (shouldBroadcastLiteral) {
+        targetColumns.forEach((columnKey) => {
+          updatedRow[columnKey] = bulkValue
+        })
+        return updatedRow
+      }
+
       const rowOffset = rowIndex - selection.startRow
       const sourceRow = parsedMatrix[Math.min(rowOffset, parsedMatrix.length - 1)] ?? ['']
       targetColumns.forEach((columnKey, columnOffset) => {

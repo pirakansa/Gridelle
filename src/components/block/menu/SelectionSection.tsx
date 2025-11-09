@@ -1,7 +1,7 @@
 // File Header: Selection status display and clear action.
 import React from 'react'
 import Button from '../../atom/Button'
-import TextInput from '../../atom/TextInput'
+import TextAreaField from '../../atom/TextAreaField'
 import MenuSectionCard from './MenuSectionCard'
 
 type SelectionSectionProps = {
@@ -35,14 +35,13 @@ export default function SelectionSection({
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2 md:gap-3 md:ml-auto">
-          <TextInput
-            type="text"
+          <TextAreaField
             placeholder="選択セルへ一括入力"
             value={bulkValue}
             onChange={(event) => onBulkValueChange(event.target.value)}
             data-testid="bulk-input"
             onPointerDown={(event) => event.stopPropagation()}
-            className="w-56 sm:w-72 md:w-80 lg:w-96"
+            className="h-24 w-56 resize-y sm:w-72 md:w-80 lg:w-96"
           />
           <Button
             type="button"
