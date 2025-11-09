@@ -1,20 +1,11 @@
 // File Header: Hook responsible for spreadsheet data state and YAML/column operations.
 import React from 'react'
-import {
-  deriveColumns,
-  parseWorkbook,
-  stringifyWorkbook,
-  type TableRow,
-  type TableSheet,
-} from '../../../services/workbookService'
-import type { Notice } from '../types'
-import { createEmptyRow } from '../utils/spreadsheetTableUtils'
+import { parseWorkbook, stringifyWorkbook, type TableRow, type TableSheet } from '../../../services/workbookService'
 import { copyText } from '../../../services/clipboardService'
 import { downloadTextFile, readFileAsText } from '../../../services/fileTransferService'
-
-type SheetState = TableSheet & {
-  columnOrder: string[]
-}
+import type { Notice } from '../types'
+import { useSheetState } from './internal/useSheetState'
+import { createSheetState, stripSheetState } from './internal/spreadsheetDataUtils'
 
 type UseSpreadsheetDataController = {
   notice: Notice | null
@@ -44,203 +35,38 @@ type UseSpreadsheetDataController = {
 
 // Function Header: Manages sheets/rows/YAML state and exposes primary data mutations.
 export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSpreadsheetDataController => {
-  const baseSheets = React.useMemo(() => createSheetState(initialSheets), [initialSheets])
-  const [sheets, setSheets] = React.useState<SheetState[]>(baseSheets)
-  const [activeSheetIndex, setActiveSheetIndex] = React.useState<number>(0)
-  const [yamlBuffer, setYamlBuffer] = React.useState<string>(() =>
-    stringifyWorkbook(baseSheets.map(stripSheetState)),
-  )
   const [notice, setNotice] = React.useState<Notice | null>(null)
+  const [yamlBuffer, setYamlBuffer] = React.useState<string>(() =>
+    stringifyWorkbook(createSheetState(initialSheets).map(stripSheetState)),
+  )
 
-  const activeSheet = sheets[activeSheetIndex] ?? sheets[0] ?? {
-    name: 'Sheet 1',
-    rows: [],
-    columnOrder: [],
-  }
-  const rows = activeSheet.rows
-  const derivedColumns = React.useMemo(() => deriveColumns(rows), [rows])
+  const {
+    sheets,
+    activeSheetIndex,
+    setActiveSheetIndex,
+    rows,
+    columns,
+    columnOrder,
+    setColumnOrder,
+  updateRows,
+  addRow,
+  addColumn,
+  addSheet,
+  renameSheet,
+  moveColumn,
+  replaceSheets,
+  } = useSheetState({ initialSheets, setNotice, setYamlBuffer })
 
-  React.useEffect(() => {
-    setSheets((current) => {
-      if (!current.length) {
-        return current
-      }
-      const targetIndex = Math.min(activeSheetIndex, current.length - 1)
-      const targetSheet = current[targetIndex]
-      const nextOrder = syncColumnOrder(targetSheet.columnOrder, derivedColumns)
-      if (arraysEqual(nextOrder, targetSheet.columnOrder)) {
-        return current
-      }
-      const next = [...current]
-      next[targetIndex] = { ...targetSheet, columnOrder: nextOrder }
-      return next
-    })
-  }, [activeSheetIndex, derivedColumns])
-
-  const columnOrder = activeSheet.columnOrder.length
-    ? activeSheet.columnOrder
-    : syncColumnOrder([], derivedColumns)
-  const columns = columnOrder.length ? columnOrder : derivedColumns
   const tableYaml = React.useMemo(
     () => stringifyWorkbook(sheets.map(stripSheetState)),
     [sheets],
-  )
-
-  const rebuildYamlBuffer = React.useCallback((nextSheets: SheetState[]) => {
-    setYamlBuffer(stringifyWorkbook(nextSheets.map(stripSheetState)))
-  }, [])
-
-  const updateRows = React.useCallback(
-    (nextRows: TableRow[]) => {
-      setSheets((current) => {
-        if (!current.length) {
-          return current
-        }
-        const targetIndex = Math.min(activeSheetIndex, current.length - 1)
-        const updatedRows = nextRows.map((row) => ({ ...row }))
-        const next = current.map((sheet, index) =>
-          index === targetIndex
-            ? {
-                ...sheet,
-                rows: updatedRows,
-                columnOrder: syncColumnOrder(sheet.columnOrder, deriveColumns(updatedRows)),
-              }
-            : sheet,
-        )
-        rebuildYamlBuffer(next)
-        setNotice(null)
-        return next
-      })
-    },
-    [activeSheetIndex, rebuildYamlBuffer],
-  )
-
-  const handleAddRow = React.useCallback((): void => {
-    const baseColumns = columns.length ? columns : ['column_1']
-    const newRow = createEmptyRow(baseColumns)
-    updateRows([...rows, newRow])
-  }, [columns, rows, updateRows])
-
-  const handleAddColumn = React.useCallback((): void => {
-    const nextColumnName = generateNextColumnKey(columns)
-
-    const nextRows =
-      rows.length === 0
-        ? [{ [nextColumnName]: '' }]
-        : rows.map((row) => ({
-            ...row,
-            [nextColumnName]: row[nextColumnName] ?? '',
-          }))
-
-    updateRows(nextRows)
-    setNotice({ text: `列「${nextColumnName}」を追加しました。`, tone: 'success' })
-  }, [columns, rows, updateRows])
-
-  const handleAddSheet = React.useCallback((): void => {
-    setSheets((current) => {
-      const sheetName = generateSheetName(current)
-      const next: SheetState[] = [
-        ...current,
-        {
-          name: sheetName,
-          rows: [],
-          columnOrder: [],
-        },
-      ]
-      rebuildYamlBuffer(next)
-      setNotice({ text: `シート「${sheetName}」を追加しました。`, tone: 'success' })
-      setActiveSheetIndex(next.length - 1)
-      return next
-    })
-  }, [rebuildYamlBuffer])
-
-  const handleRenameSheet = React.useCallback(
-    (name: string): void => {
-      const trimmed = name.trim()
-      if (!trimmed) {
-        setNotice({ text: 'シート名を入力してください。', tone: 'error' })
-        return
-      }
-      setSheets((current) => {
-        if (!current.length) {
-          return current
-        }
-        const targetIndex = Math.min(activeSheetIndex, current.length - 1)
-        const next = current.map((sheet, index) =>
-          index === targetIndex
-            ? {
-                ...sheet,
-                name: trimmed,
-              }
-            : sheet,
-        )
-        rebuildYamlBuffer(next)
-        setNotice({ text: `シート名を「${trimmed}」に更新しました。`, tone: 'success' })
-        return next
-      })
-    },
-    [activeSheetIndex, rebuildYamlBuffer])
-
-  const moveColumn = React.useCallback(
-    (columnKey: string, direction: 'left' | 'right'): void => {
-      setSheets((current) => {
-        if (!current.length) {
-          return current
-        }
-        const targetIndex = Math.min(activeSheetIndex, current.length - 1)
-        const targetSheet = current[targetIndex]
-        const index = targetSheet.columnOrder.indexOf(columnKey)
-        if (index === -1) {
-          return current
-        }
-        const delta = direction === 'left' ? -1 : 1
-        const swapIndex = index + delta
-        if (swapIndex < 0 || swapIndex >= targetSheet.columnOrder.length) {
-          return current
-        }
-        const nextOrder = [...targetSheet.columnOrder]
-        const [moved] = nextOrder.splice(index, 1)
-        nextOrder.splice(swapIndex, 0, moved)
-        const next = current.map((sheet, sheetIndex) =>
-          sheetIndex === targetIndex ? { ...sheet, columnOrder: nextOrder } : sheet,
-        )
-        setNotice({ text: `列「${columnKey}」を移動しました。`, tone: 'success' })
-        return next
-      })
-    },
-    [activeSheetIndex],
-  )
-
-  const setColumnOrder = React.useCallback(
-    (updater: React.SetStateAction<string[]>) => {
-      setSheets((current) => {
-        if (!current.length) {
-          return current
-        }
-        const targetIndex = Math.min(activeSheetIndex, current.length - 1)
-        const currentOrder = current[targetIndex].columnOrder
-        const nextOrder =
-          typeof updater === 'function' ? (updater as (_order: string[]) => string[])(currentOrder) : updater
-        const next = current.map((sheet, index) =>
-          index === targetIndex
-            ? {
-                ...sheet,
-                columnOrder: nextOrder,
-              }
-            : sheet,
-        )
-        return next
-      })
-    },
-    [activeSheetIndex],
   )
 
   const applyYamlBuffer = React.useCallback((): void => {
     try {
       const parsed = parseWorkbook(yamlBuffer)
       const next = createSheetState(parsed)
-      setSheets(next)
-      rebuildYamlBuffer(next)
+      replaceSheets(next)
       setActiveSheetIndex((prev) => {
         if (!next.length) {
           return 0
@@ -251,7 +77,7 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
     } catch (error) {
       setNotice({ text: (error as Error).message, tone: 'error' })
     }
-  }, [rebuildYamlBuffer, yamlBuffer])
+  }, [replaceSheets, setActiveSheetIndex, setNotice, yamlBuffer])
 
   const handleFileUpload = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -267,8 +93,7 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
           setYamlBuffer(content)
           try {
             const parsed = createSheetState(parseWorkbook(content))
-            setSheets(parsed)
-            rebuildYamlBuffer(parsed)
+            replaceSheets(parsed)
             setActiveSheetIndex((prev) => {
               if (!parsed.length) {
                 return 0
@@ -291,7 +116,7 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
           })
         })
     },
-    [rebuildYamlBuffer],
+    [replaceSheets, setActiveSheetIndex, setNotice],
   )
 
   const handleDownloadYaml = React.useCallback((): void => {
@@ -329,75 +154,16 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
     columns,
     columnOrder,
     setColumnOrder,
-    updateRows,
-    handleAddRow,
-    handleAddColumn,
-    handleAddSheet,
-    handleRenameSheet,
-    moveColumn,
+  updateRows,
+  handleAddRow: addRow,
+  handleAddColumn: addColumn,
+  handleAddSheet: addSheet,
+  handleRenameSheet: renameSheet,
+  moveColumn,
     applyYamlBuffer,
     handleFileUpload,
     handleDownloadYaml,
     handleCopyYaml,
     handleCellChange,
   }
-}
-
-function createSheetState(sheets: TableSheet[]): SheetState[] {
-  const safeSheets = sheets.length
-    ? sheets
-    : [
-        {
-          name: 'Sheet 1',
-          rows: [],
-        },
-      ]
-  return safeSheets.map((sheet) => {
-    const rows = sheet.rows.map((row) => ({ ...row }))
-    return {
-      name: sheet.name,
-      rows,
-      columnOrder: deriveColumns(rows),
-    }
-  })
-}
-
-function stripSheetState(sheet: SheetState): TableSheet {
-  return { name: sheet.name, rows: sheet.rows }
-}
-
-function syncColumnOrder(currentOrder: string[], derivedColumns: string[]): string[] {
-  const filtered = currentOrder.filter((column) => derivedColumns.includes(column))
-  const appended = derivedColumns.filter((column) => !filtered.includes(column))
-  return [...filtered, ...appended]
-}
-
-function generateSheetName(sheets: SheetState[]): string {
-  const existing = new Set(sheets.map((sheet) => sheet.name))
-  let index = sheets.length + 1
-  let candidate = `Sheet ${index}`
-  while (existing.has(candidate)) {
-    index += 1
-    candidate = `Sheet ${index}`
-  }
-  return candidate
-}
-
-function generateNextColumnKey(existing: string[]): string {
-  const baseName = 'column'
-  let index = existing.length + 1
-  let candidate = `${baseName}_${index}`
-  const taken = new Set(existing)
-  while (taken.has(candidate)) {
-    index += 1
-    candidate = `${baseName}_${index}`
-  }
-  return candidate
-}
-
-function arraysEqual(a: string[], b: string[]): boolean {
-  if (a.length !== b.length) {
-    return false
-  }
-  return a.every((value, index) => value === b[index])
 }
