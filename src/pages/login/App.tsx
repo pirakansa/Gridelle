@@ -155,6 +155,10 @@ export default function App(): React.ReactElement {
     }
   }, [])
 
+  const handleNavigateTop = React.useCallback(() => {
+    window.location.replace('/top.html')
+  }, [])
+
   const detailsText = React.useMemo(() => {
     if (!user) {
       return UNAUTHENTICATED_DETAILS
@@ -208,14 +212,24 @@ export default function App(): React.ReactElement {
             </>
           )}
           {user && (
-            <button
-              type="button"
-              className={`${styles.button} ${styles.buttonSecondary}`}
-              onClick={handleLogout}
-              disabled={isBusy}
-            >
-              ログアウト
-            </button>
+            <>
+              <button
+                type="button"
+                className={`${styles.button} ${styles.buttonPrimary}`}
+                onClick={handleNavigateTop}
+                disabled={isBusy}
+              >
+                トップページに進む
+              </button>
+              <button
+                type="button"
+                className={`${styles.button} ${styles.buttonSecondary}`}
+                onClick={handleLogout}
+                disabled={isBusy}
+              >
+                ログアウト
+              </button>
+            </>
           )}
         </section>
         <section className={styles.detailsBlock}>
