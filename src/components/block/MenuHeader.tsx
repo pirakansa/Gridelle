@@ -3,13 +3,13 @@ import React from 'react'
 import type { Notice } from '../../pages/top/types'
 import type { LoginMode } from '../../services/authService'
 import { layoutTheme } from '../../utils/Theme'
-import Button from '../atom/Button'
 import MenuTabs, { type MenuSectionId } from './menu/MenuTabs'
 import SheetSection from './menu/SheetSection'
 import StructureSection from './menu/StructureSection'
 import SelectionSection from './menu/SelectionSection'
 import HelpSection from './menu/HelpSection'
 import UserSection from './menu/UserSection'
+import FileSection from './menu/FileSection'
 
 type Props = {
   onYamlInputClick: () => void
@@ -122,9 +122,6 @@ export default function MenuHeader({
             <span className="text-base font-semibold text-slate-900">Gridelle</span>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" variant="ghost" onClick={onYamlInputClick}>
-              YAML入力 / プレビュー
-            </Button>
             <MenuTabs
               activeSection={activeMenuSection}
               onSelectSection={(section) => setActiveMenuSection(section)}
@@ -157,6 +154,7 @@ export default function MenuHeader({
                   {notice.text}
                 </p>
               )}
+              {activeMenuSection === 'file' && <FileSection onYamlInputClick={onYamlInputClick} />}
               {activeMenuSection === 'sheet' && (
                 <SheetSection
                   sheetNames={sheetNames}

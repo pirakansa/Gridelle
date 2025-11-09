@@ -75,6 +75,7 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
+    await user.click(screen.getByTestId('menu-tab-file'))
     await user.click(screen.getByRole('button', { name: 'YAML入力 / プレビュー' }))
     expect(await screen.findByRole('dialog', { name: 'YAML入力 / プレビュー' })).toBeInTheDocument()
 
@@ -93,6 +94,7 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
+    await user.click(screen.getByTestId('menu-tab-file'))
     await user.click(screen.getByRole('button', { name: 'YAML入力 / プレビュー' }))
     const textarea = (await screen.findByTestId('yaml-textarea')) as HTMLTextAreaElement
     await user.clear(textarea)
@@ -102,6 +104,8 @@ describe('App', () => {
     )
 
     await user.click(screen.getByRole('button', { name: 'YAMLを反映' }))
+
+    await user.click(screen.getByTestId('menu-tab-sheet'))
 
     expect(await screen.findByTestId('cell-display-0-feature')).toHaveTextContent('新規カード')
     expect(screen.getByTestId('cell-display-0-owner')).toHaveTextContent('Carol')

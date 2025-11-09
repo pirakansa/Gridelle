@@ -2,7 +2,7 @@
 import React from 'react'
 import IconButton from '../../atom/IconButton'
 
-export type MenuSectionId = 'sheet' | 'structure' | 'selection' | 'user' | 'help'
+export type MenuSectionId = 'file' | 'sheet' | 'structure' | 'selection' | 'user' | 'help'
 
 type MenuTabsProps = {
   activeSection: MenuSectionId
@@ -32,6 +32,7 @@ export default function MenuTabs({
       <div className="flex flex-wrap items-center gap-2">
         {(
           [
+            { id: 'file' as const, label: 'ファイル' },
             { id: 'sheet' as const, label: 'シート' },
             { id: 'structure' as const, label: '行列' },
             { id: 'selection' as const, label: '選択' },
