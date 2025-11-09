@@ -73,11 +73,9 @@ export default function App(): React.ReactElement {
         currentSheetName={spreadsheet.currentSheetName}
         onRenameSheet={spreadsheet.handleRenameSheet}
         onAddSheet={spreadsheet.handleAddSheet}
-        newColumnName={spreadsheet.newColumnName}
-        onColumnNameChange={spreadsheet.setNewColumnName}
-        onAddRow={spreadsheet.handleAddRow}
-        onAddColumn={spreadsheet.handleAddColumn}
-  onDeleteSelectedRows={spreadsheet.handleDeleteSelectedRows}
+    onAddRow={spreadsheet.handleAddRow}
+    onAddColumn={spreadsheet.handleAddColumn}
+    onDeleteSelectedRows={spreadsheet.handleDeleteSelectedRows}
         selectionSummary={spreadsheet.selectionSummary}
         onClearSelection={spreadsheet.clearSelection}
         hasSelection={Boolean(spreadsheet.selection)}

@@ -19,8 +19,6 @@ type UseSpreadsheetState = {
   currentSheetName: string
   rows: TableRow[]
   columns: string[]
-  newColumnName: string
-  setNewColumnName: React.Dispatch<React.SetStateAction<string>>
   handleAddRow: () => void
   handleAddColumn: () => void
   handleDeleteSelectedRows: () => void
@@ -96,12 +94,10 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     rows,
     columns,
     setColumnOrder,
-    newColumnName,
-    setNewColumnName,
-  updateRows,
-  handleAddRow,
-  handleAddColumn,
-  handleAddSheet,
+    updateRows,
+    handleAddRow,
+    handleAddColumn,
+    handleAddSheet,
     handleRenameSheet,
     moveColumn,
     applyYamlBuffer,
@@ -177,8 +173,6 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     currentSheetName: sheets[activeSheetIndex]?.name ?? '',
     rows,
     columns,
-    newColumnName,
-    setNewColumnName,
     handleAddRow,
     handleAddColumn,
     handleDeleteSelectedRows,

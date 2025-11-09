@@ -18,8 +18,6 @@ type Props = {
   currentSheetName: string
   onRenameSheet: (_name: string) => void
   onAddSheet: () => void
-  newColumnName: string
-  onColumnNameChange: (_value: string) => void
   onAddRow: () => void
   onAddColumn: () => void
   onDeleteSelectedRows: () => void
@@ -41,8 +39,6 @@ export default function MenuHeader({
   currentSheetName,
   onRenameSheet,
   onAddSheet,
-  newColumnName,
-  onColumnNameChange,
   onAddRow,
   onAddColumn,
   onDeleteSelectedRows,
@@ -135,8 +131,6 @@ export default function MenuHeader({
               )}
               {activeMenuSection === 'structure' && (
                 <StructureSection
-                  newColumnName={newColumnName}
-                  onColumnNameChange={onColumnNameChange}
                   onAddRow={onAddRow}
                   onAddColumn={onAddColumn}
                   onDeleteSelectedRows={onDeleteSelectedRows}

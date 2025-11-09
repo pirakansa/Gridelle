@@ -29,8 +29,6 @@ type UseSpreadsheetDataController = {
   columns: string[]
   columnOrder: string[]
   setColumnOrder: React.Dispatch<React.SetStateAction<string[]>>
-  newColumnName: string
-  setNewColumnName: React.Dispatch<React.SetStateAction<string>>
   updateRows: (_rows: TableRow[]) => void
   handleAddRow: () => void
   handleAddColumn: () => void
@@ -53,7 +51,6 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
     stringifyWorkbook(baseSheets.map(stripSheetState)),
   )
   const [notice, setNotice] = React.useState<Notice | null>(null)
-  const [newColumnName, setNewColumnName] = React.useState<string>('')
 
   const activeSheet = sheets[activeSheetIndex] ?? sheets[0] ?? {
     name: 'Sheet 1',
@@ -125,28 +122,19 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
   }, [columns, rows, updateRows])
 
   const handleAddColumn = React.useCallback((): void => {
-    const trimmed = newColumnName.trim()
-    if (!trimmed) {
-      setNotice({ text: '列名を入力してください。', tone: 'error' })
-      return
-    }
-    if (columns.includes(trimmed)) {
-      setNotice({ text: '同名の列がすでに存在します。', tone: 'error' })
-      return
-    }
+    const nextColumnName = generateNextColumnKey(columns)
 
     const nextRows =
       rows.length === 0
-        ? [{ [trimmed]: '' }]
+        ? [{ [nextColumnName]: '' }]
         : rows.map((row) => ({
             ...row,
-            [trimmed]: row[trimmed] ?? '',
+            [nextColumnName]: row[nextColumnName] ?? '',
           }))
 
     updateRows(nextRows)
-    setNewColumnName('')
-    setNotice({ text: `列「${trimmed}」を追加しました。`, tone: 'success' })
-  }, [columns, newColumnName, rows, updateRows])
+    setNotice({ text: `列「${nextColumnName}」を追加しました。`, tone: 'success' })
+  }, [columns, rows, updateRows])
 
   const handleAddSheet = React.useCallback((): void => {
     setSheets((current) => {
@@ -341,8 +329,6 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
     columns,
     columnOrder,
     setColumnOrder,
-    newColumnName,
-    setNewColumnName,
     updateRows,
     handleAddRow,
     handleAddColumn,
@@ -393,6 +379,18 @@ function generateSheetName(sheets: SheetState[]): string {
   while (existing.has(candidate)) {
     index += 1
     candidate = `Sheet ${index}`
+  }
+  return candidate
+}
+
+function generateNextColumnKey(existing: string[]): string {
+  const baseName = 'column'
+  let index = existing.length + 1
+  let candidate = `${baseName}_${index}`
+  const taken = new Set(existing)
+  while (taken.has(candidate)) {
+    index += 1
+    candidate = `${baseName}_${index}`
   }
   return candidate
 }

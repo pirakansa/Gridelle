@@ -3,6 +3,12 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+vi.mock('../../../utils/navigation', () => ({
+  redirectToLogin: vi.fn(),
+  redirectToTop: vi.fn(),
+}))
+
 import App from '../App'
 
 const writeTextMock = vi.fn(async (_text: string) => undefined)
@@ -131,6 +137,31 @@ describe('App', () => {
 
     const afterTitles = screen.getAllByTestId('column-title').map((node) => node.textContent)
     expect(afterTitles).toEqual(['owner', 'feature', 'status', 'effort'])
+  })
+
+  it('列を追加すると自動採番された列が連続して追加される', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    await user.click(screen.getByRole('button', { name: '列を追加' }))
+
+    await waitFor(() => {
+      const titles = screen.getAllByTestId('column-title').map((node) => node.textContent)
+      expect(titles).toContain('column_5')
+    })
+
+    expect(await screen.findByTestId('cell-display-0-column_5')).toHaveTextContent('')
+
+    await user.click(screen.getByRole('button', { name: '列を追加' }))
+
+    await waitFor(() => {
+      const titles = screen.getAllByTestId('column-title').map((node) => node.textContent)
+      expect(titles).toContain('column_6')
+    })
+
+    expect(await screen.findByTestId('cell-display-0-column_6')).toHaveTextContent('')
   })
 
   it('セルの値をコピーできる', async () => {
