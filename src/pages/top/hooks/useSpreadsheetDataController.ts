@@ -1,6 +1,6 @@
 // File Header: Hook responsible for spreadsheet data state and YAML/column operations.
 import React from 'react'
-import { stringifyWorkbook, type TableRow, type TableSheet } from '../../../services/workbookService'
+import { stringifyWorkbook, parseWorkbook, type TableRow, type TableSheet } from '../../../services/workbookService'
 import { copyText } from '../../../services/clipboardService'
 import { downloadTextFile, readFileAsText } from '../../../services/fileTransferService'
 import type { Notice } from '../types'
@@ -41,15 +41,82 @@ type UseSpreadsheetDataController = {
   handleCellChange: (_rowIndex: number, _columnKey: string, _value: string) => void
 }
 
+const TABLE_STORAGE_KEY = 'gridelle:tableYaml'
+const BUFFER_STORAGE_KEY = 'gridelle:yamlBuffer'
+
+const readPersistedValue = (key: string): string | null => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return null
+  }
+  try {
+    return window.localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+const writePersistedValue = (key: string, value: string): void => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return
+  }
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    // ignore storage write failures (quota, privacy mode, etc.)
+  }
+}
+
+const removePersistedValue = (key: string): void => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return
+  }
+  try {
+    window.localStorage.removeItem(key)
+  } catch {
+    // noop
+  }
+}
+
 // Function Header: Manages sheets/rows/YAML state and exposes primary data mutations.
 export const useSpreadsheetDataController = (
   initialSheets: TableSheet[],
   parseHooks?: ParseLifecycleHooks,
 ): UseSpreadsheetDataController => {
+  const persistenceDefaults = React.useMemo(() => {
+    const fallbackYaml = stringifyWorkbook(createSheetState(initialSheets).map(stripSheetState))
+    if (typeof window === 'undefined') {
+      return {
+        initialSheets,
+        initialTableYaml: fallbackYaml,
+        initialYamlBuffer: fallbackYaml,
+      }
+    }
+
+    const storedTableYaml = readPersistedValue(TABLE_STORAGE_KEY)
+    if (storedTableYaml) {
+      try {
+        const parsedSheets = parseWorkbook(storedTableYaml)
+        const storedBuffer = readPersistedValue(BUFFER_STORAGE_KEY)
+        return {
+          initialSheets: parsedSheets,
+          initialTableYaml: storedTableYaml,
+          initialYamlBuffer: storedBuffer ?? storedTableYaml,
+        }
+      } catch {
+        removePersistedValue(TABLE_STORAGE_KEY)
+        removePersistedValue(BUFFER_STORAGE_KEY)
+      }
+    }
+
+    return {
+      initialSheets,
+      initialTableYaml: fallbackYaml,
+      initialYamlBuffer: fallbackYaml,
+    }
+  }, [initialSheets])
+
   const [notice, setNotice] = React.useState<Notice | null>(null)
-  const [yamlBuffer, setYamlBuffer] = React.useState<string>(() =>
-    stringifyWorkbook(createSheetState(initialSheets).map(stripSheetState)),
-  )
+  const [yamlBuffer, setYamlBuffer] = React.useState<string>(persistenceDefaults.initialYamlBuffer)
 
   const {
     sheets,
@@ -66,12 +133,12 @@ export const useSpreadsheetDataController = (
   renameSheet,
   moveColumn,
   replaceSheets,
-  } = useSheetState({ initialSheets, setNotice })
+  } = useSheetState({ initialSheets: persistenceDefaults.initialSheets, setNotice })
 
   const parseRequestIdRef = React.useRef<number>(0)
 
   const sheetsMemo = React.useMemo(() => sheets.map(stripSheetState), [sheets])
-  const [tableYaml, setTableYaml] = React.useState<string>(() => stringifyWorkbook(sheetsMemo))
+  const [tableYaml, setTableYaml] = React.useState<string>(persistenceDefaults.initialTableYaml)
 
   React.useEffect(() => {
     let cancelled = false
@@ -101,6 +168,14 @@ export const useSpreadsheetDataController = (
       cancelled = true
     }
   }, [sheetsMemo, setYamlBuffer])
+
+  React.useEffect(() => {
+    writePersistedValue(TABLE_STORAGE_KEY, tableYaml)
+  }, [tableYaml])
+
+  React.useEffect(() => {
+    writePersistedValue(BUFFER_STORAGE_KEY, yamlBuffer)
+  }, [yamlBuffer])
 
   const applyYamlBuffer = React.useCallback((): void => {
     const requestId = Date.now()

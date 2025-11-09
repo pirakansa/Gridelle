@@ -12,6 +12,8 @@ vi.mock('../../../utils/navigation', () => ({
 import App from '../App'
 
 const writeTextMock = vi.fn(async (_text: string) => undefined)
+const TABLE_STORAGE_KEY = 'gridelle:tableYaml'
+const BUFFER_STORAGE_KEY = 'gridelle:yamlBuffer'
 
 beforeEach(() => {
   writeTextMock.mockClear()
@@ -24,6 +26,9 @@ beforeEach(() => {
     value: clipboard,
     configurable: true,
   })
+  if (typeof window !== 'undefined' && window.localStorage) {
+    window.localStorage.clear()
+  }
 })
 
 describe('App', () => {
@@ -590,6 +595,30 @@ describe('App', () => {
       expect(screen.getByTestId('cell-display-0-feature').textContent).toBe('Line1\nLine2')
       expect(screen.getByTestId('cell-display-0-owner').textContent).toBe('Line1\nLine2')
     })
+  })
+
+  it('テーブル編集内容がリロード後も保持される', async () => {
+    const user = userEvent.setup()
+    const { unmount } = render(<App />)
+
+    const targetCell = screen.getByTestId('cell-box-0-feature')
+    fireEvent.doubleClick(targetCell)
+    const editor = (await screen.findByTestId('cell-0-feature')) as HTMLTextAreaElement
+    await user.clear(editor)
+    await user.type(editor, '永続化テスト')
+    fireEvent.keyDown(editor, { key: 'Enter', code: 'Enter' })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('永続化テスト')
+      expect(window.localStorage.getItem(TABLE_STORAGE_KEY)).toContain('永続化テスト')
+      expect(window.localStorage.getItem(BUFFER_STORAGE_KEY)).toContain('永続化テスト')
+    })
+
+    unmount()
+
+    render(<App />)
+
+    expect(await screen.findByTestId('cell-display-0-feature')).toHaveTextContent('永続化テスト')
   })
 
   it('フィルハンドルで下方向に値をコピーできる', async () => {
