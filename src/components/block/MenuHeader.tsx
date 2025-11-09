@@ -1,4 +1,4 @@
-// File Header: Application ribbon combining global menu access with spreadsheet controls.
+// File Header: Application menu combining global controls with spreadsheet utilities.
 import React from 'react'
 import type { Notice } from '../../pages/top/types'
 import { layoutTheme } from '../../utils/Theme'
@@ -29,11 +29,11 @@ type Props = {
   onBulkApply: () => void
 }
 
-const ribbonGroupClass =
+const menuGroupClass =
   'flex flex-col gap-3 rounded-2xl bg-white/80 p-4 shadow-sm shadow-slate-200/50 ring-1 ring-inset ring-slate-200'
-const ribbonTitleClass = 'text-xs font-semibold uppercase tracking-[0.2em] text-slate-400'
+const menuTitleClass = 'text-xs font-semibold uppercase tracking-[0.2em] text-slate-400'
 
-// Function Header: Renders the sticky menu along with spreadsheet ribbon commands and collapse toggle.
+// Function Header: Renders the sticky menu along with spreadsheet utility commands and collapse toggle.
 export default function MenuHeader({
   onYamlInputClick,
   notice,
@@ -54,8 +54,8 @@ export default function MenuHeader({
   onBulkValueChange,
   onBulkApply,
 }: Props): React.ReactElement {
-  const ribbonId = React.useId()
-  const [isRibbonCollapsed, setRibbonCollapsed] = React.useState<boolean>(false)
+  const menuPanelId = React.useId()
+  const [isMenuCollapsed, setMenuCollapsed] = React.useState<boolean>(false)
   const [sheetNameDraft, setSheetNameDraft] = React.useState<string>(currentSheetName)
 
   React.useEffect(() => {
@@ -89,11 +89,11 @@ export default function MenuHeader({
     [commitSheetName, currentSheetName],
   )
 
-  const toggleRibbon = React.useCallback(() => {
-    setRibbonCollapsed((prev) => !prev)
+  const toggleMenu = React.useCallback(() => {
+    setMenuCollapsed((prev) => !prev)
   }, [])
 
-  const collapseLabel = isRibbonCollapsed ? 'リボンを展開' : 'リボンを折りたたむ'
+  const collapseLabel = isMenuCollapsed ? 'メニューを展開' : 'メニューを折りたたむ'
 
   return (
     <header className="sticky top-0 z-10 w-full border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -101,9 +101,6 @@ export default function MenuHeader({
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <span className="text-base font-semibold text-slate-900">Gridelle</span>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
-              アプリケーションメニュー
-            </span>
           </div>
           <nav aria-label="Gridelleメニュー" className="flex flex-wrap items-center gap-3">
             <button type="button" className={ghostButtonClass} onClick={onYamlInputClick}>
@@ -112,15 +109,15 @@ export default function MenuHeader({
             <button
               type="button"
               className={subtleButtonClass}
-              onClick={toggleRibbon}
-              aria-expanded={!isRibbonCollapsed}
-              aria-controls={ribbonId}
+              onClick={toggleMenu}
+              aria-expanded={!isMenuCollapsed}
+              aria-controls={menuPanelId}
             >
               {collapseLabel}
             </button>
           </nav>
         </div>
-        {isRibbonCollapsed && notice && (
+        {isMenuCollapsed && notice && (
           <p
             className={`text-sm ${notice.tone === 'error' ? 'text-red-600' : 'text-emerald-600'}`}
             role={notice.tone === 'error' ? 'alert' : 'status'}
@@ -128,11 +125,11 @@ export default function MenuHeader({
             {notice.text}
           </p>
         )}
-        {!isRibbonCollapsed && (
+        {!isMenuCollapsed && (
           <div
-            id={ribbonId}
+            id={menuPanelId}
             className={`${layoutTheme.ribbonShell} p-4`}
-            aria-label="スプレッドシート操作リボン"
+            aria-label="スプレッドシート操作メニュー"
           >
             <div className="flex flex-col gap-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -190,8 +187,8 @@ export default function MenuHeader({
                 </p>
               )}
               <div className="grid gap-4 lg:grid-cols-3">
-                <div className={ribbonGroupClass}>
-                  <span className={ribbonTitleClass}>構造</span>
+                <div className={menuGroupClass}>
+                  <span className={menuTitleClass}>構造</span>
                   <div className="flex flex-wrap items-center gap-3">
                     <button type="button" className={primaryButtonClass} onClick={onAddRow}>
                       行を追加
@@ -210,8 +207,8 @@ export default function MenuHeader({
                     </div>
                   </div>
                 </div>
-                <div className={ribbonGroupClass}>
-                  <span className={ribbonTitleClass}>選択</span>
+                <div className={menuGroupClass}>
+                  <span className={menuTitleClass}>選択</span>
                   <p data-testid="selection-summary" className="text-sm font-medium text-slate-700">
                     {selectionSummary}
                   </p>
@@ -227,8 +224,8 @@ export default function MenuHeader({
                     </button>
                   </div>
                 </div>
-                <div className={ribbonGroupClass}>
-                  <span className={ribbonTitleClass}>一括入力</span>
+                <div className={menuGroupClass}>
+                  <span className={menuTitleClass}>一括入力</span>
                   <div className="flex flex-col gap-3">
                     <input
                       type="text"
