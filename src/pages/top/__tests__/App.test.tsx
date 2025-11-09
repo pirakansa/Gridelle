@@ -295,7 +295,7 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('tab', { name: '完了済み' }))
+    await user.selectOptions(screen.getByTestId('sheet-select'), '1')
 
     expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('リリースノート作成')
     expect(screen.getByTestId('sheet-name-input')).toHaveValue('完了済み')
@@ -318,10 +318,12 @@ describe('App', () => {
     render(<App />)
 
     await user.click(screen.getByTestId('add-sheet-button'))
-    const newSheetTab = await screen.findByRole('tab', { name: 'Sheet 3' })
+    const sheetSelect = screen.getByTestId('sheet-select') as HTMLSelectElement
     await waitFor(() => {
-      expect(newSheetTab).toHaveAttribute('aria-selected', 'true')
+      expect(sheetSelect.value).toBe('2')
     })
+    const options = Array.from(sheetSelect.options).map((option) => option.textContent)
+    expect(options).toContain('Sheet 3')
     expect(await screen.findByText('表示するデータがありません。')).toBeInTheDocument()
   })
 })
