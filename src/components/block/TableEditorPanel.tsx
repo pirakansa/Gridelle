@@ -1,11 +1,9 @@
 // File Header: Ribbon-style menu exposing spreadsheet structure and selection controls.
 import React from 'react'
 import { layoutTheme } from '../../utils/Theme'
-import {
-  ghostButtonClass,
-  primaryButtonClass,
-  subtleButtonClass,
-} from '../constants'
+import Button from '../atom/Button'
+import TextInput from '../atom/TextInput'
+import SelectField from '../atom/SelectField'
 
 type Props = {
   notice: { text: string; tone: 'error' | 'success' } | null
@@ -79,11 +77,10 @@ export default function TableEditorPanel({
                 <label htmlFor="sheet-select" className="font-medium text-slate-700">
                   シート
                 </label>
-                <select
+                <SelectField
                   id="sheet-select"
                   value={activeSheetIndex}
                   onChange={(event) => onSelectSheet(Number(event.target.value))}
-                  className="rounded border border-slate-200 px-2 py-1 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                   data-testid="sheet-select"
                 >
                   {sheetNames.map((name, index) => (
@@ -91,22 +88,17 @@ export default function TableEditorPanel({
                       {name}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
-              <button
-                type="button"
-                className={ghostButtonClass}
-                onClick={onAddSheet}
-                data-testid="add-sheet-button"
-              >
+              <Button type="button" variant="ghost" onClick={onAddSheet} data-testid="add-sheet-button">
                 シートを追加
-              </button>
+              </Button>
             </div>
             <div className="flex w-full max-w-sm items-center gap-2 md:max-w-md">
               <label htmlFor="sheet-name" className="text-sm text-slate-600">
                 シート名
               </label>
-              <input
+              <TextInput
                 id="sheet-name"
                 type="text"
                 value={sheetNameDraft}
@@ -118,8 +110,8 @@ export default function TableEditorPanel({
                     commitSheetName()
                   }
                 }}
-                className="w-full rounded border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 data-testid="sheet-name-input"
+                fullWidth
               />
             </div>
           </div>
@@ -136,20 +128,19 @@ export default function TableEditorPanel({
             <div className={ribbonGroupClass}>
               <span className={ribbonTitleClass}>構造</span>
               <div className="flex flex-wrap items-center gap-3">
-                <button type="button" className={primaryButtonClass} onClick={onAddRow}>
+                <Button type="button" onClick={onAddRow}>
                   行を追加
-                </button>
+                </Button>
                 <div className="flex items-center gap-2">
-                  <input
+                  <TextInput
                     type="text"
                     placeholder="列名を入力"
                     value={newColumnName}
                     onChange={(event) => onColumnNameChange(event.target.value)}
-                    className="rounded-full border border-slate-200 px-4 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                   />
-                  <button type="button" className={ghostButtonClass} onClick={onAddColumn}>
+                  <Button type="button" variant="ghost" onClick={onAddColumn}>
                     列を追加
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -160,38 +151,33 @@ export default function TableEditorPanel({
               </p>
               <div className="flex items-center gap-3 text-xs text-slate-500">
                 <span>⌘/Ctrl+V で貼り付け / Escape で選択解除</span>
-                <button
-                  type="button"
-                  className={subtleButtonClass}
-                  onClick={onClearSelection}
-                  disabled={!hasSelection}
-                >
+                <Button type="button" variant="subtle" onClick={onClearSelection} disabled={!hasSelection}>
                   選択をクリア
-                </button>
+                </Button>
               </div>
             </div>
             <div className={ribbonGroupClass}>
               <span className={ribbonTitleClass}>一括入力</span>
               <div className="flex flex-col gap-3">
-                <input
+                <TextInput
                   type="text"
                   placeholder="選択セルへ一括入力"
                   value={bulkValue}
                   onChange={(event) => onBulkValueChange(event.target.value)}
-                  className="rounded-2xl border border-slate-200 px-4 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                   data-testid="bulk-input"
                   onPointerDown={(event) => event.stopPropagation()}
+                  fullWidth
                 />
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
                     type="button"
-                    className={ghostButtonClass}
+                    variant="ghost"
                     onClick={onBulkApply}
                     disabled={!hasSelection}
                     data-testid="bulk-apply"
                   >
                     一括入力する
-                  </button>
+                  </Button>
                   <span className="text-xs text-slate-500">選択範囲に同じ値を設定</span>
                 </div>
               </div>

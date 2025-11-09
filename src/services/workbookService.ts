@@ -1,4 +1,4 @@
-// File Header: Helper utilities for translating between YAML strings and table row data.
+// File Header: Workbook service handling YAML serialization and sheet normalization.
 import { dump, load } from 'js-yaml'
 
 export type TableRow = Record<string, string>
@@ -8,8 +8,8 @@ export type TableSheet = {
   rows: TableRow[]
 }
 
-// Function Header: Parses a YAML string into an array of sheets containing table rows.
-export function parseYamlWorkbook(source: string): TableSheet[] {
+// Function Header: Parses a YAML workbook string into sheets and rows.
+export function parseWorkbook(source: string): TableSheet[] {
   const trimmed = source.trim()
   if (!trimmed) {
     return []
@@ -40,8 +40,8 @@ export function parseYamlWorkbook(source: string): TableSheet[] {
   return parsed.map((entry, index) => normalizeSheet(entry, index))
 }
 
-// Function Header: Serializes workbook sheets back into a YAML string.
-export function stringifyYamlWorkbook(sheets: TableSheet[]): string {
+// Function Header: Serializes the workbook back into YAML text.
+export function stringifyWorkbook(sheets: TableSheet[]): string {
   if (!sheets.length) {
     return '[]\n'
   }
@@ -64,7 +64,7 @@ export function stringifyYamlWorkbook(sheets: TableSheet[]): string {
   return yamlText.endsWith('\n') ? yamlText : `${yamlText}\n`
 }
 
-// Function Header: Derives the ordered list of columns from the given rows.
+// Function Header: Derives the unique columns present in the provided rows.
 export function deriveColumns(rows: TableRow[]): string[] {
   const columnSet = new Set<string>()
   rows.forEach((row) => {
@@ -78,9 +78,7 @@ function normalizeSheet(entry: unknown, index: number): TableSheet {
     const record = entry as Record<string, unknown>
     const nameRaw = record.name
     const rowsRaw = record.rows
-    const name = typeof nameRaw === 'string' && nameRaw.trim().length > 0 ? nameRaw : `Sheet ${
-      index + 1
-    }`
+    const name = typeof nameRaw === 'string' && nameRaw.trim().length > 0 ? nameRaw : `Sheet ${index + 1}`
     const rowsSource = Array.isArray(rowsRaw) ? rowsRaw : []
     const rows = rowsSource.map((rowEntry, rowIndex) => normalizeRow(rowEntry, rowIndex))
     return { name, rows }

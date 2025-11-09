@@ -1,5 +1,5 @@
 // File Header: Spreadsheet helper utilities for selection and table shape adjustments.
-import type { TableRow } from '../../../utils/yamlTable'
+import type { TableRow } from '../../../services/workbookService'
 import type { CellPosition, SelectionRange } from '../types'
 
 // Function Header: Builds a normalized selection range given two cell positions.

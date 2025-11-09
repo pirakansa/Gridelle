@@ -1,6 +1,6 @@
 // File Header: Overlay shell component used to present configuration panels.
 import React from 'react'
-import { ghostButtonClass } from '../constants'
+import Button from '../atom/Button'
 
 type Props = {
   title: string
@@ -47,14 +47,9 @@ export default function SettingsOverlay({
               </p>
             )}
           </div>
-          <button
-            type="button"
-            className={`${ghostButtonClass} px-3 py-1 text-xs`}
-            onClick={onClose}
-            aria-label="閉じる"
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} aria-label="閉じる">
             × 閉じる
-          </button>
+          </Button>
         </div>
         <div className="max-h-[70vh] overflow-y-auto pr-1">{children}</div>
       </div>

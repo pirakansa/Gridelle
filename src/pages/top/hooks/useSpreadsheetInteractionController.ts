@@ -1,6 +1,6 @@
 // File Header: Hook encapsulating selection, fill, clipboard, and editing interactions.
 import React from 'react'
-import type { TableRow } from '../../../utils/yamlTable'
+import type { TableRow } from '../../../services/workbookService'
 import type { CellPosition, Notice, SelectionRange, UpdateRows } from '../types'
 import { stringifySelection } from '../utils/spreadsheetTableUtils'
 import { useClipboardHandlers } from './useClipboardHandlers'
