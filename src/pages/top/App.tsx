@@ -78,6 +78,10 @@ export default function App(): React.ReactElement {
     onAddColumn={spreadsheet.handleAddColumn}
     onInsertColumnRightOfSelection={spreadsheet.handleInsertColumnRightOfSelection}
   onDeleteSelectedColumns={spreadsheet.handleDeleteSelectedColumns}
+  onMoveSelectedColumnsLeft={spreadsheet.handleMoveSelectedColumnsLeft}
+  onMoveSelectedColumnsRight={spreadsheet.handleMoveSelectedColumnsRight}
+  canMoveSelectedColumnsLeft={spreadsheet.canMoveSelectedColumnsLeft}
+  canMoveSelectedColumnsRight={spreadsheet.canMoveSelectedColumnsRight}
     onDeleteSelectedRows={spreadsheet.handleDeleteSelectedRows}
         selectionSummary={spreadsheet.selectionSummary}
         onClearSelection={spreadsheet.clearSelection}

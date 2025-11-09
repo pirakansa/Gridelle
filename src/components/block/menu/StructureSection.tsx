@@ -10,6 +10,10 @@ type StructureSectionProps = {
   onInsertColumnRightOfSelection: () => void
   onDeleteSelectedColumns: () => void
   onDeleteSelectedRows: () => void
+  onMoveSelectedColumnsLeft: () => void
+  onMoveSelectedColumnsRight: () => void
+  canMoveSelectedColumnsLeft: boolean
+  canMoveSelectedColumnsRight: boolean
   hasSelection: boolean
 }
 
@@ -21,6 +25,10 @@ export default function StructureSection({
   onInsertColumnRightOfSelection,
   onDeleteSelectedColumns,
   onDeleteSelectedRows,
+  onMoveSelectedColumnsLeft,
+  onMoveSelectedColumnsRight,
+  canMoveSelectedColumnsLeft,
+  canMoveSelectedColumnsRight,
   hasSelection,
 }: StructureSectionProps): React.ReactElement {
   return (
@@ -66,6 +74,24 @@ export default function StructureSection({
               data-testid="insert-column-right-of-selection"
             >
               選択列の右に列を追加
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onMoveSelectedColumnsLeft}
+              disabled={!canMoveSelectedColumnsLeft}
+              data-testid="move-selected-columns-left"
+            >
+              選択列を左へ移動
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onMoveSelectedColumnsRight}
+              disabled={!canMoveSelectedColumnsRight}
+              data-testid="move-selected-columns-right"
+            >
+              選択列を右へ移動
             </Button>
             <Button
               type="button"

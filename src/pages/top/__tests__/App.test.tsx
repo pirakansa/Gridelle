@@ -222,6 +222,46 @@ describe('App', () => {
     })
   })
 
+  it('選択列を左へ移動できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+    await user.click(screen.getByTestId('column-select-2'))
+
+    const moveLeftButton = screen.getByTestId('move-selected-columns-left')
+    expect(moveLeftButton).toBeEnabled()
+
+    await user.click(moveLeftButton)
+
+    await waitFor(() => {
+      const titles = screen.getAllByTestId('column-title').map((node) => node.textContent)
+      expect(titles).toEqual(['feature', 'status', 'owner', 'effort'])
+    })
+
+    expect(screen.getByTestId('cell-box-0-status')).toHaveAttribute('data-selected', 'true')
+  })
+
+  it('選択列を右へ移動できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+    await user.click(screen.getByTestId('column-select-0'))
+
+    const moveRightButton = screen.getByTestId('move-selected-columns-right')
+    expect(moveRightButton).toBeEnabled()
+
+    await user.click(moveRightButton)
+
+    await waitFor(() => {
+      const titles = screen.getAllByTestId('column-title').map((node) => node.textContent)
+      expect(titles).toEqual(['owner', 'feature', 'status', 'effort'])
+    })
+
+    expect(screen.getByTestId('cell-box-0-feature')).toHaveAttribute('data-selected', 'true')
+  })
+
   it('すべての列を削除するとテーブルが空状態になる', async () => {
     const user = userEvent.setup()
     render(<App />)

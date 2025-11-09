@@ -24,6 +24,10 @@ type Props = {
   onInsertColumnRightOfSelection: () => void
   onDeleteSelectedColumns: () => void
   onDeleteSelectedRows: () => void
+  onMoveSelectedColumnsLeft: () => void
+  onMoveSelectedColumnsRight: () => void
+  canMoveSelectedColumnsLeft: boolean
+  canMoveSelectedColumnsRight: boolean
   selectionSummary: string
   onClearSelection: () => void
   hasSelection: boolean
@@ -48,6 +52,10 @@ export default function MenuHeader({
   onInsertColumnRightOfSelection,
   onDeleteSelectedColumns,
   onDeleteSelectedRows,
+  onMoveSelectedColumnsLeft,
+  onMoveSelectedColumnsRight,
+  canMoveSelectedColumnsLeft,
+  canMoveSelectedColumnsRight,
   selectionSummary,
   onClearSelection,
   hasSelection,
@@ -143,6 +151,10 @@ export default function MenuHeader({
                   onInsertColumnRightOfSelection={onInsertColumnRightOfSelection}
                   onDeleteSelectedColumns={onDeleteSelectedColumns}
                   onDeleteSelectedRows={onDeleteSelectedRows}
+                  onMoveSelectedColumnsLeft={onMoveSelectedColumnsLeft}
+                  onMoveSelectedColumnsRight={onMoveSelectedColumnsRight}
+                  canMoveSelectedColumnsLeft={canMoveSelectedColumnsLeft}
+                  canMoveSelectedColumnsRight={canMoveSelectedColumnsRight}
                   hasSelection={hasSelection}
                 />
               )}

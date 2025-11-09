@@ -26,6 +26,10 @@ type UseSpreadsheetState = {
   handleAddColumn: () => void
   handleInsertColumnRightOfSelection: () => void
   handleDeleteSelectedColumns: () => void
+  handleMoveSelectedColumnsLeft: () => void
+  handleMoveSelectedColumnsRight: () => void
+  canMoveSelectedColumnsLeft: boolean
+  canMoveSelectedColumnsRight: boolean
   handleDeleteSelectedRows: () => void
   handleAddSheet: () => void
   handleRenameSheet: (_name: string) => void
@@ -144,6 +148,16 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     setNotice,
   })
 
+  const reselectColumnRange = React.useCallback(
+    (startIndex: number, endIndex: number) => {
+      handleColumnHeaderClick(startIndex, false)
+      if (endIndex > startIndex) {
+        handleColumnHeaderClick(endIndex, true)
+      }
+    },
+    [handleColumnHeaderClick],
+  )
+
   const handleInsertRowBelowSelection = React.useCallback((): void => {
     if (!selection) {
       setNotice({ text: '挿入する行を選択してください。', tone: 'error' })
@@ -190,6 +204,59 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     })
     setNotice({ text: `列「${newColumnKey}」を選択列の右に追加しました。`, tone: 'success' })
   }, [selection, columns, rows, updateRows, setColumnOrder, setNotice])
+
+  const handleMoveSelectedColumnsLeft = React.useCallback((): void => {
+    if (!selection) {
+      setNotice({ text: '移動する列を選択してください。', tone: 'error' })
+      return
+    }
+    if (!columns.length) {
+      setNotice({ text: '移動できる列がありません。', tone: 'error' })
+      return
+    }
+    const start = Math.max(0, Math.min(selection.startCol, columns.length - 1))
+    const end = Math.max(0, Math.min(selection.endCol, columns.length - 1))
+    const normalizedStart = Math.min(start, end)
+    const normalizedEnd = Math.max(start, end)
+    if (normalizedStart === 0) {
+      setNotice({ text: 'これ以上左に移動できません。', tone: 'error' })
+      return
+    }
+    const nextOrder = [...columns]
+    const blockLength = normalizedEnd - normalizedStart + 1
+    const block = nextOrder.splice(normalizedStart, blockLength)
+    nextOrder.splice(normalizedStart - 1, 0, ...block)
+    setColumnOrder(() => nextOrder)
+    reselectColumnRange(normalizedStart - 1, normalizedEnd - 1)
+    setNotice({ text: '選択列を左へ移動しました。', tone: 'success' })
+  }, [selection, columns, setColumnOrder, reselectColumnRange, setNotice])
+
+  const handleMoveSelectedColumnsRight = React.useCallback((): void => {
+    if (!selection) {
+      setNotice({ text: '移動する列を選択してください。', tone: 'error' })
+      return
+    }
+    if (!columns.length) {
+      setNotice({ text: '移動できる列がありません。', tone: 'error' })
+      return
+    }
+    const maxIndex = columns.length - 1
+    const start = Math.max(0, Math.min(selection.startCol, maxIndex))
+    const end = Math.max(0, Math.min(selection.endCol, maxIndex))
+    const normalizedStart = Math.min(start, end)
+    const normalizedEnd = Math.max(start, end)
+    if (normalizedEnd >= maxIndex) {
+      setNotice({ text: 'これ以上右に移動できません。', tone: 'error' })
+      return
+    }
+    const nextOrder = [...columns]
+    const blockLength = normalizedEnd - normalizedStart + 1
+    const block = nextOrder.splice(normalizedStart, blockLength)
+    nextOrder.splice(normalizedStart + 1, 0, ...block)
+    setColumnOrder(() => nextOrder)
+    reselectColumnRange(normalizedStart + 1, normalizedEnd + 1)
+    setNotice({ text: '選択列を右へ移動しました。', tone: 'success' })
+  }, [selection, columns, setColumnOrder, reselectColumnRange, setNotice])
 
   const handleDeleteSelectedColumns = React.useCallback((): void => {
     if (!selection) {
@@ -270,6 +337,8 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleInsertRowBelowSelection,
     handleAddColumn,
     handleInsertColumnRightOfSelection,
+  handleMoveSelectedColumnsLeft,
+  handleMoveSelectedColumnsRight,
     handleDeleteSelectedColumns,
     handleDeleteSelectedRows,
     handleAddSheet,
@@ -284,6 +353,10 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     applyBulkInput,
     handleRowNumberClick,
     handleColumnHeaderClick,
+    canMoveSelectedColumnsLeft: Boolean(selection && selection.startCol > 0),
+    canMoveSelectedColumnsRight: Boolean(
+      selection && columns.length > 0 && selection.endCol < columns.length - 1,
+    ),
     selection,
     activeRange,
     fillPreview,
