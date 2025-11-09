@@ -8,6 +8,9 @@ const firebaseConfig = {
 } as const
 
 const GITHUB_TOKEN_STORAGE_KEY = 'gridelle/githubAccessToken'
+const LOGIN_MODE_STORAGE_KEY = 'gridelle/loginMode'
+
+export type LoginMode = 'guest' | 'github'
 
 let firebaseApp: FirebaseApp | undefined
 let authInstance: Auth | undefined
@@ -91,4 +94,43 @@ export function clearStoredGithubToken(): void {
   setStoredGithubToken(null)
 }
 
-export { firebaseConfig as authFirebaseConfig, GITHUB_TOKEN_STORAGE_KEY }
+/**
+ * Persists the current login mode for client-side feature toggles.
+ * @param {LoginMode | null} mode Login mode identifier.
+ */
+export function setLoginMode(mode: LoginMode | null): void {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return
+  }
+
+  if (!mode) {
+    window.localStorage.removeItem(LOGIN_MODE_STORAGE_KEY)
+    return
+  }
+
+  window.localStorage.setItem(LOGIN_MODE_STORAGE_KEY, mode)
+}
+
+/**
+ * Reads the current login mode from storage.
+ * @returns {LoginMode | null} Stored login mode value.
+ */
+export function getLoginMode(): LoginMode | null {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return null
+  }
+
+  const mode = window.localStorage.getItem(LOGIN_MODE_STORAGE_KEY)
+
+  if (mode === 'guest' || mode === 'github') {
+    return mode
+  }
+
+  return null
+}
+
+export {
+  firebaseConfig as authFirebaseConfig,
+  GITHUB_TOKEN_STORAGE_KEY,
+  LOGIN_MODE_STORAGE_KEY,
+}

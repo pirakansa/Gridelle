@@ -10,24 +10,34 @@ import SettingsOverlay from '../../components/block/SettingsOverlay'
 import {
   clearStoredGithubToken,
   getFirebaseAuth,
+  getLoginMode,
   getStoredGithubToken,
+  setLoginMode,
 } from '../../services/authService'
+import type { LoginMode } from '../../services/authService'
 
 // Function Header: Composes the top page using modular sub-components wired to state hooks.
 export default function App(): React.ReactElement {
   const spreadsheet = useSpreadsheetState()
   const [isYamlInputOpen, setYamlInputOpen] = React.useState<boolean>(false)
+  const [loginMode, setLoginModeState] = React.useState<LoginMode | null>(() => getLoginMode())
 
   React.useEffect(() => {
     const auth = getFirebaseAuth()
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (!currentUser) {
         clearStoredGithubToken()
+        setLoginMode(null)
+        setLoginModeState(null)
         window.location.replace('/login.html')
         return
       }
 
-      if (!getStoredGithubToken()) {
+      const mode: LoginMode = currentUser.isAnonymous ? 'guest' : 'github'
+      setLoginMode(mode)
+      setLoginModeState(mode)
+
+      if (mode === 'github' && !getStoredGithubToken()) {
         window.location.replace('/login.html')
       }
     })
@@ -46,7 +56,7 @@ export default function App(): React.ReactElement {
   }, [])
 
   return (
-    <div className={layoutTheme.pageShell}>
+    <div className={layoutTheme.pageShell} data-login-mode={loginMode ?? 'none'}>
       <MenuHeader
         onYamlInputClick={openYamlInput}
         notice={spreadsheet.notice}
