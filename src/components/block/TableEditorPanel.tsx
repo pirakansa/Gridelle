@@ -196,6 +196,7 @@ export default function TableEditorPanel({
                   data-testid="bulk-input"
                   onPointerDown={(event) => event.stopPropagation()}
                   fullWidth
+                  minRows={1}
                 />
                 <div className="flex items-center gap-2">
                   <Button

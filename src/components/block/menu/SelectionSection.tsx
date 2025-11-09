@@ -82,7 +82,8 @@ export default function SelectionSection({
               onChange={(event) => onBulkValueChange(event.target.value)}
               data-testid="bulk-input"
               onPointerDown={(event) => event.stopPropagation()}
-              className="h-24 w-56 resize-y sm:w-72 md:w-80 lg:w-96"
+              className="w-56 resize-y sm:w-72 md:w-80 lg:w-96"
+              minRows={1}
             />
             <Button
               type="button"
