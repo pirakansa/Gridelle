@@ -1,16 +1,41 @@
 // File Header: Page-level component orchestrating the spreadsheet playground layout.
 import React from 'react'
+import { onAuthStateChanged } from 'firebase/auth'
 import { layoutTheme } from '../../utils/Theme'
 import { useSpreadsheetState } from './useSpreadsheetState'
 import SpreadsheetTable from '../../components/block/SpreadsheetTable'
 import MenuHeader from '../../components/block/MenuHeader'
 import YamlPanel from '../../components/block/YamlPanel'
 import SettingsOverlay from '../../components/block/SettingsOverlay'
+import {
+  clearStoredGithubToken,
+  getFirebaseAuth,
+  getStoredGithubToken,
+} from '../../services/authService'
 
 // Function Header: Composes the top page using modular sub-components wired to state hooks.
 export default function App(): React.ReactElement {
   const spreadsheet = useSpreadsheetState()
   const [isYamlInputOpen, setYamlInputOpen] = React.useState<boolean>(false)
+
+  React.useEffect(() => {
+    const auth = getFirebaseAuth()
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (!currentUser) {
+        clearStoredGithubToken()
+        window.location.replace('/login.html')
+        return
+      }
+
+      if (!getStoredGithubToken()) {
+        window.location.replace('/login.html')
+      }
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [])
 
   const openYamlInput = React.useCallback(() => {
     setYamlInputOpen(true)

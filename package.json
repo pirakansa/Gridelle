@@ -17,6 +17,7 @@
   "author": "pirakansa",
   "license": "MIT",
   "dependencies": {
+    "@octokit/rest": "^21.0.2",
     "cookie": "^1.0.2",
     "firebase": "^12.5.0",
     "js-yaml": "^4.1.0",
