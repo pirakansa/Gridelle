@@ -160,6 +160,7 @@ export default function SpreadsheetTable({
                             onBlur={onCellEditorBlur}
                             onKeyDown={onCellEditorKeyDown}
                             onPointerDown={(event) => event.stopPropagation()}
+                            onClick={(event) => event.stopPropagation()}
                             onDoubleClick={(event) => event.stopPropagation()}
                           />
                         ) : (

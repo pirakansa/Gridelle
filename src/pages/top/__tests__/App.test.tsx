@@ -100,6 +100,20 @@ describe('App', () => {
     })
   })
 
+  it('編集モード中にテキストエリアをクリックしても編集が継続する', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const editableBox = screen.getByTestId('cell-box-0-feature')
+    fireEvent.doubleClick(editableBox)
+    const editor = (await screen.findByTestId('cell-0-feature')) as HTMLTextAreaElement
+
+    await user.click(editor)
+
+    expect(screen.getByTestId('cell-0-feature')).toBeInTheDocument()
+    expect(editor).toHaveFocus()
+  })
+
   it('列の並べ替えができる', async () => {
     const user = userEvent.setup()
     render(<App />)
