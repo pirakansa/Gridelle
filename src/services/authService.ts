@@ -2,9 +2,23 @@
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app'
 import { Auth, GithubAuthProvider, getAuth } from 'firebase/auth'
 
+/**
+ * Retrieves a required environment variable or throws if it is undefined.
+ * @param {string | undefined} value Environment variable value.
+ * @param {string} key Environment variable key name.
+ * @returns {string} Validated environment value.
+ */
+function getRequiredEnv(value: string | undefined, key: string): string {
+  if (!value) {
+    throw new Error(`Environment variable ${key} is not configured.`)
+  }
+
+  return value
+}
+
 const firebaseConfig = {
-  apiKey: 'AIzaSyDD6chKQlwE6ihHGc1v3NCZeMjxCQhg0pw',
-  authDomain: 'pprj-355914.firebaseapp.com',
+  apiKey: getRequiredEnv(import.meta.env.VITE_FIREBASE_API_KEY, 'VITE_FIREBASE_API_KEY'),
+  authDomain: getRequiredEnv(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, 'VITE_FIREBASE_AUTH_DOMAIN'),
 } as const
 
 const GITHUB_TOKEN_STORAGE_KEY = 'gridelle/githubAccessToken'
