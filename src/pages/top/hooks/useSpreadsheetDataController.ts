@@ -1,6 +1,13 @@
 // File Header: Hook responsible for spreadsheet data state and YAML/column operations.
 import React from 'react'
-import { stringifyWorkbook, parseWorkbook, type TableRow, type TableSheet } from '../../../services/workbookService'
+import {
+  stringifyWorkbook,
+  parseWorkbook,
+  type TableRow,
+  type TableSheet,
+  cloneRow,
+  createCell,
+} from '../../../services/workbookService'
 import { copyText } from '../../../services/clipboardService'
 import { downloadTextFile, readFileAsText } from '../../../services/fileTransferService'
 import type { Notice } from '../types'
@@ -282,7 +289,18 @@ export const useSpreadsheetDataController = (
 
   const handleCellChange = React.useCallback(
     (rowIndex: number, columnKey: string, value: string): void => {
-      const nextRows = rows.map((row, index) => (index === rowIndex ? { ...row, [columnKey]: value } : row))
+      const nextRows = rows.map((row, index) => {
+        if (index !== rowIndex) {
+          return row
+        }
+        const nextRow = cloneRow(row)
+        const existing = nextRow[columnKey] ?? createCell()
+        nextRow[columnKey] = {
+          ...existing,
+          value,
+        }
+        return nextRow
+      })
       updateRows(nextRows)
     },
     [rows, updateRows],

@@ -1,5 +1,5 @@
 import React from 'react'
-import type { TableRow } from '../../../../services/workbookService'
+import { cloneCell, type TableRow } from '../../../../services/workbookService'
 import type { CellPosition, Notice, SelectionRange, UpdateRows } from '../../types'
 
 type UseKeyboardShortcutsOptions = {
@@ -106,7 +106,9 @@ export function useKeyboardShortcuts({
           }
           const updated = { ...row }
           targetColumns.forEach((columnKey) => {
-            updated[columnKey] = ''
+            const cleared = cloneCell(row[columnKey])
+            cleared.value = ''
+            updated[columnKey] = cleared
           })
           return updated
         })

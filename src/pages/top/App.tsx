@@ -132,6 +132,11 @@ export default function App(): React.ReactElement {
         bulkValue={spreadsheet.bulkValue}
         onBulkValueChange={spreadsheet.setBulkValue}
         onBulkApply={spreadsheet.applyBulkInput}
+  selectionTextColor={spreadsheet.selectionTextColor}
+  selectionBackgroundColor={spreadsheet.selectionBackgroundColor}
+  onApplySelectionTextColor={spreadsheet.applySelectionTextColor}
+  onApplySelectionBackgroundColor={spreadsheet.applySelectionBackgroundColor}
+  onClearSelectionStyles={spreadsheet.clearSelectionStyles}
         canDeleteSheet={spreadsheet.canDeleteSheet}
         loginMode={loginMode}
         userEmail={currentUser?.email ?? null}

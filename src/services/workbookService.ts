@@ -1,7 +1,13 @@
 // File Header: Workbook service handling YAML serialization and sheet normalization.
 import { dump, load } from 'js-yaml'
 
-export type TableRow = Record<string, string>
+export type TableCell = {
+  value: string
+  color?: string
+  bgColor?: string
+}
+
+export type TableRow = Record<string, TableCell>
 
 export type TableSheet = {
   name: string
@@ -50,7 +56,7 @@ export function stringifyWorkbook(sheets: TableSheet[]): string {
     const name = sheet.name.trim() ? sheet.name : `Sheet ${index + 1}`
     return {
       name,
-      rows: sheet.rows.map((row, rowIndex) => normalizeRow(row, rowIndex)),
+      rows: sheet.rows.map((row) => serializeRow(row)),
     }
   })
 
@@ -101,15 +107,46 @@ function normalizeRow(entry: unknown, index: number): TableRow {
   if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
     const normalized: TableRow = {}
     Object.entries(entry as Record<string, unknown>).forEach(([key, value]) => {
-      normalized[key] = stringifyValue(value)
+      normalized[key] = normalizeCell(value)
     })
     return normalized
   }
 
-  return { [`value_${index + 1}`]: stringifyValue(entry) }
+  return { [`value_${index + 1}`]: normalizeCell(entry) }
 }
 
-function stringifyValue(value: unknown): string {
+function normalizeCell(value: unknown): TableCell {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>
+    const hasCellShape =
+      Object.prototype.hasOwnProperty.call(record, 'value') ||
+      Object.prototype.hasOwnProperty.call(record, 'color') ||
+      Object.prototype.hasOwnProperty.call(record, 'bgColor') ||
+      Object.prototype.hasOwnProperty.call(record, 'bgcolor')
+
+    if (hasCellShape) {
+      const normalized: TableCell = {
+        value: stringifyScalar(record.value),
+      }
+
+      const color = record.color
+      if (typeof color === 'string' && color.trim().length > 0) {
+        normalized.color = color
+      }
+
+      const bgColorCandidate = record.bgColor ?? record.bgcolor
+      if (typeof bgColorCandidate === 'string' && bgColorCandidate.trim().length > 0) {
+        normalized.bgColor = bgColorCandidate
+      }
+
+      return normalized
+    }
+  }
+
+  return { value: stringifyScalar(value) }
+}
+
+function stringifyScalar(value: unknown): string {
   if (value === null || value === undefined) {
     return ''
   }
@@ -123,4 +160,67 @@ function stringifyValue(value: unknown): string {
   }
 
   return String(value)
+}
+
+function serializeRow(row: TableRow): Record<string, unknown> {
+  const serialized: Record<string, unknown> = {}
+  Object.entries(row).forEach(([key, cell]) => {
+    serialized[key] = serializeCell(cell)
+  })
+  return serialized
+}
+
+function serializeCell(cell: TableCell): string | { value: string; color?: string; bgColor?: string } {
+  const trimmedColor = typeof cell.color === 'string' ? cell.color.trim() : ''
+  const trimmedBg = typeof cell.bgColor === 'string' ? cell.bgColor.trim() : ''
+  const hasStyle = Boolean(trimmedColor || trimmedBg)
+
+  if (!hasStyle) {
+    return cell.value
+  }
+
+  const serialized: { value: string; color?: string; bgColor?: string } = { value: cell.value }
+  if (trimmedColor) {
+    serialized.color = trimmedColor
+  }
+  if (trimmedBg) {
+    serialized.bgColor = trimmedBg
+  }
+  return serialized
+}
+
+export function createCell(value = '', color?: string, bgColor?: string): TableCell {
+  const cell: TableCell = { value }
+  if (color && color.trim().length > 0) {
+    cell.color = color
+  }
+  if (bgColor && bgColor.trim().length > 0) {
+    cell.bgColor = bgColor
+  }
+  return cell
+}
+
+export function cloneCell(cell: TableCell | undefined): TableCell {
+  const source = cell ?? createCell()
+  return {
+    value: source.value,
+    ...(source.color ? { color: source.color } : {}),
+    ...(source.bgColor ? { bgColor: source.bgColor } : {}),
+  }
+}
+
+export function cloneRow(row: TableRow): TableRow {
+  const next: TableRow = {}
+  Object.entries(row).forEach(([key, cell]) => {
+    next[key] = cloneCell(cell)
+  })
+  return next
+}
+
+export function cloneRows(rows: TableRow[]): TableRow[] {
+  return rows.map((row) => cloneRow(row))
+}
+
+export function getCellValue(cell: TableCell | undefined): string {
+  return cell?.value ?? ''
 }

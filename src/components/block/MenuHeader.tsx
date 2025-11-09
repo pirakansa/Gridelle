@@ -42,6 +42,11 @@ type Props = {
   bulkValue: string
   onBulkValueChange: (_value: string) => void
   onBulkApply: () => void
+  selectionTextColor: string
+  selectionBackgroundColor: string
+  onApplySelectionTextColor: (_color: string | null) => void
+  onApplySelectionBackgroundColor: (_color: string | null) => void
+  onClearSelectionStyles: () => void
   canDeleteSheet: boolean
   loginMode: LoginMode | null
   userEmail: string | null
@@ -82,6 +87,11 @@ export default function MenuHeader({
   bulkValue,
   onBulkValueChange,
   onBulkApply,
+  selectionTextColor,
+  selectionBackgroundColor,
+  onApplySelectionTextColor,
+  onApplySelectionBackgroundColor,
+  onClearSelectionStyles,
   canDeleteSheet,
   loginMode,
   userEmail,
@@ -246,6 +256,11 @@ export default function MenuHeader({
                   bulkValue={bulkValue}
                   onBulkValueChange={onBulkValueChange}
                   onBulkApply={onBulkApply}
+                  selectionTextColor={selectionTextColor}
+                  selectionBackgroundColor={selectionBackgroundColor}
+                  onApplyTextColor={onApplySelectionTextColor}
+                  onApplyBackgroundColor={onApplySelectionBackgroundColor}
+                  onClearSelectionStyles={onClearSelectionStyles}
                 />
               )}
               {activeMenuSection === 'user' && (

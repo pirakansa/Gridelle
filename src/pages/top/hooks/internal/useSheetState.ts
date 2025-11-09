@@ -1,5 +1,5 @@
 import React from 'react'
-import { deriveColumns, type TableRow, type TableSheet } from '../../../../services/workbookService'
+import { cloneRow, deriveColumns, type TableRow, type TableSheet, createCell } from '../../../../services/workbookService'
 import { createEmptyRow } from '../../utils/spreadsheetTableUtils'
 import type { Notice } from '../../types'
 import {
@@ -112,11 +112,14 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
   const addColumn = React.useCallback((): void => {
     const nextColumnName = generateNextColumnKey(columns)
     const nextRows = rows.length
-      ? rows.map((row) => ({
-          ...row,
-          [nextColumnName]: row[nextColumnName] ?? '',
-        }))
-      : [{ [nextColumnName]: '' }]
+      ? rows.map((row) => {
+          const nextRow = cloneRow(row)
+          if (nextRow[nextColumnName] === undefined) {
+            nextRow[nextColumnName] = createCell()
+          }
+          return nextRow
+        })
+      : [{ [nextColumnName]: createCell() }]
     updateRows(nextRows)
     setNotice({ text: `列「${nextColumnName}」を追加しました。`, tone: 'success' })
   }, [columns, rows, updateRows, setNotice])
