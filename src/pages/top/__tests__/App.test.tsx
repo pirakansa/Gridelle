@@ -142,6 +142,7 @@ describe('App', () => {
 
   it('ドラッグ操作で複数セルを選択できる', async () => {
     render(<App />)
+    fireEvent.click(screen.getByTestId('menu-tab-selection'))
     const firstCell = screen.getByTestId('cell-box-0-feature')
     const targetCell = screen.getByTestId('cell-box-1-owner')
 
@@ -255,6 +256,7 @@ describe('App', () => {
     fireEvent.click(screen.getByTestId('cell-box-0-feature'))
     fireEvent.click(screen.getByTestId('cell-box-1-effort'), { shiftKey: true })
 
+    await user.click(screen.getByTestId('menu-tab-bulk'))
     const bulkInput = screen.getByTestId('bulk-input') as HTMLInputElement
     await user.clear(bulkInput)
     await user.type(bulkInput, 'DONE')
@@ -280,6 +282,7 @@ describe('App', () => {
 
   it('行番号をクリックすると行全体が選択される', () => {
     render(<App />)
+    fireEvent.click(screen.getByTestId('menu-tab-selection'))
     const rowButton = within(screen.getByTestId('row-number-2')).getByRole('button', {
       name: '行3を選択',
     })

@@ -20,9 +20,7 @@ body {
 }
 
 .spreadsheet-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  @apply sticky top-0 z-10;
 }
 
 .spreadsheet-table td {
