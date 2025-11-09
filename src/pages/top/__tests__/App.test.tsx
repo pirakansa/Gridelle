@@ -267,6 +267,28 @@ describe('App', () => {
     expect(screen.getByTestId('cell-box-0-feature')).toHaveAttribute('data-selected', 'true')
   })
 
+  it('複数列を移動しても選択範囲が拡張されない', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    await user.click(screen.getByTestId('column-select-1'))
+    fireEvent.click(screen.getByTestId('column-select-2'), { shiftKey: true })
+
+    const moveRightButton = screen.getByTestId('move-selected-columns-right')
+    expect(moveRightButton).toBeEnabled()
+
+    await user.click(moveRightButton)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-box-0-owner')).toHaveAttribute('data-selected', 'true')
+      expect(screen.getByTestId('cell-box-0-status')).toHaveAttribute('data-selected', 'true')
+      expect(screen.getByTestId('cell-box-0-feature')).not.toHaveAttribute('data-selected')
+      expect(screen.getByTestId('cell-box-0-effort')).not.toHaveAttribute('data-selected')
+    })
+  })
+
   it('選択行を下へ移動できる', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -313,6 +335,34 @@ describe('App', () => {
     })
 
     expect(screen.getByTestId('cell-box-0-feature')).toHaveAttribute('data-selected', 'true')
+  })
+
+  it('複数行を移動しても選択範囲が拡張されない', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    const secondRowButton = within(screen.getByTestId('row-number-1')).getByRole('button', {
+      name: '行2を選択',
+    })
+    await user.click(secondRowButton)
+
+    const thirdRowButton = within(screen.getByTestId('row-number-2')).getByRole('button', {
+      name: '行3を選択',
+    })
+    fireEvent.click(thirdRowButton, { shiftKey: true })
+
+    const moveUpButton = screen.getByTestId('move-selected-rows-up')
+    expect(moveUpButton).toBeEnabled()
+
+    await user.click(moveUpButton)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-box-0-feature')).toHaveAttribute('data-selected', 'true')
+      expect(screen.getByTestId('cell-box-1-feature')).toHaveAttribute('data-selected', 'true')
+      expect(screen.getByTestId('cell-box-2-feature')).not.toHaveAttribute('data-selected')
+    })
   })
 
   it('すべての列を削除するとテーブルが空状態になる', async () => {

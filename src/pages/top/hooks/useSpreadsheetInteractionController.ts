@@ -140,29 +140,48 @@ export const useSpreadsheetInteractionController = ({
       }
       resetFillState()
       const lastColumnIndex = columns.length - 1
-      if (extend && selection) {
-        const startRow = Math.min(selection.startRow, rowIndex)
-        const endRow = Math.max(selection.endRow, rowIndex)
-        setSelection({
-          startRow,
-          endRow,
-          startCol: 0,
-          endCol: lastColumnIndex,
+      if (extend) {
+        let computedSelection: SelectionRange | null = null
+        setSelection((previous) => {
+          const base =
+            previous ?? {
+              startRow: rowIndex,
+              endRow: rowIndex,
+              startCol: 0,
+              endCol: lastColumnIndex,
+            }
+          const nextSelection: SelectionRange = {
+            startRow: Math.min(base.startRow, rowIndex),
+            endRow: Math.max(base.endRow, rowIndex),
+            startCol: 0,
+            endCol: lastColumnIndex,
+          }
+          computedSelection = nextSelection
+          return nextSelection
         })
-        setAnchorCell({ rowIndex: startRow, columnIndex: 0 })
+        setAnchorCell((previous) => {
+          if (previous) {
+            return { rowIndex: Math.min(previous.rowIndex, rowIndex), columnIndex: 0 }
+          }
+          if (computedSelection) {
+            return { rowIndex: computedSelection.startRow, columnIndex: 0 }
+          }
+          return { rowIndex, columnIndex: 0 }
+        })
       } else {
-        setAnchorCell({ rowIndex, columnIndex: 0 })
-        setSelection({
+        const nextSelection: SelectionRange = {
           startRow: rowIndex,
           endRow: rowIndex,
           startCol: 0,
           endCol: lastColumnIndex,
-        })
+        }
+        setSelection(() => nextSelection)
+        setAnchorCell({ rowIndex, columnIndex: 0 })
       }
       setIsSelecting(false)
       setEditingCell(null)
     },
-    [columns.length, selection, resetFillState, setSelection, setAnchorCell, setIsSelecting, setEditingCell],
+    [columns.length, resetFillState, setSelection, setAnchorCell, setIsSelecting, setEditingCell],
   )
 
   const handleColumnHeaderClick = React.useCallback(
@@ -174,29 +193,48 @@ export const useSpreadsheetInteractionController = ({
       const hasRows = rows.length > 0
       const startRow = 0
       const endRow = hasRows ? rows.length - 1 : 0
-      if (extend && selection) {
-        const startCol = Math.min(selection.startCol, columnIndex)
-        const endCol = Math.max(selection.endCol, columnIndex)
-        setSelection({
-          startRow,
-          endRow,
-          startCol,
-          endCol,
+      if (extend) {
+        let computedSelection: SelectionRange | null = null
+        setSelection((previous) => {
+          const base =
+            previous ?? {
+              startRow,
+              endRow,
+              startCol: columnIndex,
+              endCol: columnIndex,
+            }
+          const nextSelection: SelectionRange = {
+            startRow,
+            endRow,
+            startCol: Math.min(base.startCol, columnIndex),
+            endCol: Math.max(base.endCol, columnIndex),
+          }
+          computedSelection = nextSelection
+          return nextSelection
         })
-        setAnchorCell({ rowIndex: startRow, columnIndex: startCol })
+        setAnchorCell((previous) => {
+          if (previous) {
+            return { rowIndex: startRow, columnIndex: Math.min(previous.columnIndex, columnIndex) }
+          }
+          if (computedSelection) {
+            return { rowIndex: startRow, columnIndex: computedSelection.startCol }
+          }
+          return { rowIndex: startRow, columnIndex }
+        })
       } else {
-        setAnchorCell({ rowIndex: startRow, columnIndex })
-        setSelection({
+        const nextSelection: SelectionRange = {
           startRow,
           endRow,
           startCol: columnIndex,
           endCol: columnIndex,
-        })
+        }
+        setSelection(() => nextSelection)
+        setAnchorCell({ rowIndex: startRow, columnIndex })
       }
       setIsSelecting(false)
       setEditingCell(null)
     },
-    [columns.length, rows.length, selection, resetFillState, setSelection, setAnchorCell, setIsSelecting, setEditingCell],
+    [columns.length, rows.length, resetFillState, setSelection, setAnchorCell, setIsSelecting, setEditingCell],
   )
 
   const handleCellPointerEnter = React.useCallback(
@@ -291,7 +329,7 @@ export const useSpreadsheetInteractionController = ({
     clearSelection,
     applyBulkInput,
     handleRowNumberClick,
-  handleColumnHeaderClick,
+    handleColumnHeaderClick,
     handleCellPointerDown,
     handleCellPointerEnter,
     handleCellClick,
