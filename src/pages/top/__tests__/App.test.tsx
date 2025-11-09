@@ -33,6 +33,12 @@ describe('App', () => {
     expect(screen.getByLabelText('Gridelleメニュー')).toBeInTheDocument()
   })
 
+  it('ヘルプタブでバージョン情報を確認できる', () => {
+    render(<App />)
+    fireEvent.click(screen.getByTestId('menu-tab-help'))
+    expect(screen.getByTestId('app-version')).toHaveTextContent(import.meta.env.VITE_APP_VERSION)
+  })
+
   it('各行に行番号を表示する', () => {
     render(<App />)
     const rowNumbers = Array.from({ length: 5 }, (_, index) =>

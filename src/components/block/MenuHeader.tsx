@@ -7,6 +7,7 @@ import MenuTabs, { type MenuSectionId } from './menu/MenuTabs'
 import SheetSection from './menu/SheetSection'
 import StructureSection from './menu/StructureSection'
 import SelectionSection from './menu/SelectionSection'
+import HelpSection from './menu/HelpSection'
 
 type Props = {
   onYamlInputClick: () => void
@@ -148,6 +149,7 @@ export default function MenuHeader({
                   onBulkApply={onBulkApply}
                 />
               )}
+              {activeMenuSection === 'help' && <HelpSection />}
             </div>
           </div>
         )}
