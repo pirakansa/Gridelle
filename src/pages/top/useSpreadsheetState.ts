@@ -23,6 +23,8 @@ type UseSpreadsheetState = {
   columns: string[]
   handleAddRow: () => void
   handleInsertRowBelowSelection: () => void
+  handleMoveSelectedRowsUp: () => void
+  handleMoveSelectedRowsDown: () => void
   handleAddColumn: () => void
   handleInsertColumnRightOfSelection: () => void
   handleDeleteSelectedColumns: () => void
@@ -30,6 +32,8 @@ type UseSpreadsheetState = {
   handleMoveSelectedColumnsRight: () => void
   canMoveSelectedColumnsLeft: boolean
   canMoveSelectedColumnsRight: boolean
+  canMoveSelectedRowsUp: boolean
+  canMoveSelectedRowsDown: boolean
   handleDeleteSelectedRows: () => void
   handleAddSheet: () => void
   handleRenameSheet: (_name: string) => void
@@ -148,6 +152,16 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     setNotice,
   })
 
+  const reselectRowRange = React.useCallback(
+    (startIndex: number, endIndex: number) => {
+      handleRowNumberClick(startIndex, false)
+      if (endIndex > startIndex) {
+        handleRowNumberClick(endIndex, true)
+      }
+    },
+    [handleRowNumberClick],
+  )
+
   const reselectColumnRange = React.useCallback(
     (startIndex: number, endIndex: number) => {
       handleColumnHeaderClick(startIndex, false)
@@ -179,6 +193,60 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     updateRows(nextRows)
     setNotice({ text: '選択行の下に行を追加しました。', tone: 'success' })
   }, [selection, columns, rows, updateRows, setNotice])
+
+  const handleMoveSelectedRowsUp = React.useCallback((): void => {
+    if (!selection) {
+      setNotice({ text: '移動する行を選択してください。', tone: 'error' })
+      return
+    }
+    if (!rows.length) {
+      setNotice({ text: '移動できる行がありません。', tone: 'error' })
+      return
+    }
+    const maxIndex = rows.length - 1
+    const start = Math.max(0, Math.min(selection.startRow, maxIndex))
+    const end = Math.max(0, Math.min(selection.endRow, maxIndex))
+    const normalizedStart = Math.min(start, end)
+    const normalizedEnd = Math.max(start, end)
+    if (normalizedStart === 0) {
+      setNotice({ text: 'これ以上上に移動できません。', tone: 'error' })
+      return
+    }
+    const nextRows = [...rows]
+    const blockLength = normalizedEnd - normalizedStart + 1
+    const block = nextRows.splice(normalizedStart, blockLength)
+    nextRows.splice(normalizedStart - 1, 0, ...block)
+    updateRows(nextRows)
+    reselectRowRange(normalizedStart - 1, normalizedEnd - 1)
+    setNotice({ text: '選択行を上へ移動しました。', tone: 'success' })
+  }, [selection, rows, updateRows, reselectRowRange, setNotice])
+
+  const handleMoveSelectedRowsDown = React.useCallback((): void => {
+    if (!selection) {
+      setNotice({ text: '移動する行を選択してください。', tone: 'error' })
+      return
+    }
+    if (!rows.length) {
+      setNotice({ text: '移動できる行がありません。', tone: 'error' })
+      return
+    }
+    const maxIndex = rows.length - 1
+    const start = Math.max(0, Math.min(selection.startRow, maxIndex))
+    const end = Math.max(0, Math.min(selection.endRow, maxIndex))
+    const normalizedStart = Math.min(start, end)
+    const normalizedEnd = Math.max(start, end)
+    if (normalizedEnd >= maxIndex) {
+      setNotice({ text: 'これ以上下に移動できません。', tone: 'error' })
+      return
+    }
+    const nextRows = [...rows]
+    const blockLength = normalizedEnd - normalizedStart + 1
+    const block = nextRows.splice(normalizedStart, blockLength)
+    nextRows.splice(normalizedStart + 1, 0, ...block)
+    updateRows(nextRows)
+    reselectRowRange(normalizedStart + 1, normalizedEnd + 1)
+    setNotice({ text: '選択行を下へ移動しました。', tone: 'success' })
+  }, [selection, rows, updateRows, reselectRowRange, setNotice])
 
   const handleInsertColumnRightOfSelection = React.useCallback((): void => {
     if (!selection) {
@@ -297,6 +365,13 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     setNotice({ text: message, tone: 'success' })
   }, [selection, columns, rows, updateRows, setColumnOrder, clearSelection, setNotice])
 
+  const canMoveSelectedRowsUp = Boolean(selection && selection.startRow > 0)
+  const canMoveSelectedRowsDown = Boolean(selection && rows.length > 0 && selection.endRow < rows.length - 1)
+  const canMoveSelectedColumnsLeft = Boolean(selection && selection.startCol > 0)
+  const canMoveSelectedColumnsRight = Boolean(
+    selection && columns.length > 0 && selection.endCol < columns.length - 1,
+  )
+
   const handleDeleteSelectedRows = React.useCallback((): void => {
     if (!selection) {
       setNotice({ text: '削除する行を選択してください。', tone: 'error' })
@@ -335,6 +410,8 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     columns,
     handleAddRow,
     handleInsertRowBelowSelection,
+  handleMoveSelectedRowsUp,
+  handleMoveSelectedRowsDown,
     handleAddColumn,
     handleInsertColumnRightOfSelection,
   handleMoveSelectedColumnsLeft,
@@ -353,10 +430,10 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     applyBulkInput,
     handleRowNumberClick,
     handleColumnHeaderClick,
-    canMoveSelectedColumnsLeft: Boolean(selection && selection.startCol > 0),
-    canMoveSelectedColumnsRight: Boolean(
-      selection && columns.length > 0 && selection.endCol < columns.length - 1,
-    ),
+    canMoveSelectedRowsUp,
+    canMoveSelectedRowsDown,
+    canMoveSelectedColumnsLeft,
+    canMoveSelectedColumnsRight,
     selection,
     activeRange,
     fillPreview,

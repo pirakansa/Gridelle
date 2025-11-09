@@ -20,6 +20,8 @@ type Props = {
   onAddSheet: () => void
   onAddRow: () => void
   onInsertRowBelowSelection: () => void
+  onMoveSelectedRowsUp: () => void
+  onMoveSelectedRowsDown: () => void
   onAddColumn: () => void
   onInsertColumnRightOfSelection: () => void
   onDeleteSelectedColumns: () => void
@@ -28,6 +30,8 @@ type Props = {
   onMoveSelectedColumnsRight: () => void
   canMoveSelectedColumnsLeft: boolean
   canMoveSelectedColumnsRight: boolean
+  canMoveSelectedRowsUp: boolean
+  canMoveSelectedRowsDown: boolean
   selectionSummary: string
   onClearSelection: () => void
   hasSelection: boolean
@@ -48,6 +52,8 @@ export default function MenuHeader({
   onAddSheet,
   onAddRow,
   onInsertRowBelowSelection,
+  onMoveSelectedRowsUp,
+  onMoveSelectedRowsDown,
   onAddColumn,
   onInsertColumnRightOfSelection,
   onDeleteSelectedColumns,
@@ -56,6 +62,8 @@ export default function MenuHeader({
   onMoveSelectedColumnsRight,
   canMoveSelectedColumnsLeft,
   canMoveSelectedColumnsRight,
+  canMoveSelectedRowsUp,
+  canMoveSelectedRowsDown,
   selectionSummary,
   onClearSelection,
   hasSelection,
@@ -147,6 +155,8 @@ export default function MenuHeader({
                 <StructureSection
                   onAddRow={onAddRow}
                   onInsertRowBelowSelection={onInsertRowBelowSelection}
+                  onMoveSelectedRowsUp={onMoveSelectedRowsUp}
+                  onMoveSelectedRowsDown={onMoveSelectedRowsDown}
                   onAddColumn={onAddColumn}
                   onInsertColumnRightOfSelection={onInsertColumnRightOfSelection}
                   onDeleteSelectedColumns={onDeleteSelectedColumns}
@@ -155,6 +165,8 @@ export default function MenuHeader({
                   onMoveSelectedColumnsRight={onMoveSelectedColumnsRight}
                   canMoveSelectedColumnsLeft={canMoveSelectedColumnsLeft}
                   canMoveSelectedColumnsRight={canMoveSelectedColumnsRight}
+                  canMoveSelectedRowsUp={canMoveSelectedRowsUp}
+                  canMoveSelectedRowsDown={canMoveSelectedRowsDown}
                   hasSelection={hasSelection}
                 />
               )}

@@ -262,6 +262,54 @@ describe('App', () => {
     expect(screen.getByTestId('cell-box-0-feature')).toHaveAttribute('data-selected', 'true')
   })
 
+  it('選択行を下へ移動できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    const firstRowButton = within(screen.getByTestId('row-number-0')).getByRole('button', {
+      name: '行1を選択',
+    })
+    await user.click(firstRowButton)
+
+    const moveDownButton = screen.getByTestId('move-selected-rows-down')
+    expect(moveDownButton).toBeEnabled()
+
+    await user.click(moveDownButton)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('YAML Export')
+      expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('テーブル編集')
+    })
+
+    expect(screen.getByTestId('cell-box-1-feature')).toHaveAttribute('data-selected', 'true')
+  })
+
+  it('選択行を上へ移動できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    const secondRowButton = within(screen.getByTestId('row-number-1')).getByRole('button', {
+      name: '行2を選択',
+    })
+    await user.click(secondRowButton)
+
+    const moveUpButton = screen.getByTestId('move-selected-rows-up')
+    expect(moveUpButton).toBeEnabled()
+
+    await user.click(moveUpButton)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('YAML Export')
+      expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('テーブル編集')
+    })
+
+    expect(screen.getByTestId('cell-box-0-feature')).toHaveAttribute('data-selected', 'true')
+  })
+
   it('すべての列を削除するとテーブルが空状態になる', async () => {
     const user = userEvent.setup()
     render(<App />)

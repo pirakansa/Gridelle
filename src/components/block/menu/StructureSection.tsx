@@ -6,6 +6,8 @@ import MenuSectionCard from './MenuSectionCard'
 type StructureSectionProps = {
   onAddRow: () => void
   onInsertRowBelowSelection: () => void
+  onMoveSelectedRowsUp: () => void
+  onMoveSelectedRowsDown: () => void
   onAddColumn: () => void
   onInsertColumnRightOfSelection: () => void
   onDeleteSelectedColumns: () => void
@@ -14,6 +16,8 @@ type StructureSectionProps = {
   onMoveSelectedColumnsRight: () => void
   canMoveSelectedColumnsLeft: boolean
   canMoveSelectedColumnsRight: boolean
+  canMoveSelectedRowsUp: boolean
+  canMoveSelectedRowsDown: boolean
   hasSelection: boolean
 }
 
@@ -21,6 +25,8 @@ type StructureSectionProps = {
 export default function StructureSection({
   onAddRow,
   onInsertRowBelowSelection,
+  onMoveSelectedRowsUp,
+  onMoveSelectedRowsDown,
   onAddColumn,
   onInsertColumnRightOfSelection,
   onDeleteSelectedColumns,
@@ -29,6 +35,8 @@ export default function StructureSection({
   onMoveSelectedColumnsRight,
   canMoveSelectedColumnsLeft,
   canMoveSelectedColumnsRight,
+  canMoveSelectedRowsUp,
+  canMoveSelectedRowsDown,
   hasSelection,
 }: StructureSectionProps): React.ReactElement {
   return (
@@ -39,6 +47,24 @@ export default function StructureSection({
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" onClick={onAddRow}>
               行を追加
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onMoveSelectedRowsUp}
+              disabled={!canMoveSelectedRowsUp}
+              data-testid="move-selected-rows-up"
+            >
+              選択行を上へ移動
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onMoveSelectedRowsDown}
+              disabled={!canMoveSelectedRowsDown}
+              data-testid="move-selected-rows-down"
+            >
+              選択行を下へ移動
             </Button>
             <Button
               type="button"
