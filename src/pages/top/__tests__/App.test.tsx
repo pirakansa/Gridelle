@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 import React from 'react'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -574,18 +574,28 @@ describe('App', () => {
     })
   })
 
-  it('フィルハンドルで下方向に値をコピーできる', () => {
+  it('フィルハンドルで下方向に値をコピーできる', async () => {
     render(<App />)
 
     fireEvent.click(screen.getByTestId('cell-box-0-feature'))
     const handle = screen.getByTestId('fill-handle')
     const targetCell = screen.getByTestId('cell-box-1-feature')
 
-    fireEvent.pointerDown(handle)
-    fireEvent.pointerEnter(targetCell)
-    fireEvent.pointerUp(window)
+    await act(async () => {
+      fireEvent.pointerDown(handle)
+    })
 
-    expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('テーブル編集')
+    await act(async () => {
+      fireEvent.pointerEnter(targetCell)
+    })
+
+    await act(async () => {
+      fireEvent.pointerUp(window)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('テーブル編集')
+    })
   })
 
   it('行番号をクリックすると行全体が選択される', () => {
