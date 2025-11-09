@@ -757,7 +757,6 @@ describe('App', () => {
 
     const summary = screen.getByTestId('selection-summary')
     expect(summary.textContent).toContain('4セル選択中')
-    expect(summary.textContent).toContain('R3〜3')
   })
 
   it('シートを切り替えると別データが表示される', async () => {

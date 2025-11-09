@@ -17,9 +17,7 @@ export const stringifySelection = (selection: SelectionRange | null): string => 
   }
   const count =
     (selection.endRow - selection.startRow + 1) * (selection.endCol - selection.startCol + 1)
-  return `${count}セル選択中 (R${selection.startRow + 1}〜${selection.endRow + 1}, C${
-    selection.startCol + 1
-  }〜${selection.endCol + 1})`
+  return `${count}セル選択中`
 }
 
 // Function Header: Creates an empty row that satisfies the provided column keys.
