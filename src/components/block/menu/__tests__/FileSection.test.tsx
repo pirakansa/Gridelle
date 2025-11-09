@@ -5,7 +5,7 @@ import FileSection from '../FileSection'
 
 describe('FileSection', () => {
   it('renders YAML button and hides GitHub controls when not logged in', () => {
-    render(<FileSection onYamlInputClick={vi.fn()} loginMode={null} />)
+  render(<FileSection onYamlInputClick={vi.fn()} loginMode={null} onGithubActionsClick={vi.fn()} />)
 
     expect(screen.getByTestId('open-yaml-panel')).toBeInTheDocument()
     expect(screen.queryByTestId('github-file-actions')).not.toBeInTheDocument()
@@ -17,14 +17,12 @@ describe('FileSection', () => {
       <FileSection
         onYamlInputClick={vi.fn()}
         loginMode="github"
-        onGithubActionsClick={onGithubActionsClick}
+  onGithubActionsClick={onGithubActionsClick}
       />,
     )
 
     const githubButton = screen.getByTestId('github-file-actions')
     expect(githubButton).toBeInTheDocument()
-    expect(githubButton).not.toBeDisabled()
-
     fireEvent.click(githubButton)
     expect(onGithubActionsClick).toHaveBeenCalledTimes(1)
   })

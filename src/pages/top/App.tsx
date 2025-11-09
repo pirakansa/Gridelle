@@ -9,6 +9,7 @@ import SpreadsheetTable from '../../components/block/SpreadsheetTable'
 import MenuHeader from '../../components/block/MenuHeader'
 import YamlPanel from '../../components/block/YamlPanel'
 import SettingsOverlay from '../../components/block/SettingsOverlay'
+import GithubIntegrationPanel from '../../components/block/GithubIntegrationPanel'
 import { clearStoredGithubToken, deriveLoginMode, getFirebaseAuth, getLoginMode, getStoredGithubToken, setLoginMode } from '../../services/authService'
 import type { LoginMode } from '../../services/authService'
 
@@ -17,6 +18,7 @@ export default function App(): React.ReactElement {
   const auth = React.useMemo(() => getFirebaseAuth(), [])
   const spreadsheet = useSpreadsheetState()
   const [isYamlInputOpen, setYamlInputOpen] = React.useState<boolean>(false)
+  const [isGithubIntegrationOpen, setGithubIntegrationOpen] = React.useState<boolean>(false)
   const [loginMode, setLoginModeState] = React.useState<LoginMode | null>(() => getLoginMode())
   const [currentUser, setCurrentUser] = React.useState<User | null>(() => auth.currentUser ?? null)
   const [isLoggingOut, setLoggingOut] = React.useState<boolean>(false)
@@ -68,6 +70,14 @@ export default function App(): React.ReactElement {
     setYamlInputOpen(false)
   }, [])
 
+  const openGithubIntegration = React.useCallback(() => {
+    setGithubIntegrationOpen(true)
+  }, [])
+
+  const closeGithubIntegration = React.useCallback(() => {
+    setGithubIntegrationOpen(false)
+  }, [])
+
   const handleLogout = React.useCallback(async () => {
     if (isLoggingOut) {
       return
@@ -93,6 +103,7 @@ export default function App(): React.ReactElement {
     <div className={layoutTheme.pageShell} data-login-mode={loginMode ?? 'none'}>
       <MenuHeader
         onYamlInputClick={openYamlInput}
+        onGithubIntegrationClick={openGithubIntegration}
         notice={spreadsheet.notice}
         sheetNames={spreadsheet.sheets.map((sheet) => sheet.name)}
         activeSheetIndex={spreadsheet.activeSheetIndex}
@@ -167,6 +178,16 @@ export default function App(): React.ReactElement {
             onDownload={spreadsheet.handleDownloadYaml}
             onCopy={spreadsheet.handleCopyYaml}
           />
+        </SettingsOverlay>
+      )}
+      {isGithubIntegrationOpen && (
+        <SettingsOverlay
+          title="GitHubファイル連携"
+          description="GitHub上のYAMLを読み込む機能のプレビューです。"
+          onClose={closeGithubIntegration}
+          panelId="github-file-actions"
+        >
+          <GithubIntegrationPanel />
         </SettingsOverlay>
       )}
     </div>

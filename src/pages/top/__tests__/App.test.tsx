@@ -3,6 +3,69 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { Auth, User } from 'firebase/auth'
+
+const firebaseAuthMocks = vi.hoisted(() => {
+  const signOutMock = vi.fn(async () => undefined)
+  let mockCurrentUser: User | null = null
+
+  const authStub = {
+    app: {} as never,
+    config: {} as never,
+    languageCode: null,
+    name: 'mock-auth',
+    settings: {} as never,
+    tenantId: null,
+    useDeviceLanguage: vi.fn(),
+    signInAnonymously: vi.fn(),
+    signInWithCredential: vi.fn(),
+    signInWithCustomToken: vi.fn(),
+    signInWithEmailAndPassword: vi.fn(),
+    signInWithEmailLink: vi.fn(),
+    signInWithPhoneNumber: vi.fn(),
+    signInWithPopup: vi.fn(),
+    signInWithRedirect: vi.fn(),
+    signOut: signOutMock,
+    updateCurrentUser: vi.fn(),
+    beforeAuthStateChanged: vi.fn(),
+    delete: vi.fn(),
+    onAuthStateChanged: vi.fn(),
+    onIdTokenChanged: vi.fn(),
+    setPersistence: vi.fn(),
+    toJSON: vi.fn(),
+  } as Record<string, unknown>
+
+  Object.defineProperty(authStub, 'currentUser', {
+    configurable: true,
+    get: () => mockCurrentUser,
+  })
+
+  const onAuthStateChangedMock = vi.fn((_: Auth, callback: (nextUser: User | null) => void) => {
+    callback(mockCurrentUser)
+    return () => {}
+  })
+
+  return {
+    signOutMock,
+    onAuthStateChangedMock,
+    getAuthInstance: () => authStub as unknown as Auth,
+    setCurrentUser: (nextUser: User | null) => {
+      mockCurrentUser = nextUser
+    },
+  }
+})
+
+vi.mock('firebase/auth', () => ({
+  onAuthStateChanged: firebaseAuthMocks.onAuthStateChangedMock,
+  signOut: firebaseAuthMocks.signOutMock,
+  getAuth: vi.fn(() => firebaseAuthMocks.getAuthInstance()),
+  GithubAuthProvider: class {
+    addScope = vi.fn()
+    setCustomParameters = vi.fn()
+  },
+}))
+
+const { signOutMock, onAuthStateChangedMock, setCurrentUser: setMockAuthUser } = firebaseAuthMocks
 
 vi.mock('../../../utils/navigation', () => ({
   redirectToLogin: vi.fn(),
@@ -16,6 +79,9 @@ const TABLE_STORAGE_KEY = 'gridelle:tableYaml'
 const BUFFER_STORAGE_KEY = 'gridelle:yamlBuffer'
 
 beforeEach(() => {
+  setMockAuthUser(null)
+  onAuthStateChangedMock.mockClear()
+  signOutMock.mockClear()
   writeTextMock.mockClear()
   const clipboard = { writeText: writeTextMock }
   Object.defineProperty(globalThis.navigator, 'clipboard', {
@@ -110,6 +176,31 @@ describe('App', () => {
     expect(await screen.findByTestId('cell-display-0-feature')).toHaveTextContent('新規カード')
     expect(screen.getByTestId('cell-display-0-owner')).toHaveTextContent('Carol')
     expect(screen.getByTestId('sheet-name-input')).toHaveValue('新シート')
+  })
+
+  it('GitHub連携パネルを開閉できる', async () => {
+    window.localStorage.setItem('gridelle/loginMode', 'github')
+    window.localStorage.setItem('gridelle/githubAccessToken', 'dummy-token')
+    setMockAuthUser({
+      uid: 'github-user',
+      email: 'tester@example.com',
+      isAnonymous: false,
+    } as unknown as User)
+
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-file'))
+    const githubButton = await screen.findByTestId('github-file-actions')
+    await user.click(githubButton)
+
+    expect(await screen.findByRole('dialog', { name: 'GitHubファイル連携' })).toBeInTheDocument()
+    expect(screen.getByTestId('github-integration-panel')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '閉じる' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'GitHubファイル連携' })).not.toBeInTheDocument()
+    })
   })
 
   it('セルに複数行のテキストを入力できる', async () => {

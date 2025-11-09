@@ -13,6 +13,7 @@ import FileSection from './menu/FileSection'
 
 type Props = {
   onYamlInputClick: () => void
+  onGithubIntegrationClick: () => void
   notice: Notice | null
   sheetNames: string[]
   activeSheetIndex: number
@@ -52,6 +53,7 @@ type Props = {
 // Function Header: Renders the sticky menu along with spreadsheet utility commands and collapse toggle.
 export default function MenuHeader({
   onYamlInputClick,
+  onGithubIntegrationClick,
   notice,
   sheetNames,
   activeSheetIndex,
@@ -156,6 +158,7 @@ export default function MenuHeader({
                 <FileSection
                   onYamlInputClick={onYamlInputClick}
                   loginMode={loginMode}
+                  onGithubActionsClick={onGithubIntegrationClick}
                 />
               )}
               {activeMenuSection === 'sheet' && (
