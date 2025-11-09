@@ -8,5 +8,5 @@ export const layoutTheme = {
   card: 'rounded-2xl border border-slate-200 bg-white p-6 shadow-sm',
   sectionTitle: 'text-lg font-semibold text-slate-900',
   helperText: 'text-sm text-slate-500',
-  tableScroll: 'h-full w-full overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm',
+  tableScroll: 'w-full max-h-[65vh] overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm',
 } as const
