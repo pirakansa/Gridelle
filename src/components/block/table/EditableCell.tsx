@@ -123,7 +123,7 @@ export default function EditableCell({
           />
         ) : (
           <div
-            className="w-full flex-1 whitespace-pre-wrap break-words rounded px-2 py-2 text-left text-sm"
+            className="w-full flex-1 whitespace-pre rounded px-2 py-2 text-left text-sm"
             data-testid={`cell-display-${rowIndex}-${column}`}
           >
             {value}
