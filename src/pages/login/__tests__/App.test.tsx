@@ -205,7 +205,7 @@ describe('pages/login/App', () => {
     const card = await screen.findByTestId('login-card')
     expect(card).toHaveAttribute('data-login-mode', 'guest')
     expect(card).toHaveAttribute('data-can-octokit', 'false')
-    expect(screen.getByText('Octokit 機能を利用するには GitHub でログインしてください。')).toBeInTheDocument()
+  expect(screen.getByText('GitHub連携機能を利用するには GitHub でログインしてください。')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'トップページに進む' })).toBeInTheDocument()
     expect(screen.getByTestId('app-version')).toHaveTextContent(import.meta.env.VITE_APP_VERSION)
   })
