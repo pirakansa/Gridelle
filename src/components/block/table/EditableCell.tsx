@@ -106,7 +106,7 @@ export default function EditableCell({
       onClick={(event) => onCellClick(event, rowIndex, columnIndex)}
       onDoubleClick={() => onCellDoubleClick(rowIndex, columnIndex)}
     >
-      <div className="relative flex items-center gap-1 px-1">
+  <div className="flex h-full items-start gap-1 px-1">
         {isEditing ? (
           <textarea
             value={draftValue}
@@ -165,7 +165,11 @@ function deriveCellClassName({
   const inBase = selection ? isCellWithinRange(selection, rowIndex, columnIndex) : false
   const inFillPreview = fillPreview && inActive && !inBase
 
-  return ['border border-slate-200', inActive ? 'selected-cell' : '', inFillPreview ? 'fill-preview-cell' : '']
+  return [
+    'relative border border-slate-200',
+    inActive ? 'selected-cell' : '',
+    inFillPreview ? 'fill-preview-cell' : '',
+  ]
     .filter(Boolean)
     .join(' ')
 }
