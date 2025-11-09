@@ -61,6 +61,7 @@ export default function SpreadsheetTable({
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
   const [viewportHeight, setViewportHeight] = React.useState<number>(0)
   const [scrollTop, setScrollTop] = React.useState<number>(0)
+  const wasEditingRef = React.useRef<boolean>(false)
 
   React.useLayoutEffect(() => {
     const container = scrollContainerRef.current
@@ -89,6 +90,18 @@ export default function SpreadsheetTable({
     }
     setScrollTop(container.scrollTop)
   }, [rows.length])
+
+  React.useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) {
+      wasEditingRef.current = Boolean(editingCell)
+      return
+    }
+    if (wasEditingRef.current && !editingCell) {
+      container.focus({ preventScroll: true })
+    }
+    wasEditingRef.current = Boolean(editingCell)
+  }, [editingCell])
 
   const handleScroll = React.useCallback((event: React.UIEvent<HTMLDivElement>) => {
     setScrollTop(event.currentTarget.scrollTop)
