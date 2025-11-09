@@ -62,6 +62,7 @@ export default function SpreadsheetTable({
   return (
     <div
       className={`${layoutTheme.tableScroll} mt-6`}
+      id="sheet-workspace"
       tabIndex={0}
       role="region"
       aria-label="スプレッドシートエリア"

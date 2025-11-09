@@ -70,24 +70,12 @@ export default function TableEditorPanel({
   return (
     <section className="flex flex-col gap-4">
       <div className={layoutTheme.card}>
-        <div className="mb-6 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <label htmlFor="sheet-select" className="font-medium text-slate-700">
-              シート
-            </label>
-            <select
-              id="sheet-select"
-              value={activeSheetIndex}
-              onChange={(event) => onSelectSheet(Number(event.target.value))}
-              className="rounded border border-slate-200 px-2 py-1 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              data-testid="sheet-select"
-            >
-              {sheetNames.map((name, index) => (
-                <option key={`${name}-${index}`} value={index}>
-                  {name}
-                </option>
-              ))}
-            </select>
+        <div className="mb-6 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <span className="font-medium text-slate-700">シート</span>
+              <span className="text-xs text-slate-400">タブをクリックして切り替え</span>
+            </div>
             <button
               type="button"
               className={ghostButtonClass}
@@ -96,6 +84,34 @@ export default function TableEditorPanel({
             >
               シートを追加
             </button>
+          </div>
+          <div
+            className="flex items-center gap-2 overflow-x-auto rounded-xl bg-slate-100/70 p-2"
+            role="tablist"
+            aria-label="シート一覧"
+            data-testid="sheet-tablist"
+          >
+            {sheetNames.map((name, index) => {
+              const isActive = index === activeSheetIndex
+              return (
+                <button
+                  key={`sheet-tab-${index}`}
+                  type="button"
+                  role="tab"
+                  tabIndex={isActive ? 0 : -1}
+                  aria-selected={isActive}
+                  aria-controls="sheet-workspace"
+                  onClick={() => onSelectSheet(index)}
+                  className={`shrink-0 whitespace-nowrap rounded-lg border border-transparent px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-200'
+                      : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                  }`}
+                >
+                  {name}
+                </button>
+              )
+            })}
           </div>
           <div className="flex flex-1 items-center gap-2">
             <label htmlFor="sheet-name" className="text-sm text-slate-600">
