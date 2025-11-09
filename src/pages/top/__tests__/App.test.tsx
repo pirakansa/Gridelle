@@ -133,7 +133,12 @@ describe('App', () => {
     const beforeTitles = screen.getAllByTestId('column-title').map((node) => node.textContent)
     expect(beforeTitles).toEqual(['feature', 'owner', 'status', 'effort'])
 
-    await user.click(screen.getByRole('button', { name: 'owner列を左へ移動' }))
+    await user.click(screen.getByTestId('menu-tab-structure'))
+    await user.click(screen.getByTestId('column-select-1'))
+
+    const moveLeftButton = await screen.findByTestId('move-selected-columns-left')
+    expect(moveLeftButton).toBeEnabled()
+    await user.click(moveLeftButton)
 
     const afterTitles = screen.getAllByTestId('column-title').map((node) => node.textContent)
     expect(afterTitles).toEqual(['owner', 'feature', 'status', 'effort'])
@@ -462,7 +467,7 @@ describe('App', () => {
     fireEvent.click(screen.getByTestId('cell-box-0-feature'))
     fireEvent.click(screen.getByTestId('cell-box-1-effort'), { shiftKey: true })
 
-  await user.click(screen.getByTestId('menu-tab-selection'))
+    await user.click(screen.getByTestId('menu-tab-selection'))
     const bulkInput = screen.getByTestId('bulk-input') as HTMLInputElement
     await user.clear(bulkInput)
     await user.type(bulkInput, 'DONE')

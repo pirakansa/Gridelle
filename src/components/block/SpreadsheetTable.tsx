@@ -32,7 +32,6 @@ type Props = {
   onStartFillDrag: (_event: React.PointerEvent<HTMLButtonElement>) => void
   onCellChange: (_rowIndex: number, _column: string, _value: string) => void
   onPaste: (_event: React.ClipboardEvent<HTMLDivElement>) => void
-  onMoveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   onCellEditorBlur: () => void
   onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }
@@ -56,7 +55,6 @@ export default function SpreadsheetTable({
   onStartFillDrag,
   onCellChange,
   onPaste,
-  onMoveColumn,
   onCellEditorBlur,
   onCellEditorKeyDown,
 }: Props): React.ReactElement {
@@ -72,7 +70,7 @@ export default function SpreadsheetTable({
       data-testid="interactive-table-shell"
     >
       <table className="spreadsheet-table">
-        <TableHead columns={columns} onMoveColumn={onMoveColumn} onColumnHeaderClick={onColumnHeaderClick} />
+        <TableHead columns={columns} onColumnHeaderClick={onColumnHeaderClick} />
         <TableBody
           rows={rows}
           columns={columns}
