@@ -3,7 +3,6 @@ import React from 'react'
 import { layoutTheme } from '../../utils/Theme'
 import Button from '../atom/Button'
 import TextInput from '../atom/TextInput'
-import SelectField from '../atom/SelectField'
 
 type Props = {
   notice: { text: string; tone: 'error' | 'success' } | null
@@ -66,6 +65,12 @@ export default function TableEditorPanel({
   const ribbonGroupClass =
     'flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 p-4 shadow-inner'
   const ribbonTitleClass = 'text-xs font-semibold uppercase tracking-wide text-slate-500'
+  const sheetGroupLabelId = React.useId()
+  const sheetTabBaseClass =
+    'rounded-full border px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-200'
+  const sheetTabActiveClass = 'border-slate-900 bg-slate-900 text-white shadow'
+  const sheetTabInactiveClass =
+    'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100 focus:border-slate-300'
 
   return (
     <section className="flex flex-col gap-4" aria-label="スプレッドシートメニュー">
@@ -74,21 +79,32 @@ export default function TableEditorPanel({
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2 text-sm text-slate-600">
-                <label htmlFor="sheet-select" className="font-medium text-slate-700">
+                <span id={sheetGroupLabelId} className="font-medium text-slate-700">
                   シート
-                </label>
-                <SelectField
-                  id="sheet-select"
-                  value={activeSheetIndex}
-                  onChange={(event) => onSelectSheet(Number(event.target.value))}
-                  data-testid="sheet-select"
+                </span>
+                <div
+                  className="flex flex-wrap items-center gap-2"
+                  role="group"
+                  aria-labelledby={sheetGroupLabelId}
+                  data-testid="sheet-tablist"
                 >
-                  {sheetNames.map((name, index) => (
-                    <option key={`${name}-${index}`} value={index}>
-                      {name}
-                    </option>
-                  ))}
-                </SelectField>
+                  {sheetNames.map((name, index) => {
+                    const isActive = index === activeSheetIndex
+                    const buttonClass = `${sheetTabBaseClass} ${isActive ? sheetTabActiveClass : sheetTabInactiveClass}`
+                    return (
+                      <button
+                        key={`${name}-${index}`}
+                        type="button"
+                        className={buttonClass}
+                        onClick={() => onSelectSheet(index)}
+                        aria-pressed={isActive}
+                        data-testid={`sheet-tab-${index}`}
+                      >
+                        {name}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
               <Button type="button" variant="ghost" onClick={onAddSheet} data-testid="add-sheet-button">
                 シートを追加
