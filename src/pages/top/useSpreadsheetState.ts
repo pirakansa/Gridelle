@@ -25,6 +25,7 @@ type UseSpreadsheetState = {
   handleInsertRowBelowSelection: () => void
   handleAddColumn: () => void
   handleInsertColumnRightOfSelection: () => void
+  handleDeleteSelectedColumns: () => void
   handleDeleteSelectedRows: () => void
   handleAddSheet: () => void
   handleRenameSheet: (_name: string) => void
@@ -188,6 +189,45 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     setNotice({ text: `列「${newColumnKey}」を選択列の右に追加しました。`, tone: 'success' })
   }, [selection, columns, rows, updateRows, setColumnOrder, setNotice])
 
+  const handleDeleteSelectedColumns = React.useCallback((): void => {
+    if (!selection) {
+      setNotice({ text: '削除する列を選択してください。', tone: 'error' })
+      return
+    }
+    if (!columns.length) {
+      setNotice({ text: '削除できる列がありません。', tone: 'error' })
+      return
+    }
+    const maxIndex = columns.length - 1
+    const start = Math.max(0, Math.min(selection.startCol, maxIndex))
+    const end = Math.max(0, Math.min(selection.endCol, maxIndex))
+    const normalizedStart = Math.min(start, end)
+    const normalizedEnd = Math.max(start, end)
+    const targetColumns = columns.slice(normalizedStart, normalizedEnd + 1)
+    if (!targetColumns.length) {
+      setNotice({ text: '削除できる列が見つかりません。', tone: 'error' })
+      return
+    }
+    const targetColumnSet = new Set(targetColumns)
+    const remainingColumns = columns.filter((key) => !targetColumnSet.has(key))
+    const nextRows = remainingColumns.length
+      ? rows.map((row) => {
+          const nextRow = { ...row }
+          targetColumns.forEach((key) => {
+            delete nextRow[key]
+          })
+          return nextRow
+        })
+      : []
+    updateRows(nextRows)
+    setColumnOrder(() => remainingColumns)
+    clearSelection()
+    const message = remainingColumns.length
+      ? `${targetColumns.length}列を削除しました。`
+      : 'すべての列を削除しました。'
+    setNotice({ text: message, tone: 'success' })
+  }, [selection, columns, rows, updateRows, setColumnOrder, clearSelection, setNotice])
+
   const handleDeleteSelectedRows = React.useCallback((): void => {
     if (!selection) {
       setNotice({ text: '削除する行を選択してください。', tone: 'error' })
@@ -228,6 +268,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleInsertRowBelowSelection,
     handleAddColumn,
     handleInsertColumnRightOfSelection,
+  handleDeleteSelectedColumns,
     handleDeleteSelectedRows,
     handleAddSheet,
     handleRenameSheet,

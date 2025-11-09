@@ -3,7 +3,7 @@ import type { TableRow } from '../../../../services/workbookService'
 import type { CellPosition, Notice, SelectionRange, UpdateRows } from '../../types'
 
 type UseKeyboardShortcutsOptions = {
-  beginSelectionWithReset: (position: CellPosition, preserveAnchor?: boolean) => void
+  beginSelectionWithReset: (_position: CellPosition, _preserveAnchor?: boolean) => void
   clearSelection: () => void
   columns: string[]
   editingCell: CellPosition | null
@@ -30,7 +30,7 @@ export function useKeyboardShortcuts({
   setIsSelecting,
   setNotice,
   updateRows,
-}: UseKeyboardShortcutsOptions): (event: React.KeyboardEvent<HTMLDivElement>) => void {
+}: UseKeyboardShortcutsOptions): React.KeyboardEventHandler<HTMLDivElement> {
   return React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>): void => {
       if (event.key === 'Escape') {

@@ -5,7 +5,7 @@ type UseSelectionNormalizerOptions = {
   selection: SelectionRange | null
   rowsLength: number
   columnsLength: number
-  setSelection: (range: SelectionRange) => void
+  setSelection: (_range: SelectionRange) => void
   clearSelection: () => void
 }
 

@@ -8,6 +8,7 @@ type StructureSectionProps = {
   onInsertRowBelowSelection: () => void
   onAddColumn: () => void
   onInsertColumnRightOfSelection: () => void
+  onDeleteSelectedColumns: () => void
   onDeleteSelectedRows: () => void
   hasSelection: boolean
 }
@@ -18,6 +19,7 @@ export default function StructureSection({
   onInsertRowBelowSelection,
   onAddColumn,
   onInsertColumnRightOfSelection,
+  onDeleteSelectedColumns,
   onDeleteSelectedRows,
   hasSelection,
 }: StructureSectionProps): React.ReactElement {
@@ -64,6 +66,15 @@ export default function StructureSection({
               data-testid="insert-column-right-of-selection"
             >
               選択列の右に列を追加
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onDeleteSelectedColumns}
+              disabled={!hasSelection}
+              data-testid="delete-selected-columns"
+            >
+              選択列を削除
             </Button>
           </div>
         </section>

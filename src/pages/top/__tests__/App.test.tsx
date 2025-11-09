@@ -164,6 +164,75 @@ describe('App', () => {
     expect(await screen.findByTestId('cell-display-0-column_6')).toHaveTextContent('')
   })
 
+  it('選択行の下に行を追加できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    const rowButton = within(screen.getByTestId('row-number-0')).getByRole('button', {
+      name: '行1を選択',
+    })
+    await user.click(rowButton)
+
+    const insertRowButton = screen.getByTestId('insert-row-below-selection')
+    expect(insertRowButton).toBeEnabled()
+
+    await user.click(insertRowButton)
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/row-number-/)).toHaveLength(6)
+    })
+
+    const insertedRowCell = await screen.findByTestId('cell-display-1-feature')
+    expect(insertedRowCell).toHaveTextContent('')
+  })
+
+  it('選択列の右に列を追加できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    await user.click(screen.getByTestId('cell-box-0-feature'))
+
+    const insertColumnButton = screen.getByTestId('insert-column-right-of-selection')
+    expect(insertColumnButton).toBeEnabled()
+
+    await user.click(insertColumnButton)
+
+    await waitFor(() => {
+      const titles = screen.getAllByTestId('column-title').map((node) => node.textContent)
+      expect(titles).toEqual(['feature', 'column_5', 'owner', 'status', 'effort'])
+    })
+
+    const insertedColumnCell = await screen.findByTestId('cell-display-0-column_5')
+    expect(insertedColumnCell).toHaveTextContent('')
+  })
+
+  it('すべての列を削除するとテーブルが空状態になる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    await user.click(screen.getByTestId('cell-box-0-feature'))
+  fireEvent.click(screen.getByTestId('cell-box-0-effort'), { shiftKey: true })
+
+    const deleteColumnsButton = screen.getByTestId('delete-selected-columns')
+    expect(deleteColumnsButton).toBeEnabled()
+
+    await user.click(deleteColumnsButton)
+
+    expect(await screen.findByText('すべての列を削除しました。')).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(screen.queryAllByTestId('column-title')).toHaveLength(0)
+    })
+
+    expect(await screen.findByText('表示するデータがありません。')).toBeInTheDocument()
+  })
+
   it('セルの値をコピーできる', async () => {
     const user = userEvent.setup()
     render(<App />)

@@ -22,6 +22,7 @@ type Props = {
   onInsertRowBelowSelection: () => void
   onAddColumn: () => void
   onInsertColumnRightOfSelection: () => void
+  onDeleteSelectedColumns: () => void
   onDeleteSelectedRows: () => void
   selectionSummary: string
   onClearSelection: () => void
@@ -45,6 +46,7 @@ export default function MenuHeader({
   onInsertRowBelowSelection,
   onAddColumn,
   onInsertColumnRightOfSelection,
+  onDeleteSelectedColumns,
   onDeleteSelectedRows,
   selectionSummary,
   onClearSelection,
@@ -139,6 +141,7 @@ export default function MenuHeader({
                   onInsertRowBelowSelection={onInsertRowBelowSelection}
                   onAddColumn={onAddColumn}
                   onInsertColumnRightOfSelection={onInsertColumnRightOfSelection}
+                  onDeleteSelectedColumns={onDeleteSelectedColumns}
                   onDeleteSelectedRows={onDeleteSelectedRows}
                   hasSelection={hasSelection}
                 />
