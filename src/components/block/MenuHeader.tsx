@@ -1,16 +1,19 @@
 // File Header: Application menu combining global controls with spreadsheet utilities.
 import React from 'react'
 import type { Notice } from '../../pages/top/types'
+import type { LoginMode } from '../../services/authService'
 import { layoutTheme } from '../../utils/Theme'
-import Button from '../atom/Button'
 import MenuTabs, { type MenuSectionId } from './menu/MenuTabs'
 import SheetSection from './menu/SheetSection'
 import StructureSection from './menu/StructureSection'
 import SelectionSection from './menu/SelectionSection'
 import HelpSection from './menu/HelpSection'
+import UserSection from './menu/UserSection'
+import FileSection from './menu/FileSection'
 
 type Props = {
   onYamlInputClick: () => void
+  onGithubIntegrationClick: () => void
   notice: Notice | null
   sheetNames: string[]
   activeSheetIndex: number
@@ -39,12 +42,23 @@ type Props = {
   bulkValue: string
   onBulkValueChange: (_value: string) => void
   onBulkApply: () => void
+  selectionTextColor: string
+  selectionBackgroundColor: string
+  onApplySelectionTextColor: (_color: string | null) => void
+  onApplySelectionBackgroundColor: (_color: string | null) => void
+  onClearSelectionStyles: () => void
   canDeleteSheet: boolean
+  loginMode: LoginMode | null
+  userEmail: string | null
+  onLogout: () => Promise<void>
+  isLoggingOut: boolean
+  logoutError: string | null
 }
 
 // Function Header: Renders the sticky menu along with spreadsheet utility commands and collapse toggle.
 export default function MenuHeader({
   onYamlInputClick,
+  onGithubIntegrationClick,
   notice,
   sheetNames,
   activeSheetIndex,
@@ -73,28 +87,80 @@ export default function MenuHeader({
   bulkValue,
   onBulkValueChange,
   onBulkApply,
+  selectionTextColor,
+  selectionBackgroundColor,
+  onApplySelectionTextColor,
+  onApplySelectionBackgroundColor,
+  onClearSelectionStyles,
   canDeleteSheet,
+  loginMode,
+  userEmail,
+  onLogout,
+  isLoggingOut,
+  logoutError,
 }: Props): React.ReactElement {
   const menuPanelId = React.useId()
   const [isMenuCollapsed, setMenuCollapsed] = React.useState<boolean>(false)
   const [activeMenuSection, setActiveMenuSection] = React.useState<MenuSectionId>('sheet')
   const [sheetNameDraft, setSheetNameDraft] = React.useState<string>(currentSheetName)
+  const [renamingSheetIndex, setRenamingSheetIndex] = React.useState<number | null>(null)
 
   React.useEffect(() => {
-    setSheetNameDraft(currentSheetName)
-  }, [currentSheetName])
+    if (renamingSheetIndex === null) {
+      setSheetNameDraft(currentSheetName)
+    }
+  }, [currentSheetName, renamingSheetIndex])
+
+  React.useEffect(() => {
+    if (renamingSheetIndex !== null && renamingSheetIndex >= sheetNames.length) {
+      setRenamingSheetIndex(null)
+      setSheetNameDraft(currentSheetName)
+    }
+  }, [renamingSheetIndex, sheetNames, currentSheetName])
 
   const commitSheetName = React.useCallback(() => {
     const trimmed = sheetNameDraft.trim()
-    if (!trimmed) {
-      setSheetNameDraft(currentSheetName)
+    if (renamingSheetIndex === null) {
       return
     }
 
-    if (trimmed !== currentSheetName) {
+    const originalName = sheetNames[renamingSheetIndex] ?? ''
+    if (!trimmed) {
+      setSheetNameDraft(originalName)
+      return
+    }
+
+    if (trimmed !== originalName) {
+      if (renamingSheetIndex !== activeSheetIndex) {
+        onSelectSheet(renamingSheetIndex)
+      }
       onRenameSheet(trimmed)
     }
-  }, [sheetNameDraft, currentSheetName, onRenameSheet])
+    setRenamingSheetIndex(null)
+  }, [sheetNameDraft, renamingSheetIndex, sheetNames, activeSheetIndex, onSelectSheet, onRenameSheet])
+
+  const cancelSheetRename = React.useCallback(() => {
+    if (renamingSheetIndex === null) {
+      return
+    }
+    const originalName = sheetNames[renamingSheetIndex] ?? currentSheetName
+    setSheetNameDraft(originalName)
+    setRenamingSheetIndex(null)
+  }, [renamingSheetIndex, sheetNames, currentSheetName])
+
+  const startSheetRename = React.useCallback(
+    (index: number) => {
+      if (renamingSheetIndex === index) {
+        return
+      }
+      setRenamingSheetIndex(index)
+      setSheetNameDraft(sheetNames[index] ?? '')
+      if (index !== activeSheetIndex) {
+        onSelectSheet(index)
+      }
+    },
+    [renamingSheetIndex, sheetNames, activeSheetIndex, onSelectSheet],
+  )
 
   const toggleMenu = React.useCallback(() => {
     setMenuCollapsed((prev) => !prev)
@@ -108,9 +174,6 @@ export default function MenuHeader({
             <span className="text-base font-semibold text-slate-900">Gridelle</span>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" variant="ghost" onClick={onYamlInputClick}>
-              YAML入力 / プレビュー
-            </Button>
             <MenuTabs
               activeSection={activeMenuSection}
               onSelectSection={(section) => setActiveMenuSection(section)}
@@ -143,6 +206,13 @@ export default function MenuHeader({
                   {notice.text}
                 </p>
               )}
+              {activeMenuSection === 'file' && (
+                <FileSection
+                  onYamlInputClick={onYamlInputClick}
+                  loginMode={loginMode}
+                  onGithubActionsClick={onGithubIntegrationClick}
+                />
+              )}
               {activeMenuSection === 'sheet' && (
                 <SheetSection
                   sheetNames={sheetNames}
@@ -150,10 +220,12 @@ export default function MenuHeader({
                   onSelectSheet={onSelectSheet}
                   onAddSheet={onAddSheet}
                   onDeleteSheet={onDeleteSheet}
+                  renamingSheetIndex={renamingSheetIndex}
+                  onStartSheetRename={startSheetRename}
                   sheetNameDraft={sheetNameDraft}
                   onSheetNameDraftChange={setSheetNameDraft}
                   onCommitSheetName={commitSheetName}
-                  onCancelSheetRename={() => setSheetNameDraft(currentSheetName)}
+                  onCancelSheetRename={cancelSheetRename}
                   canDeleteSheet={canDeleteSheet}
                 />
               )}
@@ -184,6 +256,20 @@ export default function MenuHeader({
                   bulkValue={bulkValue}
                   onBulkValueChange={onBulkValueChange}
                   onBulkApply={onBulkApply}
+                  selectionTextColor={selectionTextColor}
+                  selectionBackgroundColor={selectionBackgroundColor}
+                  onApplyTextColor={onApplySelectionTextColor}
+                  onApplyBackgroundColor={onApplySelectionBackgroundColor}
+                  onClearSelectionStyles={onClearSelectionStyles}
+                />
+              )}
+              {activeMenuSection === 'user' && (
+                <UserSection
+                  loginMode={loginMode}
+                  userEmail={userEmail}
+                  onLogout={onLogout}
+                  isLoggingOut={isLoggingOut}
+                  logoutError={logoutError}
                 />
               )}
               {activeMenuSection === 'help' && <HelpSection />}

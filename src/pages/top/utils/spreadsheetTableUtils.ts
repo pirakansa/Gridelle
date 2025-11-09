@@ -1,5 +1,5 @@
 // File Header: Spreadsheet helper utilities for selection and table shape adjustments.
-import type { TableRow } from '../../../services/workbookService'
+import { createCell, cloneRow, type TableRow } from '../../../services/workbookService'
 import type { CellPosition, SelectionRange } from '../types'
 
 // Function Header: Builds a normalized selection range given two cell positions.
@@ -25,7 +25,7 @@ export const stringifySelection = (selection: SelectionRange | null): string => 
 // Function Header: Creates an empty row that satisfies the provided column keys.
 export const createEmptyRow = (columnKeys: string[]): TableRow =>
   columnKeys.reduce((acc, key) => {
-    acc[key] = ''
+    acc[key] = createCell()
     return acc
   }, {} as TableRow)
 
@@ -41,10 +41,10 @@ export const ensureColumnCapacity = (columnKeys: string[], targetLength: number)
 // Function Header: Synchronizes rows so every row has all expected column keys.
 export const syncRowsToColumns = (sourceRows: TableRow[], columnKeys: string[]): TableRow[] =>
   sourceRows.map((row) => {
-    const nextRow: TableRow = { ...row }
+    const nextRow: TableRow = cloneRow(row)
     columnKeys.forEach((key) => {
       if (nextRow[key] === undefined) {
-        nextRow[key] = ''
+        nextRow[key] = createCell()
       }
     })
     return nextRow

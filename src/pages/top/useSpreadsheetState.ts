@@ -1,6 +1,6 @@
 // File Header: Custom hook composing spreadsheet data and interaction controllers.
 import React from 'react'
-import type { TableRow, TableSheet } from '../../services/workbookService'
+import { createCell, type TableRow, type TableSheet } from '../../services/workbookService'
 import { useSpreadsheetDataController } from './hooks/useSpreadsheetDataController'
 import { useSpreadsheetInteractionController } from './hooks/useSpreadsheetInteractionController'
 import { generateNextColumnKey } from './hooks/internal/spreadsheetDataUtils'
@@ -47,6 +47,11 @@ type UseSpreadsheetState = {
   bulkValue: string
   setBulkValue: React.Dispatch<React.SetStateAction<string>>
   applyBulkInput: () => void
+  selectionTextColor: string
+  selectionBackgroundColor: string
+  applySelectionTextColor: (_color: string | null) => void
+  applySelectionBackgroundColor: (_color: string | null) => void
+  clearSelectionStyles: () => void
   handleRowNumberClick: (_rowIndex: number, _extend: boolean) => void
   handleColumnHeaderClick: (_columnIndex: number, _extend: boolean) => void
   selection: SelectionRange | null
@@ -76,22 +81,25 @@ type UseSpreadsheetState = {
   handleCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }
 
+const createSeedRow = (entries: Record<string, string>): TableRow =>
+  Object.fromEntries(Object.entries(entries).map(([key, value]) => [key, createCell(value)]))
+
 const DEFAULT_SHEETS: TableSheet[] = [
   {
     name: 'バックログ',
     rows: [
-      { feature: 'テーブル編集', owner: 'Alice', status: 'READY', effort: '3' },
-      { feature: 'YAML Export', owner: 'Bob', status: 'REVIEW', effort: '5' },
-      { feature: 'CSVインポート', owner: 'Carol', status: 'BACKLOG', effort: '2' },
-      { feature: '権限管理', owner: 'Dave', status: 'DOING', effort: '8' },
-      { feature: '操作ガイド作成', owner: 'Eve', status: 'DONE', effort: '1' },
+      createSeedRow({ feature: 'テーブル編集', owner: 'Alice', status: 'READY', effort: '3' }),
+      createSeedRow({ feature: 'YAML Export', owner: 'Bob', status: 'REVIEW', effort: '5' }),
+      createSeedRow({ feature: 'CSVインポート', owner: 'Carol', status: 'BACKLOG', effort: '2' }),
+      createSeedRow({ feature: '権限管理', owner: 'Dave', status: 'DOING', effort: '8' }),
+      createSeedRow({ feature: '操作ガイド作成', owner: 'Eve', status: 'DONE', effort: '1' }),
     ],
   },
   {
     name: '完了済み',
     rows: [
-      { feature: 'リリースノート作成', owner: 'Fiona', status: 'DONE', effort: '2' },
-      { feature: 'QAレビュー', owner: 'George', status: 'DONE', effort: '4' },
+      createSeedRow({ feature: 'リリースノート作成', owner: 'Fiona', status: 'DONE', effort: '2' }),
+      createSeedRow({ feature: 'QAレビュー', owner: 'George', status: 'DONE', effort: '4' }),
     ],
   },
 ]
@@ -135,6 +143,11 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     editingCell,
     clearSelection,
     applyBulkInput,
+    selectionTextColor,
+    selectionBackgroundColor,
+    applySelectionTextColor,
+    applySelectionBackgroundColor,
+    clearSelectionStyles,
     handleCellPointerDown,
     handleCellPointerEnter,
     handleCellClick,
@@ -258,8 +271,8 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     }
     const newColumnKey = generateNextColumnKey(columns)
     const updatedRows = rows.length
-      ? rows.map((row) => ({ ...row, [newColumnKey]: row[newColumnKey] ?? '' }))
-      : [{ [newColumnKey]: '' }]
+      ? rows.map((row) => ({ ...row, [newColumnKey]: row[newColumnKey] ?? createCell('') }))
+      : [{ [newColumnKey]: createCell('') }]
     const insertAfter = columns.length ? Math.min(Math.max(selection.endCol, 0), columns.length - 1) : -1
     const insertIndex = insertAfter + 1
     updateRows(updatedRows)
@@ -432,6 +445,11 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     bulkValue,
     setBulkValue,
     applyBulkInput,
+    selectionTextColor,
+    selectionBackgroundColor,
+    applySelectionTextColor,
+    applySelectionBackgroundColor,
+    clearSelectionStyles,
     handleRowNumberClick,
     handleColumnHeaderClick,
     canMoveSelectedRowsUp,

@@ -5,6 +5,7 @@ vi.mock('../workbookService', () => ({
   stringifyWorkbook: vi.fn((sheets: unknown[]) => JSON.stringify({ sheets })),
 }))
 
+import type { TableSheet } from '../workbookService'
 import { stringifyWorkbook } from '../workbookService'
 import { stringifyWorkbookAsync } from '../yamlStringifyWorkerClient'
 
@@ -64,11 +65,6 @@ class MockWorker {
   }
 }
 
-type TableSheetMock = {
-  name: string
-  rows: Array<Record<string, string>>
-}
-
 const ORIGINAL_WORKER = globalThis.Worker
 const stringifySpy = stringifyWorkbook as unknown as ReturnType<typeof vi.fn>
 
@@ -91,10 +87,10 @@ describe('stringifyWorkbookAsync', () => {
 
   it('falls back to direct stringify when workers are unavailable', async () => {
     delete (globalThis as { Worker?: typeof Worker }).Worker
-  const sheet = { name: 'Sheet', rows: [] } as TableSheetMock
-  const result = await stringifyWorkbookAsync([sheet])
+    const sheet: TableSheet = { name: 'Sheet', rows: [] }
+    const result = await stringifyWorkbookAsync([sheet])
     expect(stringifySpy).toHaveBeenCalledTimes(1)
-  expect(result).toBe(JSON.stringify({ sheets: [sheet] }))
+    expect(result).toBe(JSON.stringify({ sheets: [sheet] }))
   })
 
   it('uses a worker when available', async () => {
@@ -111,7 +107,12 @@ describe('stringifyWorkbookAsync', () => {
       onStringifyError: vi.fn(),
     }
 
-  const sheets = [{ name: 'Sheet', rows: [{ column_1: 'value' }] } as TableSheetMock]
+    const sheets: TableSheet[] = [
+      {
+        name: 'Sheet',
+        rows: [{ column_1: { value: 'value' } }],
+      },
+    ]
 
     const result = await stringifyWorkbookAsync(sheets, {
       workerFactory: () => mock as unknown as Worker,
@@ -155,8 +156,10 @@ describe('stringifyWorkbookAsync', () => {
       onStringifyError: vi.fn(),
     }
 
+    const sheets: TableSheet[] = [{ name: 'Sheet', rows: [] }]
+
     await expect(
-  stringifyWorkbookAsync([{ name: 'Sheet', rows: [] } as TableSheetMock], {
+      stringifyWorkbookAsync(sheets, {
         workerFactory: () => errorWorker as unknown as Worker,
         ...hooks,
       })

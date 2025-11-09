@@ -1,6 +1,6 @@
 // File Header: Hook bundling spreadsheet clipboard interactions.
 import React from 'react'
-import type { TableRow } from '../../../services/workbookService'
+import { cloneRow, createCell, getCellValue, type TableRow } from '../../../services/workbookService'
 import type { Notice, SelectionRange, UpdateRows } from '../types'
 import {
   createEmptyRow,
@@ -73,8 +73,8 @@ export const useClipboardHandlers = ({
         const cellValues: string[] = []
         for (let columnIndex = boundedRange.startCol; columnIndex <= boundedRange.endCol; columnIndex += 1) {
           const columnKey = columns[columnIndex]
-          const value = sourceRow[columnKey]
-          cellValues.push(value === undefined || value === null ? '' : String(value))
+          const value = getCellValue(sourceRow[columnKey])
+          cellValues.push(value)
         }
         valueMatrix.push(cellValues)
       }
@@ -124,11 +124,15 @@ export const useClipboardHandlers = ({
 
       matrix.forEach((rowValues, rowOffset) => {
         const targetRowIndex = start.rowIndex + rowOffset
-        const updatedRow = { ...nextRows[targetRowIndex] }
+        const updatedRow = cloneRow(nextRows[targetRowIndex])
         rowValues.forEach((value, columnOffset) => {
           const targetColumnIndex = start.columnIndex + columnOffset
           const columnKey = nextColumns[targetColumnIndex]
-          updatedRow[columnKey] = value
+          const existing = updatedRow[columnKey] ?? createCell()
+          updatedRow[columnKey] = {
+            ...existing,
+            value,
+          }
         })
         nextRows[targetRowIndex] = updatedRow
       })

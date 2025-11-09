@@ -1,6 +1,6 @@
 // File Header: Hook coordinating spreadsheet fill handle interactions.
 import React from 'react'
-import type { TableRow } from '../../../services/workbookService'
+import { cloneRow, createCell, type TableRow } from '../../../services/workbookService'
 import type { CellPosition, Notice, SelectionRange, UpdateRows } from '../types'
 import { createEmptyRow } from '../utils/spreadsheetTableUtils'
 
@@ -49,10 +49,8 @@ export const useFillController = ({
       }
 
       const columnKeys = columns.slice(selection.startCol, selection.endCol + 1)
-      const patternRows = rows
-        .slice(selection.startRow, selection.endRow + 1)
-        .map((row) => ({ ...row }))
-      let nextRows = rows.map((row) => ({ ...row }))
+      const patternRows = rows.slice(selection.startRow, selection.endRow + 1).map((row) => cloneRow(row))
+      let nextRows = rows.map((row) => cloneRow(row))
       while (nextRows.length <= targetEndRow) {
         nextRows = [...nextRows, createEmptyRow(columns)]
       }
@@ -60,9 +58,11 @@ export const useFillController = ({
       for (let rowIndex = selection.endRow + 1; rowIndex <= targetEndRow; rowIndex += 1) {
         const patternRow =
           patternRows[((rowIndex - selection.startRow) % patternRows.length + patternRows.length) % patternRows.length]
-        const updatedRow = { ...nextRows[rowIndex] }
+        const updatedRow = cloneRow(nextRows[rowIndex])
         columnKeys.forEach((columnKey) => {
-          updatedRow[columnKey] = patternRow[columnKey] ?? ''
+          const sourceCell = patternRow[columnKey]
+          const nextCell = sourceCell ? { ...sourceCell } : createCell()
+          updatedRow[columnKey] = nextCell
         })
         nextRows[rowIndex] = updatedRow
       }

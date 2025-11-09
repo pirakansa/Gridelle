@@ -10,6 +10,8 @@ type SheetSectionProps = {
   onSelectSheet: (_index: number) => void
   onAddSheet: () => void
   onDeleteSheet: () => void
+  renamingSheetIndex: number | null
+  onStartSheetRename: (_index: number) => void
   sheetNameDraft: string
   onSheetNameDraftChange: (_value: string) => void
   onCommitSheetName: () => void
@@ -24,6 +26,8 @@ export default function SheetSection({
   onSelectSheet,
   onAddSheet,
   onDeleteSheet,
+  renamingSheetIndex,
+  onStartSheetRename,
   sheetNameDraft,
   onSheetNameDraftChange,
   onCommitSheetName,
@@ -53,13 +57,38 @@ export default function SheetSection({
             >
               {sheetNames.map((name, index) => {
                 const isActive = index === activeSheetIndex
+                const isRenaming = index === renamingSheetIndex
                 const buttonClass = `${sheetTabBaseClass} ${isActive ? sheetTabActiveClass : sheetTabInactiveClass}`
+                if (isRenaming) {
+                  return (
+                    <TextInput
+                      key={`${name}-${index}`}
+                      value={sheetNameDraft}
+                      onChange={(event) => onSheetNameDraftChange(event.target.value)}
+                      onBlur={onCommitSheetName}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          onCommitSheetName()
+                        }
+                        if (event.key === 'Escape') {
+                          event.preventDefault()
+                          onCancelSheetRename()
+                        }
+                      }}
+                      autoFocus
+                      className="h-9 min-w-[7rem] rounded-full px-3 text-sm"
+                      data-testid="sheet-name-input"
+                    />
+                  )
+                }
                 return (
                   <button
                     key={`${name}-${index}`}
                     type="button"
                     className={buttonClass}
                     onClick={() => onSelectSheet(index)}
+                    onDoubleClick={() => onStartSheetRename(index)}
                     aria-pressed={isActive}
                     data-testid={`sheet-tab-${index}`}
                   >
@@ -69,6 +98,8 @@ export default function SheetSection({
               })}
             </div>
           </div>
+        </div>
+        <div className="flex items-center justify-end gap-3">
           <Button type="button" variant="ghost" onClick={onAddSheet} data-testid="add-sheet-button">
             シートを追加
           </Button>
@@ -81,29 +112,6 @@ export default function SheetSection({
           >
             シートを削除
           </Button>
-        </div>
-        <div className="flex w-full max-w-sm items-center gap-2 md:max-w-md">
-          <label htmlFor="sheet-name" className="text-sm text-slate-600">
-            シート名
-          </label>
-          <TextInput
-            id="sheet-name"
-            value={sheetNameDraft}
-            onChange={(event) => onSheetNameDraftChange(event.target.value)}
-            onBlur={onCommitSheetName}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                onCommitSheetName()
-              }
-              if (event.key === 'Escape') {
-                event.preventDefault()
-                onCancelSheetRename()
-              }
-            }}
-            data-testid="sheet-name-input"
-            fullWidth
-          />
         </div>
       </div>
     </MenuSectionCard>

@@ -1,58 +1,66 @@
 // File Header: Page-level component orchestrating the spreadsheet playground layout.
 import React from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
+import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { layoutTheme } from '../../utils/Theme'
 import { redirectToLogin } from '../../utils/navigation'
+import { clearAppStorage } from '../../utils/storageCleanup'
 import { useSpreadsheetState } from './useSpreadsheetState'
 import SpreadsheetTable from '../../components/block/SpreadsheetTable'
 import MenuHeader from '../../components/block/MenuHeader'
 import YamlPanel from '../../components/block/YamlPanel'
 import SettingsOverlay from '../../components/block/SettingsOverlay'
-import {
-  clearStoredGithubToken,
-  deriveLoginMode,
-  getFirebaseAuth,
-  getLoginMode,
-  getStoredGithubToken,
-  setLoginMode,
-} from '../../services/authService'
+import GithubIntegrationPanel from '../../components/block/GithubIntegrationPanel'
+import { clearStoredGithubToken, deriveLoginMode, getFirebaseAuth, getLoginMode, getStoredGithubToken, setLoginMode } from '../../services/authService'
 import type { LoginMode } from '../../services/authService'
 
 // Function Header: Composes the top page using modular sub-components wired to state hooks.
 export default function App(): React.ReactElement {
+  const auth = React.useMemo(() => getFirebaseAuth(), [])
   const spreadsheet = useSpreadsheetState()
   const [isYamlInputOpen, setYamlInputOpen] = React.useState<boolean>(false)
+  const [isGithubIntegrationOpen, setGithubIntegrationOpen] = React.useState<boolean>(false)
   const [loginMode, setLoginModeState] = React.useState<LoginMode | null>(() => getLoginMode())
+  const [currentUser, setCurrentUser] = React.useState<User | null>(() => auth.currentUser ?? null)
+  const [isLoggingOut, setLoggingOut] = React.useState<boolean>(false)
+  const [logoutError, setLogoutError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
-    const auth = getFirebaseAuth()
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) {
-        clearStoredGithubToken()
-        setLoginMode(null)
-        setLoginModeState(null)
-        redirectToLogin()
-        return
-      }
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (nextUser) => {
+        setCurrentUser(nextUser)
+        setLogoutError(null)
 
-      const mode = deriveLoginMode(currentUser) as LoginMode
-      setLoginMode(mode)
-      setLoginModeState(mode)
+        if (!nextUser) {
+          clearAppStorage()
+          setLoginModeState(null)
+          redirectToLogin()
+          return
+        }
 
-      if (mode === 'guest') {
-        clearStoredGithubToken()
-        return
-      }
+        const mode = deriveLoginMode(nextUser) as LoginMode
+        setLoginMode(mode)
+        setLoginModeState(mode)
 
-      if (!getStoredGithubToken()) {
-        redirectToLogin()
-      }
-    })
+        if (mode === 'guest') {
+          clearStoredGithubToken()
+          return
+        }
+
+        if (!getStoredGithubToken()) {
+          redirectToLogin()
+        }
+      },
+      (authError) => {
+        console.error('認証状態の監視でエラーが発生しました', authError)
+        setLogoutError('認証状態の取得に失敗しました。再度ログインし直してください。')
+      },
+    )
 
     return () => {
       unsubscribe()
     }
-  }, [])
+  }, [auth])
 
   const openYamlInput = React.useCallback(() => {
     setYamlInputOpen(true)
@@ -62,17 +70,47 @@ export default function App(): React.ReactElement {
     setYamlInputOpen(false)
   }, [])
 
+  const openGithubIntegration = React.useCallback(() => {
+    setGithubIntegrationOpen(true)
+  }, [])
+
+  const closeGithubIntegration = React.useCallback(() => {
+    setGithubIntegrationOpen(false)
+  }, [])
+
+  const handleLogout = React.useCallback(async () => {
+    if (isLoggingOut) {
+      return
+    }
+
+    setLoggingOut(true)
+    setLogoutError(null)
+
+    try {
+      await signOut(auth)
+      clearAppStorage()
+      setLoginModeState(null)
+      setCurrentUser(null)
+    } catch (error) {
+      console.error('トップ画面のログアウト処理でエラーが発生しました', error)
+      setLogoutError('ログアウトに失敗しました。時間を置いて再度お試しください。')
+    } finally {
+      setLoggingOut(false)
+    }
+  }, [auth, isLoggingOut, setLoginModeState])
+
   return (
     <div className={layoutTheme.pageShell} data-login-mode={loginMode ?? 'none'}>
       <MenuHeader
         onYamlInputClick={openYamlInput}
+        onGithubIntegrationClick={openGithubIntegration}
         notice={spreadsheet.notice}
         sheetNames={spreadsheet.sheets.map((sheet) => sheet.name)}
         activeSheetIndex={spreadsheet.activeSheetIndex}
         onSelectSheet={spreadsheet.handleSelectSheet}
         currentSheetName={spreadsheet.currentSheetName}
-        onRenameSheet={spreadsheet.handleRenameSheet}
-        onAddSheet={spreadsheet.handleAddSheet}
+    onRenameSheet={spreadsheet.handleRenameSheet}
+    onAddSheet={spreadsheet.handleAddSheet}
     onDeleteSheet={spreadsheet.handleDeleteSheet}
         onAddRow={spreadsheet.handleAddRow}
         onInsertRowBelowSelection={spreadsheet.handleInsertRowBelowSelection}
@@ -94,7 +132,17 @@ export default function App(): React.ReactElement {
         bulkValue={spreadsheet.bulkValue}
         onBulkValueChange={spreadsheet.setBulkValue}
         onBulkApply={spreadsheet.applyBulkInput}
+  selectionTextColor={spreadsheet.selectionTextColor}
+  selectionBackgroundColor={spreadsheet.selectionBackgroundColor}
+  onApplySelectionTextColor={spreadsheet.applySelectionTextColor}
+  onApplySelectionBackgroundColor={spreadsheet.applySelectionBackgroundColor}
+  onClearSelectionStyles={spreadsheet.clearSelectionStyles}
         canDeleteSheet={spreadsheet.canDeleteSheet}
+        loginMode={loginMode}
+        userEmail={currentUser?.email ?? null}
+        onLogout={handleLogout}
+        isLoggingOut={isLoggingOut}
+        logoutError={logoutError}
       />
       <main className={layoutTheme.contentWrapper}>
         <SpreadsheetTable
@@ -135,6 +183,16 @@ export default function App(): React.ReactElement {
             onDownload={spreadsheet.handleDownloadYaml}
             onCopy={spreadsheet.handleCopyYaml}
           />
+        </SettingsOverlay>
+      )}
+      {isGithubIntegrationOpen && (
+        <SettingsOverlay
+          title="GitHubファイル連携"
+          description="GitHub上のYAMLを読み込む機能のプレビューです。"
+          onClose={closeGithubIntegration}
+          panelId="github-file-actions"
+        >
+          <GithubIntegrationPanel />
         </SettingsOverlay>
       )}
     </div>

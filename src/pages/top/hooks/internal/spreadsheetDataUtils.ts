@@ -1,4 +1,4 @@
-import { deriveColumns, type TableRow, type TableSheet } from '../../../../services/workbookService'
+import { cloneRow, deriveColumns, type TableRow, type TableSheet } from '../../../../services/workbookService'
 
 export type SheetState = TableSheet & {
   columnOrder: string[]
@@ -15,7 +15,7 @@ export function createSheetState(sheets: TableSheet[]): SheetState[] {
       ]
 
   return safeSheets.map((sheet) => {
-    const rows = sheet.rows.map((row) => ({ ...row }))
+    const rows = sheet.rows.map((row) => cloneRow(row))
     return {
       name: sheet.name,
       rows,
@@ -25,7 +25,7 @@ export function createSheetState(sheets: TableSheet[]): SheetState[] {
 }
 
 export function stripSheetState(sheet: SheetState): TableSheet {
-  return { name: sheet.name, rows: sheet.rows }
+  return { name: sheet.name, rows: sheet.rows.map((row) => cloneRow(row)) }
 }
 
 export function syncColumnOrder(currentOrder: string[], derivedColumns: string[]): string[] {
@@ -65,5 +65,5 @@ export function generateNextColumnKey(existing: string[]): string {
 }
 
 export function cloneRows(rows: TableRow[]): TableRow[] {
-  return rows.map((row) => ({ ...row }))
+  return rows.map((row) => cloneRow(row))
 }

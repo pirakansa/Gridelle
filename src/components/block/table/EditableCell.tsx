@@ -1,12 +1,13 @@
 // File Header: Table cell component handling editing visuals, selection, and fill handle.
 import React from 'react'
+import type { TableCell } from '../../../services/workbookService'
 import type { CellPosition, SelectionRange } from '../../../pages/top/useSpreadsheetState'
 
 type EditableCellProps = {
   column: string
   columnIndex: number
   rowIndex: number
-  value: string
+  cell: TableCell | undefined
   selection: SelectionRange | null
   activeRange: SelectionRange | null
   fillPreview: SelectionRange | null
@@ -27,7 +28,7 @@ export default function EditableCell({
   column,
   columnIndex,
   rowIndex,
-  value,
+  cell,
   selection,
   activeRange,
   fillPreview,
@@ -42,7 +43,21 @@ export default function EditableCell({
   onCellEditorBlur,
   onCellEditorKeyDown,
 }: EditableCellProps): React.ReactElement {
-  const [draftValue, setDraftValue] = React.useState<string>(value)
+  const cellValue = cell?.value ?? ''
+  const cellStyle = React.useMemo<React.CSSProperties>(() => {
+    const style: React.CSSProperties = {}
+    const bgColor = cell?.bgColor?.trim()
+    const textColor = cell?.color?.trim()
+    if (bgColor) {
+      style.backgroundColor = bgColor
+    }
+    if (textColor) {
+      style.color = textColor
+    }
+    return style
+  }, [cell?.bgColor, cell?.color])
+
+  const [draftValue, setDraftValue] = React.useState<string>(cellValue)
   const hasCommittedRef = React.useRef<boolean>(false)
   const discardRef = React.useRef<boolean>(false)
 
@@ -53,10 +68,10 @@ export default function EditableCell({
       hasCommittedRef.current = false
       discardRef.current = false
     }
-    setDraftValue((current) => (current === value ? current : value))
-  }, [isEditing, value])
+    setDraftValue((current) => (current === cellValue ? current : cellValue))
+  }, [cellValue, isEditing])
 
-  const className = deriveCellClassName({
+  const { className } = deriveCellPresentation({
     activeRange,
     selection,
     fillPreview,
@@ -69,10 +84,10 @@ export default function EditableCell({
       return
     }
     hasCommittedRef.current = true
-    if (draftValue !== value) {
+    if (draftValue !== cellValue) {
       onCellChange(rowIndex, column, draftValue)
     }
-  }, [column, draftValue, onCellChange, rowIndex, value])
+  }, [cellValue, column, draftValue, onCellChange, rowIndex])
 
   const handleEditorBlur = React.useCallback(() => {
     commitDraftValue()
@@ -84,14 +99,14 @@ export default function EditableCell({
       if (event.key === 'Escape') {
         discardRef.current = true
         hasCommittedRef.current = true
-        setDraftValue(value)
+        setDraftValue(cellValue)
       }
       if (event.key === 'Enter' && !event.shiftKey) {
         commitDraftValue()
       }
       onCellEditorKeyDown(event)
     },
-    [commitDraftValue, onCellEditorKeyDown, value],
+    [cellValue, commitDraftValue, onCellEditorKeyDown],
   )
 
   return (
@@ -105,6 +120,7 @@ export default function EditableCell({
       onPointerEnter={() => onPointerEnter(rowIndex, columnIndex)}
       onClick={(event) => onCellClick(event, rowIndex, columnIndex)}
       onDoubleClick={() => onCellDoubleClick(rowIndex, columnIndex)}
+      style={cellStyle}
     >
   <div className="flex h-full items-start gap-1 px-1">
         {isEditing ? (
@@ -121,13 +137,15 @@ export default function EditableCell({
             onClick={(event) => event.stopPropagation()}
             onDoubleClick={(event) => event.stopPropagation()}
             onPaste={(event) => event.stopPropagation()}
+            style={cellStyle}
           />
         ) : (
           <div
             className="w-full flex-1 whitespace-pre rounded px-2 py-2 text-left text-sm"
             data-testid={`cell-display-${rowIndex}-${column}`}
+            style={cellStyle}
           >
-            {value}
+            {cellValue}
           </div>
         )}
         {selection &&
@@ -155,24 +173,30 @@ type CellClassArgs = {
   columnIndex: number
 }
 
-function deriveCellClassName({
+type CellPresentation = {
+  className: string
+}
+
+function deriveCellPresentation({
   activeRange,
   selection,
   fillPreview,
   rowIndex,
   columnIndex,
-}: CellClassArgs): string {
+}: CellClassArgs): CellPresentation {
   const inActive = activeRange ? isCellWithinRange(activeRange, rowIndex, columnIndex) : false
   const inBase = selection ? isCellWithinRange(selection, rowIndex, columnIndex) : false
   const inFillPreview = fillPreview && inActive && !inBase
 
-  return [
+  const className = [
     'relative border border-slate-200',
     inActive ? 'selected-cell' : '',
     inFillPreview ? 'fill-preview-cell' : '',
   ]
     .filter(Boolean)
     .join(' ')
+
+  return { className }
 }
 
 function isCellWithinRange(

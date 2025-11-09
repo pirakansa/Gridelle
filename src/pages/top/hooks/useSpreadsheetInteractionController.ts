@@ -1,6 +1,6 @@
 // File Header: Hook encapsulating selection, fill, clipboard, and editing interactions.
 import React from 'react'
-import type { TableRow } from '../../../services/workbookService'
+import { cloneCell, type TableCell, type TableRow } from '../../../services/workbookService'
 import type { CellPosition, Notice, SelectionRange, UpdateRows } from '../types'
 import { stringifySelection } from '../utils/spreadsheetTableUtils'
 import { useClipboardHandlers } from './useClipboardHandlers'
@@ -29,6 +29,11 @@ type UseSpreadsheetInteractionController = {
   editingCell: CellPosition | null
   clearSelection: () => void
   applyBulkInput: () => void
+  selectionTextColor: string
+  selectionBackgroundColor: string
+  applySelectionTextColor: (_color: string | null) => void
+  applySelectionBackgroundColor: (_color: string | null) => void
+  clearSelectionStyles: () => void
   handleRowNumberClick: (_rowIndex: number, _extend: boolean) => void
   handleColumnHeaderClick: (_columnIndex: number, _extend: boolean) => void
   handleCellPointerDown: (
@@ -105,6 +110,133 @@ export const useSpreadsheetInteractionController = ({
     updateRows,
     setNotice,
   })
+
+  const updateSelectionCells = React.useCallback(
+    (mutator: (_cell: TableCell) => { cell: TableCell; changed: boolean }): boolean => {
+      if (!selection) {
+        setNotice({ text: 'セルを選択してください。', tone: 'error' })
+        return false
+      }
+      if (!columns.length || !rows.length) {
+        setNotice({ text: 'セルを選択してください。', tone: 'error' })
+        return false
+      }
+
+      let didChange = false
+      const nextRows = rows.map((row, rowIndex) => {
+        if (rowIndex < selection.startRow || rowIndex > selection.endRow) {
+          return row
+        }
+
+        let rowClone: TableRow | null = null
+        for (let columnIndex = selection.startCol; columnIndex <= selection.endCol; columnIndex += 1) {
+          const columnKey = columns[columnIndex]
+          if (!columnKey) {
+            continue
+          }
+          const clonedCell = cloneCell(row[columnKey])
+          const { cell: nextCell, changed } = mutator(clonedCell)
+          if (!changed) {
+            continue
+          }
+          if (!rowClone) {
+            rowClone = { ...row }
+          }
+          rowClone[columnKey] = nextCell
+          didChange = true
+        }
+
+        return rowClone ?? row
+      })
+
+      if (didChange) {
+        updateRows(nextRows)
+      }
+
+      return didChange
+    },
+    [columns, rows, selection, setNotice, updateRows],
+  )
+
+  const applySelectionTextColor = React.useCallback(
+    (color: string | null): void => {
+      const trimmed = (color ?? '').trim()
+      const normalized = trimmed.length > 0 ? trimmed : ''
+
+      const changed = updateSelectionCells((cell) => {
+        if (!normalized) {
+          if (cell.color) {
+            const nextCell = { ...cell }
+            delete nextCell.color
+            return { cell: nextCell, changed: true }
+          }
+          return { cell, changed: false }
+        }
+
+        if (cell.color === normalized) {
+          return { cell, changed: false }
+        }
+
+        return { cell: { ...cell, color: normalized }, changed: true }
+      })
+
+      if (changed) {
+        setNotice({
+          text: normalized ? '選択セルの文字色を更新しました。' : '選択セルの文字色をクリアしました。',
+          tone: 'success',
+        })
+      }
+    },
+    [setNotice, updateSelectionCells],
+  )
+
+  const applySelectionBackgroundColor = React.useCallback(
+    (color: string | null): void => {
+      const trimmed = (color ?? '').trim()
+      const normalized = trimmed.length > 0 ? trimmed : ''
+
+      const changed = updateSelectionCells((cell) => {
+        if (!normalized) {
+          if (cell.bgColor) {
+            const nextCell = { ...cell }
+            delete nextCell.bgColor
+            return { cell: nextCell, changed: true }
+          }
+          return { cell, changed: false }
+        }
+
+        if (cell.bgColor === normalized) {
+          return { cell, changed: false }
+        }
+
+        return { cell: { ...cell, bgColor: normalized }, changed: true }
+      })
+
+      if (changed) {
+        setNotice({
+          text: normalized ? '選択セルの背景色を更新しました。' : '選択セルの背景色をクリアしました。',
+          tone: 'success',
+        })
+      }
+    },
+    [setNotice, updateSelectionCells],
+  )
+
+  const clearSelectionStyles = React.useCallback((): void => {
+    const changed = updateSelectionCells((cell) => {
+      if (!cell.color && !cell.bgColor) {
+        return { cell, changed: false }
+      }
+      const nextCell = { ...cell }
+      delete nextCell.color
+      delete nextCell.bgColor
+      return { cell: nextCell, changed: true }
+    })
+
+    if (changed) {
+      setNotice({ text: '選択セルのスタイルをクリアしました。', tone: 'success' })
+    }
+  }, [setNotice, updateSelectionCells])
 
   useSelectionNormalizer({
     selection,
@@ -319,6 +451,21 @@ export const useSpreadsheetInteractionController = ({
   const activeRange = fillPreview ?? selection
   const selectionSummary = stringifySelection(activeRange)
 
+  const anchorCell = React.useMemo(() => {
+    if (!selection) {
+      return null
+    }
+    const anchor = getSelectionAnchor()
+    const columnKey = columns[anchor.columnIndex]
+    if (!columnKey) {
+      return null
+    }
+    return rows[anchor.rowIndex]?.[columnKey] ?? null
+  }, [columns, getSelectionAnchor, rows, selection])
+
+  const selectionTextColor = anchorCell?.color ?? ''
+  const selectionBackgroundColor = anchorCell?.bgColor ?? ''
+
   return {
     selection,
     activeRange,
@@ -328,6 +475,11 @@ export const useSpreadsheetInteractionController = ({
     editingCell,
     clearSelection,
     applyBulkInput,
+    selectionTextColor,
+    selectionBackgroundColor,
+    applySelectionTextColor,
+    applySelectionBackgroundColor,
+    clearSelectionStyles,
     handleRowNumberClick,
     handleColumnHeaderClick,
     handleCellPointerDown,

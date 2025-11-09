@@ -1,6 +1,6 @@
 // File Header: Applies bulk input values across the currently selected spreadsheet range.
 import React from 'react'
-import type { TableRow } from '../../../../services/workbookService'
+import { cloneRow, createCell, type TableRow } from '../../../../services/workbookService'
 import type { Notice, SelectionRange, UpdateRows } from '../../types'
 import { parseClipboardText } from '../../utils/clipboardFormat'
 
@@ -52,15 +52,24 @@ export function useBulkInput({
       if (rowIndex < selection.startRow || rowIndex > selection.endRow) {
         return row
       }
-      const updatedRow = { ...row }
+      const updatedRow = cloneRow(row)
       if (isSingleCellSelection) {
-        updatedRow[targetColumns[0]] = bulkValue
+        const targetKey = targetColumns[0]
+        const existing = updatedRow[targetKey] ?? createCell()
+        updatedRow[targetKey] = {
+          ...existing,
+          value: bulkValue,
+        }
         return updatedRow
       }
 
       if (shouldBroadcastLiteral) {
         targetColumns.forEach((columnKey) => {
-          updatedRow[columnKey] = bulkValue
+          const existing = updatedRow[columnKey] ?? createCell()
+          updatedRow[columnKey] = {
+            ...existing,
+            value: bulkValue,
+          }
         })
         return updatedRow
       }
@@ -69,7 +78,11 @@ export function useBulkInput({
       const sourceRow = parsedMatrix[Math.min(rowOffset, parsedMatrix.length - 1)] ?? ['']
       targetColumns.forEach((columnKey, columnOffset) => {
         const sourceValue = sourceRow[Math.min(columnOffset, sourceRow.length - 1)] ?? ''
-        updatedRow[columnKey] = sourceValue
+        const existing = updatedRow[columnKey] ?? createCell()
+        updatedRow[columnKey] = {
+          ...existing,
+          value: sourceValue,
+        }
       })
       return updatedRow
     })

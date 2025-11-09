@@ -1,6 +1,13 @@
 // File Header: Hook responsible for spreadsheet data state and YAML/column operations.
 import React from 'react'
-import { stringifyWorkbook, parseWorkbook, type TableRow, type TableSheet } from '../../../services/workbookService'
+import {
+  stringifyWorkbook,
+  parseWorkbook,
+  type TableRow,
+  type TableSheet,
+  cloneRow,
+  createCell,
+} from '../../../services/workbookService'
 import { copyText } from '../../../services/clipboardService'
 import { downloadTextFile, readFileAsText } from '../../../services/fileTransferService'
 import type { Notice } from '../types'
@@ -8,6 +15,7 @@ import { useSheetState } from './internal/useSheetState'
 import { createSheetState, stripSheetState } from './internal/spreadsheetDataUtils'
 import { parseWorkbookAsync } from '../../../services/yamlWorkerClient'
 import { stringifyWorkbookAsync } from '../../../services/yamlStringifyWorkerClient'
+import { TABLE_STORAGE_KEY, BUFFER_STORAGE_KEY } from '../../../utils/storageKeys'
 
 type ParseLifecycleHooks = {
   onParseStart?: () => void
@@ -41,9 +49,6 @@ type UseSpreadsheetDataController = {
   handleCopyYaml: () => Promise<void>
   handleCellChange: (_rowIndex: number, _columnKey: string, _value: string) => void
 }
-
-const TABLE_STORAGE_KEY = 'gridelle:tableYaml'
-const BUFFER_STORAGE_KEY = 'gridelle:yamlBuffer'
 
 const readPersistedValue = (key: string): string | null => {
   if (typeof window === 'undefined' || !window.localStorage) {
@@ -284,7 +289,18 @@ export const useSpreadsheetDataController = (
 
   const handleCellChange = React.useCallback(
     (rowIndex: number, columnKey: string, value: string): void => {
-      const nextRows = rows.map((row, index) => (index === rowIndex ? { ...row, [columnKey]: value } : row))
+      const nextRows = rows.map((row, index) => {
+        if (index !== rowIndex) {
+          return row
+        }
+        const nextRow = cloneRow(row)
+        const existing = nextRow[columnKey] ?? createCell()
+        nextRow[columnKey] = {
+          ...existing,
+          value,
+        }
+        return nextRow
+      })
       updateRows(nextRows)
     },
     [rows, updateRows],
