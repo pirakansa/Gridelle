@@ -26,14 +26,14 @@ export const useSelectionController = (): SelectionController => {
   const [editingCell, setEditingCell] = React.useState<CellPosition | null>(null)
 
   const getSelectionAnchor = React.useCallback((): CellPosition => {
-    if (selection) {
-      return { rowIndex: selection.startRow, columnIndex: selection.startCol }
-    }
     if (anchorCell) {
       return anchorCell
     }
+    if (selection) {
+      return { rowIndex: selection.startRow, columnIndex: selection.startCol }
+    }
     return { rowIndex: 0, columnIndex: 0 }
-  }, [selection, anchorCell])
+  }, [anchorCell, selection])
 
   const clearSelectionState = React.useCallback((): void => {
     setSelection(null)

@@ -100,6 +100,20 @@ describe('App', () => {
     })
   })
 
+  it('編集モード中にテキストエリアをクリックしても編集が継続する', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const editableBox = screen.getByTestId('cell-box-0-feature')
+    fireEvent.doubleClick(editableBox)
+    const editor = (await screen.findByTestId('cell-0-feature')) as HTMLTextAreaElement
+
+    await user.click(editor)
+
+    expect(screen.getByTestId('cell-0-feature')).toBeInTheDocument()
+    expect(editor).toHaveFocus()
+  })
+
   it('列の並べ替えができる', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -128,6 +142,7 @@ describe('App', () => {
 
   it('ドラッグ操作で複数セルを選択できる', async () => {
     render(<App />)
+    fireEvent.click(screen.getByTestId('menu-tab-selection'))
     const firstCell = screen.getByTestId('cell-box-0-feature')
     const targetCell = screen.getByTestId('cell-box-1-owner')
 
@@ -184,6 +199,56 @@ describe('App', () => {
     })
   })
 
+  it('DELキーで選択セルの内容を削除できる', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-0-feature'))
+    const shell = screen.getByTestId('interactive-table-shell')
+    shell.focus()
+
+    fireEvent.keyDown(shell, { key: 'Delete', code: 'Delete' })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature').textContent).toBe('')
+    })
+    expect(await screen.findByText('選択セルの内容を削除しました。')).toBeInTheDocument()
+  })
+
+  it('カーソルキーで選択セルを移動できる', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-0-feature'))
+    const shell = screen.getByTestId('interactive-table-shell')
+    shell.focus()
+
+    fireEvent.keyDown(shell, { key: 'ArrowDown', code: 'ArrowDown' })
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-box-1-feature')).toHaveAttribute('data-selected', 'true')
+    })
+    expect(screen.getByTestId('cell-box-0-feature')).not.toHaveAttribute('data-selected')
+
+    fireEvent.keyDown(shell, { key: 'ArrowRight', code: 'ArrowRight' })
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-box-1-owner')).toHaveAttribute('data-selected', 'true')
+    })
+  })
+
+  it('Shift+カーソルキーで選択範囲を拡張できる', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-0-feature'))
+    const shell = screen.getByTestId('interactive-table-shell')
+    shell.focus()
+
+    fireEvent.keyDown(shell, { key: 'ArrowDown', code: 'ArrowDown' })
+    fireEvent.keyDown(shell, { key: 'ArrowDown', code: 'ArrowDown', shiftKey: true })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-box-1-feature')).toHaveAttribute('data-selected', 'true')
+      expect(screen.getByTestId('cell-box-2-feature')).toHaveAttribute('data-selected', 'true')
+    })
+  })
+
   it('選択範囲に一括入力できる', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -191,6 +256,7 @@ describe('App', () => {
     fireEvent.click(screen.getByTestId('cell-box-0-feature'))
     fireEvent.click(screen.getByTestId('cell-box-1-effort'), { shiftKey: true })
 
+    await user.click(screen.getByTestId('menu-tab-bulk'))
     const bulkInput = screen.getByTestId('bulk-input') as HTMLInputElement
     await user.clear(bulkInput)
     await user.type(bulkInput, 'DONE')
@@ -216,6 +282,7 @@ describe('App', () => {
 
   it('行番号をクリックすると行全体が選択される', () => {
     render(<App />)
+    fireEvent.click(screen.getByTestId('menu-tab-selection'))
     const rowButton = within(screen.getByTestId('row-number-2')).getByRole('button', {
       name: '行3を選択',
     })
@@ -231,7 +298,7 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-  await user.selectOptions(screen.getByTestId('sheet-select'), '1')
+    await user.selectOptions(screen.getByTestId('sheet-select'), '1')
 
     expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('リリースノート作成')
     expect(screen.getByTestId('sheet-name-input')).toHaveValue('完了済み')
@@ -254,13 +321,12 @@ describe('App', () => {
     render(<App />)
 
     await user.click(screen.getByTestId('add-sheet-button'))
-
-    const options = Array.from(
-      (screen.getByTestId('sheet-select') as HTMLSelectElement).options,
-    ).map((option) => option.textContent)
+    const sheetSelect = screen.getByTestId('sheet-select') as HTMLSelectElement
+    await waitFor(() => {
+      expect(sheetSelect.value).toBe('2')
+    })
+    const options = Array.from(sheetSelect.options).map((option) => option.textContent)
     expect(options).toContain('Sheet 3')
-
-  await user.selectOptions(screen.getByTestId('sheet-select'), '2')
-    expect(screen.getByText('表示するデータがありません。')).toBeInTheDocument()
+    expect(await screen.findByText('表示するデータがありません。')).toBeInTheDocument()
   })
 })

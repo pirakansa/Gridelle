@@ -1,6 +1,6 @@
 // File Header: Hook coordinating spreadsheet fill handle interactions.
 import React from 'react'
-import type { TableRow } from '../../../utils/yamlTable'
+import type { TableRow } from '../../../services/workbookService'
 import type { CellPosition, Notice, SelectionRange, UpdateRows } from '../types'
 import { createEmptyRow } from '../utils/spreadsheetTableUtils'
 

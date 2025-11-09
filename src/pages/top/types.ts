@@ -1,5 +1,5 @@
 // File Header: Shared type definitions used across spreadsheet-related hooks.
-import type { TableRow } from '../../utils/yamlTable'
+import type { TableRow } from '../../services/workbookService'
 
 export type Notice = { text: string; tone: 'error' | 'success' }
 

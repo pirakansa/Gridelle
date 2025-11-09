@@ -2,13 +2,15 @@
 import React from 'react'
 import {
   deriveColumns,
-  parseYamlWorkbook,
-  stringifyYamlWorkbook,
+  parseWorkbook,
+  stringifyWorkbook,
   type TableRow,
   type TableSheet,
-} from '../../../utils/yamlTable'
+} from '../../../services/workbookService'
 import type { Notice } from '../types'
 import { createEmptyRow } from '../utils/spreadsheetTableUtils'
+import { copyText } from '../../../services/clipboardService'
+import { downloadTextFile, readFileAsText } from '../../../services/fileTransferService'
 
 type SheetState = TableSheet & {
   columnOrder: string[]
@@ -49,7 +51,7 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
   const [sheets, setSheets] = React.useState<SheetState[]>(baseSheets)
   const [activeSheetIndex, setActiveSheetIndex] = React.useState<number>(0)
   const [yamlBuffer, setYamlBuffer] = React.useState<string>(() =>
-    stringifyYamlWorkbook(baseSheets.map(stripSheetState)),
+    stringifyWorkbook(baseSheets.map(stripSheetState)),
   )
   const [notice, setNotice] = React.useState<Notice | null>(null)
   const [newColumnName, setNewColumnName] = React.useState<string>('')
@@ -84,12 +86,12 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
     : syncColumnOrder([], derivedColumns)
   const columns = columnOrder.length ? columnOrder : derivedColumns
   const tableYaml = React.useMemo(
-    () => stringifyYamlWorkbook(sheets.map(stripSheetState)),
+    () => stringifyWorkbook(sheets.map(stripSheetState)),
     [sheets],
   )
 
   const rebuildYamlBuffer = React.useCallback((nextSheets: SheetState[]) => {
-    setYamlBuffer(stringifyYamlWorkbook(nextSheets.map(stripSheetState)))
+    setYamlBuffer(stringifyWorkbook(nextSheets.map(stripSheetState)))
   }, [])
 
   const updateRows = React.useCallback(
@@ -256,7 +258,7 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
 
   const applyYamlBuffer = React.useCallback((): void => {
     try {
-      const parsed = parseYamlWorkbook(yamlBuffer)
+      const parsed = parseWorkbook(yamlBuffer)
       const next = createSheetState(parsed)
       setSheets(next)
       rebuildYamlBuffer(next)
@@ -274,58 +276,53 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
 
   const handleFileUpload = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>): void => {
-      const file = event.target.files?.[0]
+      const input = event.target
+      const file = input.files?.[0]
+      input.value = ''
       if (!file) {
         return
       }
 
-      const reader = new FileReader()
-      reader.onload = () => {
-        const content = String(reader.result ?? '')
-        setYamlBuffer(content)
-        try {
-          const parsed = createSheetState(parseYamlWorkbook(content))
-          setSheets(parsed)
-          rebuildYamlBuffer(parsed)
-          setActiveSheetIndex((prev) => {
-            if (!parsed.length) {
-              return 0
-            }
-            return Math.min(prev, parsed.length - 1)
-          })
-          setNotice({ text: 'ファイルを読み込みました。', tone: 'success' })
-        } catch (error) {
+      readFileAsText(file)
+        .then((content) => {
+          setYamlBuffer(content)
+          try {
+            const parsed = createSheetState(parseWorkbook(content))
+            setSheets(parsed)
+            rebuildYamlBuffer(parsed)
+            setActiveSheetIndex((prev) => {
+              if (!parsed.length) {
+                return 0
+              }
+              return Math.min(prev, parsed.length - 1)
+            })
+            setNotice({ text: 'ファイルを読み込みました。', tone: 'success' })
+          } catch (error) {
+            setNotice({
+              text: `アップロードしたファイルを解析できませんでした: ${(error as Error).message}`,
+              tone: 'error',
+            })
+          }
+        })
+        .catch((error) => {
+          const message = error instanceof Error ? error.message : String(error)
           setNotice({
-            text: `アップロードしたファイルを解析できませんでした: ${(error as Error).message}`,
+            text: `ファイルの読み込みに失敗しました: ${message}`,
             tone: 'error',
           })
-        }
-      }
-      reader.readAsText(file)
-      event.target.value = ''
+        })
     },
     [rebuildYamlBuffer],
   )
 
   const handleDownloadYaml = React.useCallback((): void => {
-    const blob = new Blob([tableYaml], { type: 'text/yaml' })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = 'table.yaml'
-    anchor.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile('table.yaml', tableYaml)
     setNotice({ text: 'table.yaml をダウンロードしました。', tone: 'success' })
   }, [tableYaml])
 
   const handleCopyYaml = React.useCallback(async (): Promise<void> => {
-    if (!navigator.clipboard) {
-      setNotice({ text: 'クリップボードAPIが利用できません。', tone: 'error' })
-      return
-    }
-
     try {
-      await navigator.clipboard.writeText(tableYaml)
+      await copyText(tableYaml)
       setNotice({ text: 'YAMLをクリップボードにコピーしました。', tone: 'success' })
     } catch {
       setNotice({ text: 'クリップボードへのコピーに失敗しました。', tone: 'error' })

@@ -1,6 +1,6 @@
 // File Header: Hook bundling spreadsheet clipboard interactions.
 import React from 'react'
-import type { TableRow } from '../../../utils/yamlTable'
+import type { TableRow } from '../../../services/workbookService'
 import type { Notice, SelectionRange, UpdateRows } from '../types'
 import {
   createEmptyRow,

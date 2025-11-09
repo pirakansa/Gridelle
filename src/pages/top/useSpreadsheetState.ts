@@ -1,6 +1,6 @@
 // File Header: Custom hook composing spreadsheet data and interaction controllers.
 import React from 'react'
-import type { TableRow, TableSheet } from '../../utils/yamlTable'
+import type { TableRow, TableSheet } from '../../services/workbookService'
 import { useSpreadsheetDataController } from './hooks/useSpreadsheetDataController'
 import { useSpreadsheetInteractionController } from './hooks/useSpreadsheetInteractionController'
 import type { CellPosition, Notice, SelectionRange } from './types'

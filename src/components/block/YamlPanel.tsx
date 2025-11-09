@@ -1,7 +1,8 @@
 // File Header: Component responsible for YAML textarea interactions and related controls.
 import React from 'react'
 import { layoutTheme } from '../../utils/Theme'
-import { ghostButtonClass, primaryButtonClass } from '../constants'
+import Button from '../atom/Button'
+import { buildButtonClassName } from '../atom/buttonStyles'
 
 type Props = {
   yamlBuffer: string
@@ -45,15 +46,10 @@ export default function YamlPanel({
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            className={primaryButtonClass}
-            onClick={onApply}
-            disabled={!yamlBuffer.trim()}
-          >
+          <Button type="button" onClick={onApply} disabled={!yamlBuffer.trim()}>
             YAMLを反映
-          </button>
-          <label className={`${ghostButtonClass} cursor-pointer`}>
+          </Button>
+          <label className={`${buildButtonClassName({ variant: 'ghost', size: 'md' })} cursor-pointer`}>
             YAMLファイルを読み込む
             <input
               type="file"
@@ -62,12 +58,12 @@ export default function YamlPanel({
               onChange={onFileUpload}
             />
           </label>
-          <button type="button" className={ghostButtonClass} onClick={onDownload}>
+          <Button type="button" variant="ghost" onClick={onDownload}>
             YAMLをダウンロード
-          </button>
-          <button type="button" className={ghostButtonClass} onClick={onCopy}>
+          </Button>
+          <Button type="button" variant="ghost" onClick={onCopy}>
             YAMLをコピー
-          </button>
+          </Button>
         </div>
 
         {notice && (

@@ -6,7 +6,8 @@ export const layoutTheme = {
   pageShell: 'min-h-screen bg-slate-50 text-slate-900 flex flex-col',
   contentWrapper: 'flex-1 flex flex-col gap-4 p-4 md:p-8',
   card: 'rounded-2xl border border-slate-200 bg-white p-6 shadow-sm',
+  ribbonShell: 'rounded-2xl border border-slate-200 bg-white shadow-sm',
   sectionTitle: 'text-lg font-semibold text-slate-900',
   helperText: 'text-sm text-slate-500',
-  tableScroll: 'h-full w-full overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm',
+  tableScroll: 'w-full max-h-[78vh] overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm',
 } as const
