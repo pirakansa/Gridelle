@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+/* eslint-env node */
+/* global process, console */
 // File Header: CLI utility generating a large sample YAML data set for Gridelle.
 import { writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'

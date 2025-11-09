@@ -50,21 +50,6 @@ export default function TableBody({
   viewportHeight,
   scrollTop,
 }: TableBodyProps): React.ReactElement {
-  if (!rows.length) {
-    return (
-      <tbody>
-        <tr>
-          <td colSpan={columns.length + 1}>
-            <div className="flex h-40 flex-col items-center justify-center gap-2 text-center text-slate-500">
-              <p>表示するデータがありません。</p>
-              <p>YAMLを読み込むか、行・列を追加して開始してください。</p>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    )
-  }
-
   const VIRTUALIZATION_THRESHOLD = 200
   const DEFAULT_ROW_HEIGHT = 36
   const OVERSCAN_ROWS = 10
@@ -124,6 +109,21 @@ export default function TableBody({
       setRowHeight(measured)
     }
   }, [columns.length, rowHeight, visibleRows.length])
+
+  if (!rows.length) {
+    return (
+      <tbody>
+        <tr>
+          <td colSpan={columns.length + 1}>
+            <div className="flex h-40 flex-col items-center justify-center gap-2 text-center text-slate-500">
+              <p>表示するデータがありません。</p>
+              <p>YAMLを読み込むか、行・列を追加して開始してください。</p>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    )
+  }
 
   return (
     <tbody>

@@ -1,37 +1,55 @@
 // File Header: Client helper for delegating YAML parsing to a background worker.
 import { parseWorkbook, type TableSheet } from './workbookService'
 
-let workerUrl: URL | null = null
+const workerScriptUrl = new URL('./yamlParserWorker.ts', import.meta.url)
 
-function getWorker(): Worker {
-  if (!workerUrl) {
-    workerUrl = new URL('./yamlParserWorker.ts', import.meta.url)
-  }
-  return new Worker(workerUrl, { type: 'module' })
+type WorkerFactory = () => Worker
+
+// Function Header: Creates a new YAML parser worker instance using module scripts.
+function defaultWorkerFactory(): Worker {
+  return new Worker(workerScriptUrl, { type: 'module' })
+}
+
+// Function Header: Detects whether the current environment supports Web Workers.
+function isWorkerSupported(): boolean {
+  return typeof window !== 'undefined' && typeof Worker !== 'undefined'
+}
+
+type WorkerResponse = {
+  id: number
+  status: 'success' | 'error'
+  sheets?: TableSheet[]
+  message?: string
+}
+
+type ParseOptions = {
+  workerFactory?: WorkerFactory
 }
 
 // Function Header: Parses a workbook string using a Web Worker when available.
-export function parseWorkbookAsync(source: string): Promise<TableSheet[]> {
-  if (typeof window === 'undefined' || typeof Worker === 'undefined') {
+export function parseWorkbookAsync(source: string, options: ParseOptions = {}): Promise<TableSheet[]> {
+  if (!isWorkerSupported()) {
     return Promise.resolve(parseWorkbook(source))
   }
 
+  const createWorker = options.workerFactory ?? defaultWorkerFactory
   let worker: Worker
   try {
-    worker = getWorker()
+    worker = createWorker()
   } catch {
     return Promise.resolve(parseWorkbook(source))
   }
 
   return new Promise<TableSheet[]>((resolve, reject) => {
     const messageId = Date.now() + Math.random()
+
     const cleanup = () => {
       worker.removeEventListener('message', handleMessage)
       worker.removeEventListener('error', handleError)
       worker.terminate()
     }
 
-    const handleMessage = (event: MessageEvent<{ id: number; status: string; sheets?: TableSheet[]; message?: string }>) => {
+    const handleMessage = (event: MessageEvent<WorkerResponse>) => {
       const payload = event.data
       if (!payload || payload.id !== messageId) {
         return
@@ -58,3 +76,5 @@ export function parseWorkbookAsync(source: string): Promise<TableSheet[]> {
     worker.postMessage({ id: messageId, yaml: source })
   })
 }
+
+export { isWorkerSupported, defaultWorkerFactory }
