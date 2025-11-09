@@ -45,6 +45,10 @@ type UseSpreadsheetState = {
   canDeleteSheet: boolean
   moveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   applyYamlBuffer: () => void
+  ingestYamlContent: (
+    _content: string,
+    _options?: { successNotice?: string; errorNoticePrefix?: string },
+  ) => Promise<void>
   handleFileUpload: (_event: React.ChangeEvent<HTMLInputElement>) => void
   handleDownloadYaml: () => void
   handleCopyYaml: () => Promise<void>
@@ -134,6 +138,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleRenameSheet,
     moveColumn,
     applyYamlBuffer,
+    ingestYamlContent,
     handleFileUpload,
     handleDownloadYaml,
     handleCopyYaml,
@@ -450,6 +455,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleRenameSheet,
     moveColumn,
     applyYamlBuffer,
+    ingestYamlContent,
     handleFileUpload,
     handleDownloadYaml,
     handleCopyYaml,

@@ -19,6 +19,7 @@ export default function App(): React.ReactElement {
   const spreadsheet = useSpreadsheetState()
   const [isYamlInputOpen, setYamlInputOpen] = React.useState<boolean>(false)
   const [isGithubIntegrationOpen, setGithubIntegrationOpen] = React.useState<boolean>(false)
+  const [githubRepositoryUrl, setGithubRepositoryUrl] = React.useState<string>('')
   const [loginMode, setLoginModeState] = React.useState<LoginMode | null>(() => getLoginMode())
   const [currentUser, setCurrentUser] = React.useState<User | null>(() => auth.currentUser ?? null)
   const [isLoggingOut, setLoggingOut] = React.useState<boolean>(false)
@@ -77,6 +78,25 @@ export default function App(): React.ReactElement {
   const closeGithubIntegration = React.useCallback(() => {
     setGithubIntegrationOpen(false)
   }, [])
+
+  const handleRepositoryUrlSubmit = React.useCallback((url: string) => {
+    setGithubRepositoryUrl(url)
+  }, [])
+
+  const handleGithubYamlLoaded = React.useCallback(
+    async ({ yaml, filePath }: { yaml: string; filePath: string }) => {
+      try {
+        await spreadsheet.ingestYamlContent(yaml, {
+          successNotice: `GitHubから ${filePath} を読み込みました。`,
+          errorNoticePrefix: 'GitHubファイルの解析に失敗しました',
+        })
+        closeGithubIntegration()
+      } catch (error) {
+        console.error('GitHubファイルの取り込みでエラーが発生しました', error)
+      }
+    },
+    [closeGithubIntegration, spreadsheet],
+  )
 
   const handleLogout = React.useCallback(async () => {
     if (isLoggingOut) {
@@ -197,7 +217,11 @@ export default function App(): React.ReactElement {
           onClose={closeGithubIntegration}
           panelId="github-file-actions"
         >
-          <GithubIntegrationPanel />
+          <GithubIntegrationPanel
+            initialRepositoryUrl={githubRepositoryUrl}
+            onRepositoryUrlSubmit={handleRepositoryUrlSubmit}
+            onYamlContentLoaded={handleGithubYamlLoaded}
+          />
         </SettingsOverlay>
       )}
     </div>

@@ -12,6 +12,7 @@ import {
   verifyRepositoryCollaborator,
   listRepositoryBranches,
   fetchRepositoryTree,
+  fetchRepositoryFileContent,
 } from '../../services/githubRepositoryAccessService'
 
 type GithubIntegrationPanelProps = {
@@ -20,7 +21,15 @@ type GithubIntegrationPanelProps = {
   onRepositoryAccessConfirmed?: (_result: CollaboratorVerificationResult) => void
   onBranchSelected?: (_branchName: string) => void
   onFileSelected?: (_filePath: string) => void
+  onYamlContentLoaded?: (_payload: {
+    yaml: string
+    repository: GithubRepositoryCoordinates
+    branch: string
+    filePath: string
+  }) => void
 }
+
+const YAML_EXTENSION_PATTERN = /\.ya?ml$/i
 
 // Function Header: Renders introductory messaging and initial GitHub repository URL capture form.
 export default function GithubIntegrationPanel({
@@ -29,6 +38,7 @@ export default function GithubIntegrationPanel({
   onRepositoryAccessConfirmed,
   onBranchSelected,
   onFileSelected,
+  onYamlContentLoaded,
 }: GithubIntegrationPanelProps): React.ReactElement {
   const [repositoryUrl, setRepositoryUrl] = React.useState<string>(initialRepositoryUrl)
   const [isVerifying, setIsVerifying] = React.useState<boolean>(false)
@@ -43,6 +53,9 @@ export default function GithubIntegrationPanel({
   const [isTreeLoading, setIsTreeLoading] = React.useState<boolean>(false)
   const [treeErrorMessage, setTreeErrorMessage] = React.useState<string | null>(null)
   const [selectedFilePath, setSelectedFilePath] = React.useState<string | null>(null)
+  const [isFileLoading, setIsFileLoading] = React.useState<boolean>(false)
+  const [fileErrorMessage, setFileErrorMessage] = React.useState<string | null>(null)
+  const [fileSuccessMessage, setFileSuccessMessage] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     setRepositoryUrl(initialRepositoryUrl)
@@ -56,6 +69,9 @@ export default function GithubIntegrationPanel({
     setTreeEntries([])
     setTreeErrorMessage(null)
     setSelectedFilePath(null)
+    setIsFileLoading(false)
+    setFileErrorMessage(null)
+    setFileSuccessMessage(null)
   }, [])
 
   const loadBranches = React.useCallback(async (coordinates: GithubRepositoryCoordinates) => {
@@ -67,6 +83,9 @@ export default function GithubIntegrationPanel({
       setBranches(fetchedBranches)
 
       if (fetchedBranches.length > 0) {
+    setIsFileLoading(false)
+    setFileErrorMessage(null)
+    setFileSuccessMessage(null)
         setSelectedBranch((current) => {
           if (current && fetchedBranches.some((branch) => branch.name === current)) {
             return current
@@ -96,6 +115,10 @@ export default function GithubIntegrationPanel({
 
       setIsTreeLoading(true)
       setTreeErrorMessage(null)
+      setSelectedFilePath(null)
+      setFileErrorMessage(null)
+      setFileSuccessMessage(null)
+      setIsFileLoading(false)
 
       try {
         const fetchedTree = await fetchRepositoryTree(coordinates, branchName)
@@ -169,6 +192,8 @@ export default function GithubIntegrationPanel({
     (event: React.ChangeEvent<HTMLSelectElement>) => {
       setSelectedBranch(event.target.value)
       setSelectedFilePath(null)
+      setFileErrorMessage(null)
+      setFileSuccessMessage(null)
     },
     [],
   )
@@ -176,9 +201,43 @@ export default function GithubIntegrationPanel({
   const handleFileSelect = React.useCallback(
     (filePath: string) => {
       setSelectedFilePath(filePath)
-      onFileSelected?.(filePath)
+      setFileErrorMessage(null)
+      setFileSuccessMessage(null)
+
+      if (!repositoryCoordinates || !selectedBranch) {
+        return
+      }
+
+      if (!YAML_EXTENSION_PATTERN.test(filePath)) {
+        setFileErrorMessage('YAMLファイル（.yml / .yaml）のみ選択できます。')
+        return
+      }
+
+      setIsFileLoading(true)
+
+      fetchRepositoryFileContent(repositoryCoordinates, selectedBranch, filePath)
+        .then((content) => {
+          setFileSuccessMessage(`${filePath} を読み込みました。`)
+          onFileSelected?.(filePath)
+          onYamlContentLoaded?.({
+            yaml: content,
+            repository: repositoryCoordinates,
+            branch: selectedBranch,
+            filePath,
+          })
+        })
+        .catch((error) => {
+          if (error instanceof GithubRepositoryAccessError) {
+            setFileErrorMessage(error.message)
+          } else {
+            setFileErrorMessage('GitHubファイルの取得に失敗しました。時間を置いて再度お試しください。')
+          }
+        })
+        .finally(() => {
+          setIsFileLoading(false)
+        })
     },
-    [onFileSelected],
+    [onFileSelected, onYamlContentLoaded, repositoryCoordinates, selectedBranch],
   )
 
   const files = React.useMemo(
@@ -304,6 +363,7 @@ export default function GithubIntegrationPanel({
                                 : 'hover:bg-slate-50 text-slate-700'
                             }`}
                             onClick={() => handleFileSelect(entry.path)}
+                            disabled={isFileLoading}
                             data-testid="repository-tree-item"
                             data-path={entry.path}
                           >
@@ -316,6 +376,21 @@ export default function GithubIntegrationPanel({
                   </ul>
                 )}
               </div>
+              {isFileLoading && (
+                <p className="text-xs text-slate-500" data-testid="repository-file-loading">
+                  ファイルを取得しています...
+                </p>
+              )}
+              {fileErrorMessage && (
+                <p className="text-sm text-red-600" role="alert" data-testid="repository-file-error">
+                  {fileErrorMessage}
+                </p>
+              )}
+              {fileSuccessMessage && (
+                <p className="text-sm text-emerald-600" role="status" data-testid="repository-file-success">
+                  {fileSuccessMessage}
+                </p>
+              )}
             </div>
           )}
         </section>

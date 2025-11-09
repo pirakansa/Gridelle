@@ -7,6 +7,7 @@ import {
   GithubRepositoryAccessError,
   listRepositoryBranches,
   fetchRepositoryTree,
+  fetchRepositoryFileContent,
 } from '../../../services/githubRepositoryAccessService'
 
 vi.mock('../../../services/githubRepositoryAccessService', async (importOriginal) => {
@@ -16,6 +17,7 @@ vi.mock('../../../services/githubRepositoryAccessService', async (importOriginal
     verifyRepositoryCollaborator: vi.fn(),
     listRepositoryBranches: vi.fn(),
     fetchRepositoryTree: vi.fn(),
+    fetchRepositoryFileContent: vi.fn(),
   }
 })
 
@@ -40,6 +42,8 @@ describe('GithubIntegrationPanel', () => {
     const verifyMock = vi.mocked(verifyRepositoryCollaborator)
     const listBranchesMock = vi.mocked(listRepositoryBranches)
     const fetchTreeMock = vi.mocked(fetchRepositoryTree)
+    const fetchFileMock = vi.mocked(fetchRepositoryFileContent)
+    const handleYamlLoaded = vi.fn()
 
     verifyMock.mockResolvedValue({
       repository: { owner: 'example', repository: 'repo' },
@@ -54,6 +58,7 @@ describe('GithubIntegrationPanel', () => {
       { path: 'src/app.yaml', sha: 'sha-2', type: 'blob' },
       { path: 'src', sha: 'sha-dir', type: 'tree' },
     ])
+    fetchFileMock.mockResolvedValue('yaml: 42\n')
 
     render(
       <GithubIntegrationPanel
@@ -61,6 +66,7 @@ describe('GithubIntegrationPanel', () => {
         onRepositoryAccessConfirmed={handleConfirmed}
         onBranchSelected={handleBranchSelected}
         onFileSelected={handleFileSelected}
+        onYamlContentLoaded={handleYamlLoaded}
       />,
     )
 
@@ -90,7 +96,15 @@ describe('GithubIntegrationPanel', () => {
       username: 'octocat',
     })
     fireEvent.click(fileButtons[0])
+    expect(fetchFileMock).toHaveBeenCalledWith({ owner: 'example', repository: 'repo' }, 'main', 'docs/spec.yaml')
+    await screen.findByTestId('repository-file-success')
     expect(handleFileSelected).toHaveBeenCalledWith('docs/spec.yaml')
+    expect(handleYamlLoaded).toHaveBeenCalledWith({
+      yaml: 'yaml: 42\n',
+      repository: { owner: 'example', repository: 'repo' },
+      branch: 'main',
+      filePath: 'docs/spec.yaml',
+    })
   })
 
   it('shows error message when verification fails', async () => {
@@ -135,5 +149,34 @@ describe('GithubIntegrationPanel', () => {
 
     await screen.findByTestId('repository-branch-error')
     expect(screen.getByTestId('repository-branch-error')).toHaveTextContent('ブランチの取得に失敗しました。')
+  })
+
+  it('shows error when non-yaml file is selected', async () => {
+    const verifyMock = vi.mocked(verifyRepositoryCollaborator)
+    const listBranchesMock = vi.mocked(listRepositoryBranches)
+    const fetchTreeMock = vi.mocked(fetchRepositoryTree)
+
+    verifyMock.mockResolvedValue({
+      repository: { owner: 'example', repository: 'repo' },
+      username: 'octocat',
+    })
+    listBranchesMock.mockResolvedValue([{ name: 'main', commitSha: 'sha-main' }])
+    fetchTreeMock.mockResolvedValue([
+      { path: 'README.md', sha: 'sha-readme', type: 'blob' },
+    ])
+
+    render(<GithubIntegrationPanel />)
+
+    fireEvent.change(screen.getByTestId('repository-url-input'), {
+      target: { value: 'https://github.com/example/repo' },
+    })
+    fireEvent.submit(screen.getByTestId('repository-url-form'))
+
+    const fileButton = await screen.findByTestId('repository-tree-item')
+    fireEvent.click(fileButton)
+
+    expect(screen.getByTestId('repository-file-error')).toHaveTextContent(
+      'YAMLファイル（.yml / .yaml）のみ選択できます。',
+    )
   })
 })

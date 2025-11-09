@@ -5,6 +5,7 @@ import {
   verifyRepositoryCollaborator,
   listRepositoryBranches,
   fetchRepositoryTree,
+  fetchRepositoryFileContent,
 } from '../githubRepositoryAccessService'
 import { createOctokitClient } from '../octokitService'
 
@@ -146,5 +147,50 @@ describe('githubRepositoryAccessService', () => {
       { path: 'docs/spec.yaml', type: 'blob', sha: 'sha-1' },
       { path: 'src', type: 'tree', sha: 'sha-2' },
     ])
+  })
+
+  it('fetches repository file content', async () => {
+    const base64 = Buffer.from('yaml: 42\n', 'utf-8').toString('base64')
+    const octokit = {
+      rest: {
+        repos: {
+          getContent: vi.fn().mockResolvedValue({
+            data: {
+              type: 'file',
+              content: base64,
+              encoding: 'base64',
+            },
+          }),
+        },
+      },
+    }
+
+    vi.mocked(createOctokitClient).mockReturnValue(octokit as never)
+
+    const content = await fetchRepositoryFileContent({ owner: 'gridelle', repository: 'app' }, 'main', 'table.yaml')
+
+    expect(octokit.rest.repos.getContent).toHaveBeenCalledWith({
+      owner: 'gridelle',
+      repo: 'app',
+      path: 'table.yaml',
+      ref: 'main',
+    })
+    expect(content).toBe('yaml: 42\n')
+  })
+
+  it('throws error when repository file is missing', async () => {
+    const octokit = {
+      rest: {
+        repos: {
+          getContent: vi.fn().mockRejectedValue({ status: 404 }),
+        },
+      },
+    }
+
+    vi.mocked(createOctokitClient).mockReturnValue(octokit as never)
+
+    await expect(
+      fetchRepositoryFileContent({ owner: 'gridelle', repository: 'app' }, 'main', 'table.yaml'),
+    ).rejects.toMatchObject({ code: 'file-fetch-failed' })
   })
 })

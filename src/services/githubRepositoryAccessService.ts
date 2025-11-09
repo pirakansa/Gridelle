@@ -23,6 +23,7 @@ export type GithubRepositoryAccessErrorCode =
   | 'not-a-collaborator'
   | 'branch-fetch-failed'
   | 'tree-fetch-failed'
+  | 'file-fetch-failed'
   | 'unknown'
 
 export type RepositoryBranch = {
@@ -34,6 +35,44 @@ export type RepositoryTreeEntry = {
   path: string
   type: 'blob' | 'tree'
   sha: string
+}
+
+const decodeBase64Payload = (payload: string): string => {
+  const cleaned = payload.replace(/\s+/g, '')
+
+  if (typeof globalThis.atob === 'function') {
+    try {
+      const binary = globalThis.atob(cleaned)
+      const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
+      const decoder = new TextDecoder()
+      return decoder.decode(bytes)
+    } catch (error) {
+      throw new GithubRepositoryAccessError(
+        '取得したファイルのデコードに失敗しました。',
+        'file-fetch-failed',
+      )
+    }
+  }
+
+  const bufferLike = (globalThis as {
+    Buffer?: { from: (_input: string, _encoding: string) => { toString: (_encoding: string) => string } }
+  }).Buffer
+
+  if (bufferLike) {
+    try {
+      return bufferLike.from(cleaned, 'base64').toString('utf-8')
+    } catch (error) {
+      throw new GithubRepositoryAccessError(
+        '取得したファイルのデコードに失敗しました。',
+        'file-fetch-failed',
+      )
+    }
+  }
+
+  throw new GithubRepositoryAccessError(
+    'ファイル内容を解読できませんでした。別の環境で再度お試しください。',
+    'file-fetch-failed',
+  )
 }
 
 // Function Header: Represents a typed error describing repository access verification failures.
@@ -238,6 +277,72 @@ export async function fetchRepositoryTree(
     throw new GithubRepositoryAccessError(
       'リポジトリのファイルツリー取得で予期せぬエラーが発生しました。時間を置いて再度お試しください。',
       'tree-fetch-failed',
+    )
+  }
+}
+
+// Function Header: Downloads the specified file from a repository branch and returns its decoded content.
+export async function fetchRepositoryFileContent(
+  { owner, repository }: GithubRepositoryCoordinates,
+  branchName: string,
+  filePath: string,
+): Promise<string> {
+  const octokit = createOctokitClient()
+
+  try {
+    const { data } = await octokit.rest.repos.getContent({
+      owner,
+      repo: repository,
+      path: filePath,
+      ref: branchName,
+    })
+
+    if (Array.isArray(data)) {
+      throw new GithubRepositoryAccessError(
+        '指定したパスがディレクトリとして扱われました。ファイルを選択してください。',
+        'file-fetch-failed',
+      )
+    }
+
+    if (data.type !== 'file' || typeof data.content !== 'string') {
+      throw new GithubRepositoryAccessError(
+        '選択したファイルの内容を取得できませんでした。',
+        'file-fetch-failed',
+      )
+    }
+
+    if (data.encoding !== 'base64') {
+      throw new GithubRepositoryAccessError(
+        '取得したファイルのエンコード形式が想定外です。',
+        'file-fetch-failed',
+      )
+    }
+
+    return decodeBase64Payload(data.content)
+  } catch (error: unknown) {
+    if (error instanceof GithubRepositoryAccessError) {
+      throw error
+    }
+
+    const status = typeof error === 'object' && error && 'status' in error ? (error as { status?: number }).status : null
+
+    if (status === 401 || status === 403) {
+      throw new GithubRepositoryAccessError(
+        'GitHubの認証に失敗しました。再度ログインし直してください。',
+        'unauthorized',
+      )
+    }
+
+    if (status === 404) {
+      throw new GithubRepositoryAccessError(
+        '選択したファイルが見つかりませんでした。ブランチとファイルパスを確認してください。',
+        'file-fetch-failed',
+      )
+    }
+
+    throw new GithubRepositoryAccessError(
+      'GitHubファイルの取得に失敗しました。時間を置いて再度お試しください。',
+      'file-fetch-failed',
     )
   }
 }
