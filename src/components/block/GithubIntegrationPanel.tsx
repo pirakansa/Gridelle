@@ -417,17 +417,6 @@ export default function GithubIntegrationPanel({
 
       {integrationMode === 'repository' && (
         <>
-          <section className="flex flex-col gap-2">
-            <p>
-              GitHub連携機能の準備中です。まずは対象となるリポジトリのURLを入力して、使用するブランチやファイルの絞り込みを行えるようにしていきます。
-            </p>
-            <ul className="list-disc space-y-1 pl-5 text-slate-600">
-              <li>GitHubのファイルURL（blob）からYAMLを直接読み込み</li>
-              <li>リポジトリとブランチを指定してファイル一覧から読み込み</li>
-              <li>編集したYAMLをリポジトリへコミット</li>
-            </ul>
-          </section>
-
           <form className="flex flex-col gap-3" onSubmit={handleRepositorySubmit} data-testid="repository-url-form">
             <label htmlFor="repository-url" className="text-sm font-medium text-slate-800">
               対象リポジトリURL
@@ -465,6 +454,29 @@ export default function GithubIntegrationPanel({
 
           {repositoryCoordinates && (
             <section className="flex flex-col gap-3">
+              <div
+                className="rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600"
+                data-testid="repository-selection-summary"
+              >
+                <p className="font-medium text-slate-700">選択内容の確認</p>
+                <p>
+                  リポジトリ: <span className="font-mono text-slate-700">{`${repositoryCoordinates.owner}/${repositoryCoordinates.repository}`}</span>
+                </p>
+                <p>
+                  ブランチ: <span className="font-mono text-slate-700">{selectedBranch || '未選択'}</span>
+                </p>
+                <p>
+                  ファイル:{' '}
+                  <span className="font-mono text-slate-700">
+                    {isFileLoading
+                      ? selectedFilePath
+                        ? `${selectedFilePath} (読み込み中…)`
+                        : '読み込み中…'
+                      : selectedFilePath ?? '未選択'}
+                  </span>
+                </p>
+              </div>
+
               <div className="flex flex-col gap-2">
                 <label htmlFor="repository-branch" className="text-sm font-medium text-slate-800">
                   ブランチを選択

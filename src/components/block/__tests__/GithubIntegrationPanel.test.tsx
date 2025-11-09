@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import GithubIntegrationPanel from '../GithubIntegrationPanel'
 import {
@@ -86,6 +86,10 @@ describe('GithubIntegrationPanel', () => {
     const branchSelect = await screen.findByTestId('repository-branch-select')
     expect(branchSelect).toHaveValue('main')
     expect(handleBranchSelected).toHaveBeenCalledWith('main')
+    const summary = await screen.findByTestId('repository-selection-summary')
+    expect(summary).toHaveTextContent('リポジトリ: example/repo')
+    expect(summary).toHaveTextContent('ブランチ: main')
+    expect(summary).toHaveTextContent('ファイル: 未選択')
 
     await screen.findByTestId('repository-file-tree')
     expect(fetchTreeMock).toHaveBeenCalledWith({ owner: 'example', repository: 'repo' }, 'main')
@@ -98,6 +102,7 @@ describe('GithubIntegrationPanel', () => {
       username: 'octocat',
     })
     fireEvent.click(fileButtons[0])
+    await waitFor(() => expect(summary).toHaveTextContent('ファイル: docs/spec.yaml (読み込み中…)'))
     expect(fetchFileMock).toHaveBeenCalledWith({ owner: 'example', repository: 'repo' }, 'main', 'docs/spec.yaml')
     await screen.findByTestId('repository-file-success')
     expect(handleFileSelected).toHaveBeenCalledWith('docs/spec.yaml')
@@ -107,6 +112,7 @@ describe('GithubIntegrationPanel', () => {
       branch: 'main',
       filePath: 'docs/spec.yaml',
     })
+    expect(summary).toHaveTextContent('ファイル: docs/spec.yaml')
   })
 
   it('shows error message when verification fails', async () => {
