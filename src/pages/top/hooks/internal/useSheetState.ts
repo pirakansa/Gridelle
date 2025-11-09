@@ -29,6 +29,7 @@ export type UseSheetStateResult = {
   addRow: () => void
   addColumn: () => void
   addSheet: () => void
+  deleteSheet: () => void
   renameSheet: (_name: string) => void
   moveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   replaceSheets: (_next: SheetState[]) => void
@@ -137,6 +138,26 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
     })
   }, [setNotice])
 
+  const deleteSheet = React.useCallback((): void => {
+    setSheets((current) => {
+      if (!current.length) {
+        setNotice({ text: '削除できるシートがありません。', tone: 'error' })
+        return current
+      }
+      if (current.length === 1) {
+        setNotice({ text: '最後のシートは削除できません。', tone: 'error' })
+        return current
+      }
+      const targetIndex = Math.min(activeSheetIndex, current.length - 1)
+      const targetSheet = current[targetIndex]
+      const next = current.filter((_, index) => index !== targetIndex)
+      const nextActiveIndex = Math.min(targetIndex, next.length - 1)
+      setActiveSheetIndex(nextActiveIndex)
+      setNotice({ text: `シート「${targetSheet.name}」を削除しました。`, tone: 'success' })
+      return next
+    })
+  }, [activeSheetIndex, setActiveSheetIndex, setNotice])
+
   const renameSheet = React.useCallback(
     (name: string): void => {
       const trimmed = name.trim()
@@ -225,6 +246,7 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
     addRow,
     addColumn,
     addSheet,
+    deleteSheet,
     renameSheet,
     moveColumn,
     replaceSheets,

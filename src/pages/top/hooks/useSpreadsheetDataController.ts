@@ -32,6 +32,7 @@ type UseSpreadsheetDataController = {
   handleAddRow: () => void
   handleAddColumn: () => void
   handleAddSheet: () => void
+  handleDeleteSheet: () => void
   handleRenameSheet: (_name: string) => void
   moveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   applyYamlBuffer: () => void
@@ -126,13 +127,14 @@ export const useSpreadsheetDataController = (
     columns,
     columnOrder,
     setColumnOrder,
-  updateRows,
-  addRow,
-  addColumn,
-  addSheet,
-  renameSheet,
-  moveColumn,
-  replaceSheets,
+    updateRows,
+    addRow,
+    addColumn,
+    addSheet,
+    deleteSheet,
+    renameSheet,
+    moveColumn,
+    replaceSheets,
   } = useSheetState({ initialSheets: persistenceDefaults.initialSheets, setNotice })
 
   const parseRequestIdRef = React.useRef<number>(0)
@@ -294,19 +296,20 @@ export const useSpreadsheetDataController = (
     yamlBuffer,
     setYamlBuffer,
     tableYaml,
-  sheets: sheetsMemo,
+    sheets: sheetsMemo,
     activeSheetIndex,
     setActiveSheetIndex,
     rows,
     columns,
     columnOrder,
     setColumnOrder,
-  updateRows,
-  handleAddRow: addRow,
-  handleAddColumn: addColumn,
-  handleAddSheet: addSheet,
-  handleRenameSheet: renameSheet,
-  moveColumn,
+    updateRows,
+    handleAddRow: addRow,
+    handleAddColumn: addColumn,
+    handleAddSheet: addSheet,
+    handleDeleteSheet: deleteSheet,
+    handleRenameSheet: renameSheet,
+    moveColumn,
     applyYamlBuffer,
     handleFileUpload,
     handleDownloadYaml,

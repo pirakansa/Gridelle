@@ -9,10 +9,12 @@ type SheetSectionProps = {
   activeSheetIndex: number
   onSelectSheet: (_index: number) => void
   onAddSheet: () => void
+  onDeleteSheet: () => void
   sheetNameDraft: string
   onSheetNameDraftChange: (_value: string) => void
   onCommitSheetName: () => void
   onCancelSheetRename: () => void
+  canDeleteSheet: boolean
 }
 
 // Function Header: Renders the sheet selector, rename input, and add-sheet button.
@@ -21,10 +23,12 @@ export default function SheetSection({
   activeSheetIndex,
   onSelectSheet,
   onAddSheet,
+  onDeleteSheet,
   sheetNameDraft,
   onSheetNameDraftChange,
   onCommitSheetName,
   onCancelSheetRename,
+  canDeleteSheet,
 }: SheetSectionProps): React.ReactElement {
   const sheetGroupLabelId = React.useId()
   const sheetTabBaseClass =
@@ -67,6 +71,15 @@ export default function SheetSection({
           </div>
           <Button type="button" variant="ghost" onClick={onAddSheet} data-testid="add-sheet-button">
             シートを追加
+          </Button>
+          <Button
+            type="button"
+            variant="subtle"
+            onClick={onDeleteSheet}
+            disabled={!canDeleteSheet}
+            data-testid="delete-sheet-button"
+          >
+            シートを削除
           </Button>
         </div>
         <div className="flex w-full max-w-sm items-center gap-2 md:max-w-md">

@@ -36,7 +36,9 @@ type UseSpreadsheetState = {
   canMoveSelectedRowsDown: boolean
   handleDeleteSelectedRows: () => void
   handleAddSheet: () => void
+    handleDeleteSheet: () => void
   handleRenameSheet: (_name: string) => void
+  canDeleteSheet: boolean
   moveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   applyYamlBuffer: () => void
   handleFileUpload: (_event: React.ChangeEvent<HTMLInputElement>) => void
@@ -112,6 +114,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleAddRow,
     handleAddColumn,
     handleAddSheet,
+    handleDeleteSheet,
     handleRenameSheet,
     moveColumn,
     applyYamlBuffer,
@@ -410,15 +413,16 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     columns,
     handleAddRow,
     handleInsertRowBelowSelection,
-  handleMoveSelectedRowsUp,
-  handleMoveSelectedRowsDown,
+    handleMoveSelectedRowsUp,
+    handleMoveSelectedRowsDown,
     handleAddColumn,
     handleInsertColumnRightOfSelection,
-  handleMoveSelectedColumnsLeft,
-  handleMoveSelectedColumnsRight,
+    handleMoveSelectedColumnsLeft,
+    handleMoveSelectedColumnsRight,
     handleDeleteSelectedColumns,
     handleDeleteSelectedRows,
     handleAddSheet,
+    handleDeleteSheet,
     handleRenameSheet,
     moveColumn,
     applyYamlBuffer,
@@ -434,6 +438,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     canMoveSelectedRowsDown,
     canMoveSelectedColumnsLeft,
     canMoveSelectedColumnsRight,
+    canDeleteSheet: sheets.length > 1,
     selection,
     activeRange,
     fillPreview,

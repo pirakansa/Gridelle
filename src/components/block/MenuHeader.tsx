@@ -18,6 +18,7 @@ type Props = {
   currentSheetName: string
   onRenameSheet: (_name: string) => void
   onAddSheet: () => void
+  onDeleteSheet: () => void
   onAddRow: () => void
   onInsertRowBelowSelection: () => void
   onMoveSelectedRowsUp: () => void
@@ -38,6 +39,7 @@ type Props = {
   bulkValue: string
   onBulkValueChange: (_value: string) => void
   onBulkApply: () => void
+  canDeleteSheet: boolean
 }
 
 // Function Header: Renders the sticky menu along with spreadsheet utility commands and collapse toggle.
@@ -50,6 +52,7 @@ export default function MenuHeader({
   currentSheetName,
   onRenameSheet,
   onAddSheet,
+  onDeleteSheet,
   onAddRow,
   onInsertRowBelowSelection,
   onMoveSelectedRowsUp,
@@ -70,6 +73,7 @@ export default function MenuHeader({
   bulkValue,
   onBulkValueChange,
   onBulkApply,
+  canDeleteSheet,
 }: Props): React.ReactElement {
   const menuPanelId = React.useId()
   const [isMenuCollapsed, setMenuCollapsed] = React.useState<boolean>(false)
@@ -145,10 +149,12 @@ export default function MenuHeader({
                   activeSheetIndex={activeSheetIndex}
                   onSelectSheet={onSelectSheet}
                   onAddSheet={onAddSheet}
+                  onDeleteSheet={onDeleteSheet}
                   sheetNameDraft={sheetNameDraft}
                   onSheetNameDraftChange={setSheetNameDraft}
                   onCommitSheetName={commitSheetName}
                   onCancelSheetRename={() => setSheetNameDraft(currentSheetName)}
+                  canDeleteSheet={canDeleteSheet}
                 />
               )}
               {activeMenuSection === 'structure' && (

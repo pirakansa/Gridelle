@@ -13,6 +13,7 @@ type Props = {
   currentSheetName: string
   onRenameSheet: (_name: string) => void
   onAddSheet: () => void
+  onDeleteSheet: () => void
   newColumnName: string
   onColumnNameChange: React.Dispatch<React.SetStateAction<string>>
   onAddRow: () => void
@@ -23,6 +24,7 @@ type Props = {
   bulkValue: string
   onBulkValueChange: React.Dispatch<React.SetStateAction<string>>
   onBulkApply: () => void
+  canDeleteSheet: boolean
 }
 
 // Function Header: Renders ribbon groups for sheet management, structure editing, and bulk operations.
@@ -33,6 +35,7 @@ export default function TableEditorPanel({
   currentSheetName,
   onRenameSheet,
   onAddSheet,
+  onDeleteSheet,
   newColumnName,
   onColumnNameChange,
   onAddRow,
@@ -44,6 +47,7 @@ export default function TableEditorPanel({
   onBulkValueChange,
   onBulkApply,
   notice,
+  canDeleteSheet,
 }: Props): React.ReactElement {
   const [sheetNameDraft, setSheetNameDraft] = React.useState<string>(currentSheetName)
 
@@ -109,6 +113,15 @@ export default function TableEditorPanel({
               </div>
               <Button type="button" variant="ghost" onClick={onAddSheet} data-testid="add-sheet-button">
                 シートを追加
+              </Button>
+              <Button
+                type="button"
+                variant="subtle"
+                onClick={onDeleteSheet}
+                disabled={!canDeleteSheet}
+                data-testid="delete-sheet-button"
+              >
+                シートを削除
               </Button>
             </div>
             <div className="flex w-full max-w-sm items-center gap-2 md:max-w-md">

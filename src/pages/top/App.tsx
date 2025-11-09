@@ -73,6 +73,7 @@ export default function App(): React.ReactElement {
         currentSheetName={spreadsheet.currentSheetName}
         onRenameSheet={spreadsheet.handleRenameSheet}
         onAddSheet={spreadsheet.handleAddSheet}
+    onDeleteSheet={spreadsheet.handleDeleteSheet}
         onAddRow={spreadsheet.handleAddRow}
         onInsertRowBelowSelection={spreadsheet.handleInsertRowBelowSelection}
         onMoveSelectedRowsUp={spreadsheet.handleMoveSelectedRowsUp}
@@ -93,6 +94,7 @@ export default function App(): React.ReactElement {
         bulkValue={spreadsheet.bulkValue}
         onBulkValueChange={spreadsheet.setBulkValue}
         onBulkApply={spreadsheet.applyBulkInput}
+        canDeleteSheet={spreadsheet.canDeleteSheet}
       />
       <main className={layoutTheme.contentWrapper}>
         <SpreadsheetTable

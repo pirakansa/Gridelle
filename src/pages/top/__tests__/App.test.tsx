@@ -694,4 +694,20 @@ describe('App', () => {
     expect(newSheetTab).toHaveAttribute('aria-pressed', 'true')
     expect(await screen.findByText('表示するデータがありません。')).toBeInTheDocument()
   })
+
+  it('アクティブシートを削除できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const deleteButton = screen.getByTestId('delete-sheet-button')
+    expect(deleteButton).toBeEnabled()
+
+    await user.click(deleteButton)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('sheet-tab-1')).not.toBeInTheDocument()
+    })
+    expect(screen.getByTestId('sheet-tab-0')).toHaveTextContent('完了済み')
+    expect(screen.getByTestId('delete-sheet-button')).toBeDisabled()
+  })
 })
