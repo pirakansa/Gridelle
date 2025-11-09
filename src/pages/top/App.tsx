@@ -123,7 +123,6 @@ export default function App(): React.ReactElement {
         onBulkApply={spreadsheet.applyBulkInput}
         canDeleteSheet={spreadsheet.canDeleteSheet}
         loginMode={loginMode}
-        userDisplayName={currentUser?.displayName ?? null}
         userEmail={currentUser?.email ?? null}
         onLogout={handleLogout}
         isLoggingOut={isLoggingOut}

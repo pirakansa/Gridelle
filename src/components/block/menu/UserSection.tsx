@@ -6,7 +6,6 @@ import type { LoginMode } from '../../../services/authService'
 
 type UserSectionProps = {
   loginMode: LoginMode | null
-  userDisplayName: string | null
   userEmail: string | null
   onLogout: () => Promise<void>
   isLoggingOut: boolean
@@ -21,13 +20,11 @@ const loginModeLabelMap: Record<Exclude<LoginMode, null>, string> = {
 // Function Header: Renders the user information panel with logout action.
 export default function UserSection({
   loginMode,
-  userDisplayName,
   userEmail,
   onLogout,
   isLoggingOut,
   logoutError,
 }: UserSectionProps): React.ReactElement {
-  const displayName = userDisplayName?.trim() || (loginMode === 'guest' ? 'ゲストユーザー' : '未設定')
   const email = userEmail?.trim() || '未設定'
   const loginModeLabel = loginMode ? loginModeLabelMap[loginMode] : '未ログイン'
 
@@ -45,8 +42,6 @@ export default function UserSection({
           <dl className="grid grid-cols-[max-content,1fr] gap-x-3 gap-y-1" data-testid="user-profile-details">
             <dt className="font-medium text-slate-500">ログイン種別</dt>
             <dd data-testid="user-login-mode">{loginModeLabel}</dd>
-            <dt className="font-medium text-slate-500">表示名</dt>
-            <dd data-testid="user-display-name">{displayName}</dd>
             <dt className="font-medium text-slate-500">メール</dt>
             <dd data-testid="user-email">{email}</dd>
           </dl>

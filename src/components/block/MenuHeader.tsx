@@ -43,7 +43,6 @@ type Props = {
   onBulkApply: () => void
   canDeleteSheet: boolean
   loginMode: LoginMode | null
-  userDisplayName: string | null
   userEmail: string | null
   onLogout: () => Promise<void>
   isLoggingOut: boolean
@@ -83,7 +82,6 @@ export default function MenuHeader({
   onBulkApply,
   canDeleteSheet,
   loginMode,
-  userDisplayName,
   userEmail,
   onLogout,
   isLoggingOut,
@@ -206,7 +204,6 @@ export default function MenuHeader({
               {activeMenuSection === 'user' && (
                 <UserSection
                   loginMode={loginMode}
-                  userDisplayName={userDisplayName}
                   userEmail={userEmail}
                   onLogout={onLogout}
                   isLoggingOut={isLoggingOut}
