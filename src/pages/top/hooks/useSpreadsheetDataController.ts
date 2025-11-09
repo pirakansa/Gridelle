@@ -7,6 +7,7 @@ import type { Notice } from '../types'
 import { useSheetState } from './internal/useSheetState'
 import { createSheetState, stripSheetState } from './internal/spreadsheetDataUtils'
 import { parseWorkbookAsync } from '../../../services/yamlWorkerClient'
+import { stringifyWorkbookAsync } from '../../../services/yamlStringifyWorkerClient'
 
 type ParseLifecycleHooks = {
   onParseStart?: () => void
@@ -65,14 +66,41 @@ export const useSpreadsheetDataController = (
   renameSheet,
   moveColumn,
   replaceSheets,
-  } = useSheetState({ initialSheets, setNotice, setYamlBuffer })
+  } = useSheetState({ initialSheets, setNotice })
 
   const parseRequestIdRef = React.useRef<number>(0)
 
-  const tableYaml = React.useMemo(
-    () => stringifyWorkbook(sheets.map(stripSheetState)),
-    [sheets],
-  )
+  const sheetsMemo = React.useMemo(() => sheets.map(stripSheetState), [sheets])
+  const [tableYaml, setTableYaml] = React.useState<string>(() => stringifyWorkbook(sheetsMemo))
+
+  React.useEffect(() => {
+    let cancelled = false
+
+    if (sheetsMemo.length === 0) {
+      setTableYaml('[]\n')
+      setYamlBuffer('[]\n')
+      return
+    }
+
+    stringifyWorkbookAsync(sheetsMemo)
+      .then((yaml) => {
+        if (!cancelled) {
+          setTableYaml(yaml)
+          setYamlBuffer(yaml)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          const fallbackYaml = stringifyWorkbook(sheetsMemo)
+          setTableYaml(fallbackYaml)
+          setYamlBuffer(fallbackYaml)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [sheetsMemo, setYamlBuffer])
 
   const applyYamlBuffer = React.useCallback((): void => {
     const requestId = Date.now()
@@ -191,7 +219,7 @@ export const useSpreadsheetDataController = (
     yamlBuffer,
     setYamlBuffer,
     tableYaml,
-    sheets: sheets.map(stripSheetState),
+  sheets: sheetsMemo,
     activeSheetIndex,
     setActiveSheetIndex,
     rows,

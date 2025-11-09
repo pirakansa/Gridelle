@@ -1,5 +1,5 @@
 import React from 'react'
-import { deriveColumns, stringifyWorkbook, type TableRow, type TableSheet } from '../../../../services/workbookService'
+import { deriveColumns, type TableRow, type TableSheet } from '../../../../services/workbookService'
 import { createEmptyRow } from '../../utils/spreadsheetTableUtils'
 import type { Notice } from '../../types'
 import {
@@ -9,14 +9,12 @@ import {
   generateNextColumnKey,
   generateSheetName,
   SheetState,
-  stripSheetState,
   syncColumnOrder,
 } from './spreadsheetDataUtils'
 
 export type UseSheetStateOptions = {
   initialSheets: TableSheet[]
   setNotice: React.Dispatch<React.SetStateAction<Notice | null>>
-  setYamlBuffer: React.Dispatch<React.SetStateAction<string>>
 }
 
 export type UseSheetStateResult = {
@@ -36,28 +34,16 @@ export type UseSheetStateResult = {
   replaceSheets: (_next: SheetState[]) => void
 }
 
-export function useSheetState({
-  initialSheets,
-  setNotice,
-  setYamlBuffer,
-}: UseSheetStateOptions): UseSheetStateResult {
+export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions): UseSheetStateResult {
   const baseSheets = React.useMemo(() => createSheetState(initialSheets), [initialSheets])
   const [sheets, setSheets] = React.useState<SheetState[]>(baseSheets)
   const [activeSheetIndex, setActiveSheetIndex] = React.useState<number>(0)
 
-  const syncYamlBuffer = React.useCallback(
-    (nextSheets: SheetState[]) => {
-      setYamlBuffer(stringifyWorkbook(nextSheets.map(stripSheetState)))
-    },
-    [setYamlBuffer],
-  )
-
   const replaceSheets = React.useCallback(
     (nextSheets: SheetState[]) => {
       setSheets(nextSheets)
-      syncYamlBuffer(nextSheets)
     },
-    [syncYamlBuffer],
+    [],
   )
 
   const activeSheet = sheets[activeSheetIndex] ?? sheets[0] ?? {
@@ -109,12 +95,11 @@ export function useSheetState({
               }
             : sheet,
         )
-        syncYamlBuffer(next)
         setNotice(null)
         return next
       })
     },
-    [activeSheetIndex, setNotice, syncYamlBuffer],
+    [activeSheetIndex, setNotice],
   )
 
   const addRow = React.useCallback((): void => {
@@ -146,12 +131,11 @@ export function useSheetState({
           columnOrder: [],
         },
       ]
-      syncYamlBuffer(next)
       setNotice({ text: `シート「${sheetName}」を追加しました。`, tone: 'success' })
       setActiveSheetIndex(next.length - 1)
       return next
     })
-  }, [setNotice, syncYamlBuffer])
+  }, [setNotice])
 
   const renameSheet = React.useCallback(
     (name: string): void => {
@@ -173,12 +157,11 @@ export function useSheetState({
               }
             : sheet,
         )
-        syncYamlBuffer(next)
         setNotice({ text: `シート名を「${trimmed}」に更新しました。`, tone: 'success' })
         return next
       })
     },
-    [activeSheetIndex, setNotice, syncYamlBuffer],
+    [activeSheetIndex, setNotice],
   )
 
   const moveColumn = React.useCallback(
@@ -204,12 +187,11 @@ export function useSheetState({
         const next = current.map((sheet, sheetIndex) =>
           sheetIndex === targetIndex ? { ...sheet, columnOrder: nextOrder } : sheet,
         )
-        syncYamlBuffer(next)
         setNotice({ text: `列「${columnKey}」を移動しました。`, tone: 'success' })
         return next
       })
     },
-    [activeSheetIndex, setNotice, syncYamlBuffer],
+    [activeSheetIndex, setNotice],
   )
 
   const setColumnOrder = React.useCallback(
@@ -225,11 +207,10 @@ export function useSheetState({
         const next = current.map((sheet, index) =>
           index === targetIndex ? { ...sheet, columnOrder: nextOrder } : sheet,
         )
-        syncYamlBuffer(next)
         return next
       })
     },
-    [activeSheetIndex, syncYamlBuffer],
+    [activeSheetIndex],
   )
 
   return {
