@@ -154,7 +154,12 @@ export default function MenuHeader({
                   {notice.text}
                 </p>
               )}
-              {activeMenuSection === 'file' && <FileSection onYamlInputClick={onYamlInputClick} />}
+              {activeMenuSection === 'file' && (
+                <FileSection
+                  onYamlInputClick={onYamlInputClick}
+                  loginMode={loginMode}
+                />
+              )}
               {activeMenuSection === 'sheet' && (
                 <SheetSection
                   sheetNames={sheetNames}

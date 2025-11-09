@@ -2,13 +2,27 @@
 import React from 'react'
 import Button from '../../atom/Button'
 import MenuSectionCard from './MenuSectionCard'
+import type { LoginMode } from '../../../services/authService'
 
 type FileSectionProps = {
   onYamlInputClick: () => void
+  loginMode: LoginMode | null
+  onGithubActionsClick?: () => void
 }
 
-// Function Header: Renders YAML panel shortcut and supporting description.
-export default function FileSection({ onYamlInputClick }: FileSectionProps): React.ReactElement {
+// Function Header: Renders YAML panel shortcut and GitHub file integration entry points.
+export default function FileSection({
+  onYamlInputClick,
+  loginMode,
+  onGithubActionsClick,
+}: FileSectionProps): React.ReactElement {
+  const isGithubLoggedIn = loginMode === 'github'
+  const handleGithubActions = React.useCallback(() => {
+    if (onGithubActionsClick) {
+      onGithubActionsClick()
+    }
+  }, [onGithubActionsClick])
+
   return (
     <MenuSectionCard>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -22,6 +36,17 @@ export default function FileSection({ onYamlInputClick }: FileSectionProps): Rea
           <Button type="button" variant="ghost" onClick={onYamlInputClick} data-testid="open-yaml-panel">
             YAML入力 / プレビュー
           </Button>
+          {isGithubLoggedIn && (
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleGithubActions}
+              disabled={!onGithubActionsClick}
+              data-testid="github-file-actions"
+            >
+              GitHubファイル連携（準備中）
+            </Button>
+          )}
         </div>
       </div>
     </MenuSectionCard>
