@@ -3,6 +3,28 @@ import { createOctokitClient } from './octokitService'
 
 const GITHUB_HOST_PATTERN = /^(?:www\.)?github\.com$/i
 const OWNER_REPO_PATTERN = /^[A-Za-z0-9_.-]+$/
+const COMMIT_SHA_PATTERN = /^[0-9a-f]{40}$/i
+
+type BlobUrlCandidate = {
+  ref: string
+  filePath: string
+}
+
+// Function Header: Generates candidate branch refs and file paths from blob URL segments.
+const buildBlobUrlCandidates = (segments: string[]): BlobUrlCandidate[] => {
+  const candidates: BlobUrlCandidate[] = []
+
+  for (let index = 1; index < segments.length; index += 1) {
+    const ref = segments.slice(0, index).join('/')
+    const filePath = segments.slice(index).join('/')
+
+    if (ref && filePath) {
+      candidates.push({ ref, filePath })
+    }
+  }
+
+  return candidates
+}
 
 export type GithubRepositoryCoordinates = {
   owner: string
@@ -144,7 +166,7 @@ export function parseGithubRepositoryUrl(rawUrl: string): GithubRepositoryCoordi
 }
 
 // Function Header: Parses a GitHub blob URL to identify repository coordinates, ref, and file path.
-export function parseGithubBlobUrl(rawUrl: string): GithubBlobCoordinates {
+export async function parseGithubBlobUrl(rawUrl: string): Promise<GithubBlobCoordinates> {
   let parsed: URL
 
   try {
@@ -173,8 +195,6 @@ export function parseGithubBlobUrl(rawUrl: string): GithubBlobCoordinates {
   }
 
   const [owner, repository, , ...rest] = segments
-  const ref = rest.shift() ?? ''
-  const filePath = rest.join('/')
 
   if (!OWNER_REPO_PATTERN.test(owner) || !OWNER_REPO_PATTERN.test(repository)) {
     throw new GithubRepositoryAccessError(
@@ -183,18 +203,78 @@ export function parseGithubBlobUrl(rawUrl: string): GithubBlobCoordinates {
     )
   }
 
-  if (!ref || !filePath) {
+  if (rest.length < 2) {
     throw new GithubRepositoryAccessError(
       'Blob URLにブランチまたはファイルパスが含まれていません。',
       'invalid-blob-url',
     )
   }
 
+  const candidates = buildBlobUrlCandidates(rest)
+
+  if (!candidates.length) {
+    throw new GithubRepositoryAccessError(
+      'Blob URLにブランチまたはファイルパスが含まれていません。',
+      'invalid-blob-url',
+    )
+  }
+
+  const commitCandidate = candidates.find((candidate) => COMMIT_SHA_PATTERN.test(candidate.ref))
+
+  if (commitCandidate) {
+    return {
+      owner,
+      repository,
+      ref: commitCandidate.ref,
+      filePath: commitCandidate.filePath,
+    }
+  }
+
+  if (rest.length === 2) {
+    const [singleCandidate] = candidates
+
+    return {
+      owner,
+      repository,
+      ref: singleCandidate.ref,
+      filePath: singleCandidate.filePath,
+    }
+  }
+
+  let branches: RepositoryBranch[]
+
+  try {
+    branches = await listRepositoryBranches({ owner, repository })
+  } catch (error: unknown) {
+    if (error instanceof GithubRepositoryAccessError) {
+      throw error
+    }
+
+    throw new GithubRepositoryAccessError(
+      'Blob URLからブランチ一覧を取得できませんでした。時間を置いて再度お試しください。',
+      'branch-fetch-failed',
+    )
+  }
+
+  const branchNames = new Set(branches.map((branch) => branch.name))
+  const matchingCandidates = candidates.filter((candidate) => branchNames.has(candidate.ref))
+
+  if (!matchingCandidates.length) {
+    throw new GithubRepositoryAccessError(
+      'Blob URLからブランチ名を判別できませんでした。ブランチ名とファイルパスを確認してください。',
+      'invalid-blob-url',
+    )
+  }
+
+  const resolved = matchingCandidates.reduce((previous, current) =>
+    current.ref.length > previous.ref.length ? current : previous,
+  )
+
   return {
     owner,
     repository,
-    ref,
-    filePath,
+    ref: resolved.ref,
+    filePath: resolved.filePath,
   }
 }
 
@@ -415,7 +495,7 @@ export async function fetchFileFromBlobUrl(blobUrl: string): Promise<{
   content: string
   coordinates: GithubBlobCoordinates
 }> {
-  const coordinates = parseGithubBlobUrl(blobUrl)
+  const coordinates = await parseGithubBlobUrl(blobUrl)
   const content = await fetchRepositoryFileContent(
     { owner: coordinates.owner, repository: coordinates.repository },
     coordinates.ref,

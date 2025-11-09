@@ -196,14 +196,61 @@ describe('githubRepositoryAccessService', () => {
     ).rejects.toMatchObject({ code: 'file-fetch-failed' })
   })
 
-  it('parses blob url into coordinates', () => {
-    expect(
+  it('parses blob url into coordinates', async () => {
+    const octokit = {
+      rest: {
+        repos: {
+          listBranches: vi.fn().mockResolvedValue({
+            data: [
+              { name: 'main', commit: { sha: 'sha-main' } },
+              { name: 'feature/macro', commit: { sha: 'sha-feature' } },
+            ],
+          }),
+        },
+      },
+    }
+
+    vi.mocked(createOctokitClient).mockReturnValue(octokit as never)
+
+    await expect(
       parseGithubBlobUrl('https://github.com/gridelle/app/blob/main/config/table.yaml'),
-    ).toEqual({
+    ).resolves.toEqual({
       owner: 'gridelle',
       repository: 'app',
       ref: 'main',
       filePath: 'config/table.yaml',
+    })
+
+    expect(octokit.rest.repos.listBranches).toHaveBeenCalledWith({
+      owner: 'gridelle',
+      repo: 'app',
+      per_page: 100,
+    })
+  })
+
+  it('parses blob url when branch name contains a slash', async () => {
+    const octokit = {
+      rest: {
+        repos: {
+          listBranches: vi.fn().mockResolvedValue({
+            data: [
+              { name: 'feature/macro', commit: { sha: 'sha-feature' } },
+              { name: 'main', commit: { sha: 'sha-main' } },
+            ],
+          }),
+        },
+      },
+    }
+
+    vi.mocked(createOctokitClient).mockReturnValue(octokit as never)
+
+    await expect(
+      parseGithubBlobUrl('https://github.com/gridelle/app/blob/feature/macro/table.yaml'),
+    ).resolves.toEqual({
+      owner: 'gridelle',
+      repository: 'app',
+      ref: 'feature/macro',
+      filePath: 'table.yaml',
     })
   })
 
@@ -212,6 +259,9 @@ describe('githubRepositoryAccessService', () => {
     const octokit = {
       rest: {
         repos: {
+          listBranches: vi.fn().mockResolvedValue({
+            data: [{ name: 'main', commit: { sha: 'sha-main' } }],
+          }),
           getContent: vi.fn().mockResolvedValue({
             data: {
               type: 'file',
@@ -234,6 +284,43 @@ describe('githubRepositoryAccessService', () => {
         repository: 'app',
         ref: 'main',
         filePath: 'config/table.yaml',
+      },
+    })
+  })
+
+  it('fetches file content from blob url with branch containing a slash', async () => {
+    const base64 = Buffer.from('yaml: 48\n', 'utf-8').toString('base64')
+    const octokit = {
+      rest: {
+        repos: {
+          listBranches: vi.fn().mockResolvedValue({
+            data: [
+              { name: 'feature/macro', commit: { sha: 'sha-feature' } },
+              { name: 'main', commit: { sha: 'sha-main' } },
+            ],
+          }),
+          getContent: vi.fn().mockResolvedValue({
+            data: {
+              type: 'file',
+              content: base64,
+              encoding: 'base64',
+            },
+          }),
+        },
+      },
+    }
+
+    vi.mocked(createOctokitClient).mockReturnValue(octokit as never)
+
+    const result = await fetchFileFromBlobUrl('https://github.com/gridelle/app/blob/feature/macro/docs/table.yaml')
+
+    expect(result).toEqual({
+      content: 'yaml: 48\n',
+      coordinates: {
+        owner: 'gridelle',
+        repository: 'app',
+        ref: 'feature/macro',
+        filePath: 'docs/table.yaml',
       },
     })
   })
