@@ -21,7 +21,20 @@ export type GithubRepositoryAccessErrorCode =
   | 'invalid-repo'
   | 'unauthorized'
   | 'not-a-collaborator'
+  | 'branch-fetch-failed'
+  | 'tree-fetch-failed'
   | 'unknown'
+
+export type RepositoryBranch = {
+  name: string
+  commitSha: string
+}
+
+export type RepositoryTreeEntry = {
+  path: string
+  type: 'blob' | 'tree'
+  sha: string
+}
 
 // Function Header: Represents a typed error describing repository access verification failures.
 export class GithubRepositoryAccessError extends Error {
@@ -134,5 +147,97 @@ export async function verifyRepositoryCollaborator(
   return {
     repository: coordinates,
     username,
+  }
+}
+
+// Function Header: Retrieves the available branches for the given repository.
+export async function listRepositoryBranches({
+  owner,
+  repository,
+}: GithubRepositoryCoordinates): Promise<RepositoryBranch[]> {
+  const octokit = createOctokitClient()
+
+  try {
+    const { data } = await octokit.rest.repos.listBranches({
+      owner,
+      repo: repository,
+      per_page: 100,
+    })
+
+    return data
+      .filter((branch) => Boolean(branch?.name) && Boolean(branch?.commit?.sha))
+      .map((branch) => ({
+        name: branch.name,
+        commitSha: branch.commit.sha,
+      }))
+  } catch (error: unknown) {
+    const status = typeof error === 'object' && error && 'status' in error ? (error as { status?: number }).status : null
+
+    if (status === 401 || status === 403) {
+      throw new GithubRepositoryAccessError(
+        'GitHubへのアクセス権限が確認できませんでした。再度ログインし直してください。',
+        'unauthorized',
+      )
+    }
+
+    throw new GithubRepositoryAccessError(
+      'リポジトリのブランチ一覧を取得できませんでした。時間を置いて再度お試しください。',
+      'branch-fetch-failed',
+    )
+  }
+}
+
+// Function Header: Loads the repository tree for a specific branch.
+export async function fetchRepositoryTree(
+  { owner, repository }: GithubRepositoryCoordinates,
+  branchName: string,
+): Promise<RepositoryTreeEntry[]> {
+  const octokit = createOctokitClient()
+
+  try {
+    const branch = await octokit.rest.repos.getBranch({
+      owner,
+      repo: repository,
+      branch: branchName,
+    })
+
+    const treeSha = branch.data.commit.sha
+
+    const { data } = await octokit.rest.git.getTree({
+      owner,
+      repo: repository,
+      tree_sha: treeSha,
+      recursive: 'true',
+    })
+
+    return (data.tree ?? [])
+      .filter((item) => (item.type === 'blob' || item.type === 'tree') && item.path && item.sha)
+      .map((item) => ({
+        path: item.path as string,
+        type: (item.type === 'tree' ? 'tree' : 'blob') as 'tree' | 'blob',
+        sha: item.sha as string,
+      }))
+      .sort((left, right) => left.path.localeCompare(right.path))
+  } catch (error: unknown) {
+    const status = typeof error === 'object' && error && 'status' in error ? (error as { status?: number }).status : null
+
+    if (status === 401 || status === 403) {
+      throw new GithubRepositoryAccessError(
+        'GitHubへのアクセス権限が確認できませんでした。再度ログインし直してください。',
+        'unauthorized',
+      )
+    }
+
+    if (status === 404) {
+      throw new GithubRepositoryAccessError(
+        '指定したブランチまたはファイルツリーが見つかりません。ブランチ名を確認してください。',
+        'tree-fetch-failed',
+      )
+    }
+
+    throw new GithubRepositoryAccessError(
+      'リポジトリのファイルツリー取得で予期せぬエラーが発生しました。時間を置いて再度お試しください。',
+      'tree-fetch-failed',
+    )
   }
 }

@@ -3,6 +3,8 @@ import {
   GithubRepositoryAccessError,
   parseGithubRepositoryUrl,
   verifyRepositoryCollaborator,
+  listRepositoryBranches,
+  fetchRepositoryTree,
 } from '../githubRepositoryAccessService'
 import { createOctokitClient } from '../octokitService'
 
@@ -73,5 +75,76 @@ describe('githubRepositoryAccessService', () => {
     await expect(verifyRepositoryCollaborator('https://github.com/gridelle/app')).rejects.toMatchObject({
       code: 'not-a-collaborator',
     })
+  })
+
+  it('lists repository branches', async () => {
+    const octokit = {
+      rest: {
+        repos: {
+          listBranches: vi.fn().mockResolvedValue({
+            data: [
+              { name: 'main', commit: { sha: 'sha-main' } },
+              { name: 'develop', commit: { sha: 'sha-develop' } },
+            ],
+          }),
+        },
+      },
+    }
+
+    vi.mocked(createOctokitClient).mockReturnValue(octokit as never)
+
+    const branches = await listRepositoryBranches({ owner: 'gridelle', repository: 'app' })
+
+    expect(octokit.rest.repos.listBranches).toHaveBeenCalledWith({
+      owner: 'gridelle',
+      repo: 'app',
+      per_page: 100,
+    })
+    expect(branches).toEqual([
+      { name: 'main', commitSha: 'sha-main' },
+      { name: 'develop', commitSha: 'sha-develop' },
+    ])
+  })
+
+  it('fetches repository tree for a branch', async () => {
+    const octokit = {
+      rest: {
+        repos: {
+          getBranch: vi.fn().mockResolvedValue({
+            data: { commit: { sha: 'sha-main' } },
+          }),
+        },
+        git: {
+          getTree: vi.fn().mockResolvedValue({
+            data: {
+              tree: [
+                { path: 'docs/spec.yaml', type: 'blob', sha: 'sha-1' },
+                { path: 'src', type: 'tree', sha: 'sha-2' },
+              ],
+            },
+          }),
+        },
+      },
+    }
+
+    vi.mocked(createOctokitClient).mockReturnValue(octokit as never)
+
+    const tree = await fetchRepositoryTree({ owner: 'gridelle', repository: 'app' }, 'main')
+
+    expect(octokit.rest.repos.getBranch).toHaveBeenCalledWith({
+      owner: 'gridelle',
+      repo: 'app',
+      branch: 'main',
+    })
+    expect(octokit.rest.git.getTree).toHaveBeenCalledWith({
+      owner: 'gridelle',
+      repo: 'app',
+      tree_sha: 'sha-main',
+      recursive: 'true',
+    })
+    expect(tree).toEqual([
+      { path: 'docs/spec.yaml', type: 'blob', sha: 'sha-1' },
+      { path: 'src', type: 'tree', sha: 'sha-2' },
+    ])
   })
 })
