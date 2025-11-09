@@ -24,6 +24,9 @@ type WorkerResponse = {
 
 type ParseOptions = {
   workerFactory?: WorkerFactory
+  onParseStart?: () => void
+  onParseSuccess?: () => void
+  onParseError?: (_error: Error) => void
 }
 
 // Function Header: Parses a workbook string using a Web Worker when available.
@@ -42,6 +45,7 @@ export function parseWorkbookAsync(source: string, options: ParseOptions = {}): 
 
   return new Promise<TableSheet[]>((resolve, reject) => {
     const messageId = Date.now() + Math.random()
+    options?.onParseStart?.()
 
     const cleanup = () => {
       worker.removeEventListener('message', handleMessage)
@@ -56,18 +60,22 @@ export function parseWorkbookAsync(source: string, options: ParseOptions = {}): 
       }
       if (payload.status === 'success' && payload.sheets) {
         cleanup()
+        options?.onParseSuccess?.()
         resolve(payload.sheets)
         return
       }
       if (payload.status === 'error') {
         cleanup()
+        options?.onParseError?.(new Error(payload.message ?? 'YAML parsing failed.'))
         reject(new Error(payload.message ?? 'YAML parsing failed.'))
       }
     }
 
     const handleError = (error: ErrorEvent) => {
       cleanup()
-      reject(error.error ?? new Error(error.message))
+      const failure = error.error ?? new Error(error.message)
+      options?.onParseError?.(failure)
+      reject(failure)
     }
 
     worker.addEventListener('message', handleMessage)

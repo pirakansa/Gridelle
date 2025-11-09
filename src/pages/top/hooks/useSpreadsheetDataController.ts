@@ -8,6 +8,12 @@ import { useSheetState } from './internal/useSheetState'
 import { createSheetState, stripSheetState } from './internal/spreadsheetDataUtils'
 import { parseWorkbookAsync } from '../../../services/yamlWorkerClient'
 
+type ParseLifecycleHooks = {
+  onParseStart?: () => void
+  onParseSuccess?: () => void
+  onParseError?: (_error: Error) => void
+}
+
 type UseSpreadsheetDataController = {
   notice: Notice | null
   setNotice: React.Dispatch<React.SetStateAction<Notice | null>>
@@ -35,7 +41,10 @@ type UseSpreadsheetDataController = {
 }
 
 // Function Header: Manages sheets/rows/YAML state and exposes primary data mutations.
-export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSpreadsheetDataController => {
+export const useSpreadsheetDataController = (
+  initialSheets: TableSheet[],
+  parseHooks?: ParseLifecycleHooks,
+): UseSpreadsheetDataController => {
   const [notice, setNotice] = React.useState<Notice | null>(null)
   const [yamlBuffer, setYamlBuffer] = React.useState<string>(() =>
     stringifyWorkbook(createSheetState(initialSheets).map(stripSheetState)),
@@ -68,7 +77,12 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
   const applyYamlBuffer = React.useCallback((): void => {
     const requestId = Date.now()
     parseRequestIdRef.current = requestId
-    parseWorkbookAsync(yamlBuffer)
+    setNotice({ text: 'YAMLを解析しています…', tone: 'success' })
+    parseWorkbookAsync(yamlBuffer, {
+      onParseStart: () => parseHooks?.onParseStart?.(),
+      onParseSuccess: () => parseHooks?.onParseSuccess?.(),
+      onParseError: (error: Error) => parseHooks?.onParseError?.(error),
+    })
       .then((parsed) => {
         if (parseRequestIdRef.current !== requestId) {
           return
@@ -90,7 +104,7 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
         const message = error instanceof Error ? error.message : String(error)
         setNotice({ text: message, tone: 'error' })
       })
-  }, [parseRequestIdRef, replaceSheets, setActiveSheetIndex, setNotice, yamlBuffer])
+  }, [parseHooks, parseRequestIdRef, replaceSheets, setActiveSheetIndex, setNotice, yamlBuffer])
 
   const handleFileUpload = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -106,7 +120,12 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
           setYamlBuffer(content)
           const requestId = Date.now()
           parseRequestIdRef.current = requestId
-          return parseWorkbookAsync(content)
+          setNotice({ text: 'YAMLを解析しています…', tone: 'success' })
+          return parseWorkbookAsync(content, {
+            onParseStart: () => parseHooks?.onParseStart?.(),
+            onParseSuccess: () => parseHooks?.onParseSuccess?.(),
+            onParseError: (error: Error) => parseHooks?.onParseError?.(error),
+          })
             .then((parsedSheets) => {
               if (parseRequestIdRef.current !== requestId) {
                 return
@@ -141,7 +160,7 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
           })
         })
     },
-    [parseRequestIdRef, replaceSheets, setActiveSheetIndex, setNotice],
+    [parseHooks, parseRequestIdRef, replaceSheets, setActiveSheetIndex, setNotice],
   )
 
   const handleDownloadYaml = React.useCallback((): void => {

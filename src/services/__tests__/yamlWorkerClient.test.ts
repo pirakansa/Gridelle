@@ -114,13 +114,22 @@ describe('parseWorkbookAsync', () => {
     })
 
     const mock = new MockWorker()
+    const hooks = {
+      onParseStart: vi.fn(),
+      onParseSuccess: vi.fn(),
+      onParseError: vi.fn(),
+    }
     const result = await parseWorkbookAsync('worker-source', {
       workerFactory: () => mock as unknown as Worker,
+      ...hooks,
     })
 
     expect(workbookSpy).not.toHaveBeenCalled()
     expect(result[0]?.rows?.[0]?.[0]).toBe('worker-source')
     expect(mock.terminated).toBe(true)
+    expect(hooks.onParseStart).toHaveBeenCalledTimes(1)
+    expect(hooks.onParseSuccess).toHaveBeenCalledTimes(1)
+    expect(hooks.onParseError).not.toHaveBeenCalled()
   })
 
   it('rejects when the worker posts an error status', async () => {
@@ -143,12 +152,21 @@ describe('parseWorkbookAsync', () => {
     }
 
     const errorWorker = new ErrorWorker()
+    const hooks = {
+      onParseStart: vi.fn(),
+      onParseSuccess: vi.fn(),
+      onParseError: vi.fn(),
+    }
 
     await expect(
       parseWorkbookAsync('error-source', {
         workerFactory: () => errorWorker as unknown as Worker,
+        ...hooks,
       })
     ).rejects.toThrow('Worker parse error')
     expect(errorWorker.terminated).toBe(true)
+    expect(hooks.onParseStart).toHaveBeenCalledTimes(1)
+    expect(hooks.onParseSuccess).not.toHaveBeenCalled()
+    expect(hooks.onParseError).toHaveBeenCalledTimes(1)
   })
 })
