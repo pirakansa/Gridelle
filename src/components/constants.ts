@@ -11,3 +11,6 @@ export const columnIconButtonClass =
 
 export const subtleButtonClass =
   'rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 disabled:opacity-50'
+
+export const iconToggleButtonClass =
+  'inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-2'

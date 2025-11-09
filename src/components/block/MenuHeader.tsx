@@ -4,6 +4,7 @@ import type { Notice } from '../../pages/top/types'
 import { layoutTheme } from '../../utils/Theme'
 import {
   ghostButtonClass,
+  iconToggleButtonClass,
   primaryButtonClass,
   subtleButtonClass,
 } from '../constants'
@@ -98,6 +99,7 @@ export default function MenuHeader({
   }, [])
 
   const collapseLabel = isMenuCollapsed ? 'メニューを展開' : 'メニューを折りたたむ'
+  const chevronPath = isMenuCollapsed ? 'M7.5 9.75L12 14.25L16.5 9.75' : 'M7.5 14.25L12 9.75L16.5 14.25'
 
   return (
     <header className="sticky top-0 z-20 w-full border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -112,12 +114,43 @@ export default function MenuHeader({
             </button>
             <button
               type="button"
-              className={subtleButtonClass}
+              className={iconToggleButtonClass}
               onClick={toggleMenu}
               aria-expanded={!isMenuCollapsed}
               aria-controls={menuPanelId}
+              aria-label={collapseLabel}
+              title={collapseLabel}
+              data-testid="menu-collapse-toggle"
             >
-              {collapseLabel}
+              <span className="sr-only">{collapseLabel}</span>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+              >
+                <path
+                  d={chevronPath}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.6"
+                />
+                <path
+                  d="M8 7H16"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeOpacity="0.6"
+                  strokeWidth="1.4"
+                />
+                <path
+                  d="M6 17H18"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeOpacity="0.4"
+                  strokeWidth="1.2"
+                />
+              </svg>
             </button>
             <div className="flex flex-wrap items-center gap-2">
               {(
