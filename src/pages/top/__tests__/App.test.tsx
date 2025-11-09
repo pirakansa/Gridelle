@@ -40,7 +40,7 @@ const firebaseAuthMocks = vi.hoisted(() => {
     get: () => mockCurrentUser,
   })
 
-  const onAuthStateChangedMock = vi.fn((_: Auth, callback: (nextUser: User | null) => void) => {
+  const onAuthStateChangedMock = vi.fn((_: Auth, callback: (_nextUser: User | null) => void) => {
     callback(mockCurrentUser)
     return () => {}
   })
@@ -102,7 +102,7 @@ describe('App', () => {
     render(<App />)
     expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('テーブル編集')
     expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('YAML Export')
-    expect(screen.getByTestId('sheet-name-input')).toHaveValue('バックログ')
+    expect(screen.getByTestId('sheet-tab-0')).toHaveTextContent('バックログ')
   })
 
   it('設定メニューのヘッダーを表示する', () => {
@@ -174,8 +174,8 @@ describe('App', () => {
     await user.click(screen.getByTestId('menu-tab-sheet'))
 
     expect(await screen.findByTestId('cell-display-0-feature')).toHaveTextContent('新規カード')
-    expect(screen.getByTestId('cell-display-0-owner')).toHaveTextContent('Carol')
-    expect(screen.getByTestId('sheet-name-input')).toHaveValue('新シート')
+  expect(screen.getByTestId('cell-display-0-owner')).toHaveTextContent('Carol')
+  expect(await screen.findByTestId('sheet-tab-0')).toHaveTextContent('新シート')
   })
 
   it('GitHub連携パネルを開閉できる', async () => {
@@ -767,18 +767,20 @@ describe('App', () => {
     await user.click(screen.getByTestId('sheet-tab-1'))
 
     expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('リリースノート作成')
-    expect(screen.getByTestId('sheet-name-input')).toHaveValue('完了済み')
+    expect(screen.getByTestId('sheet-tab-1')).toHaveTextContent('完了済み')
   })
 
   it('シート名を変更できる', async () => {
     const user = userEvent.setup()
     render(<App />)
 
-    const input = screen.getByTestId('sheet-name-input') as HTMLInputElement
-    await user.clear(input)
-    await user.type(input, 'メインシート{enter}')
+    await user.click(screen.getByTestId('menu-tab-sheet'))
+    await user.dblClick(screen.getByTestId('sheet-tab-0'))
+    const renameInput = await screen.findByTestId('sheet-name-input')
+    await user.clear(renameInput)
+    await user.type(renameInput, 'メインシート{enter}')
 
-    expect(screen.getByTestId('sheet-name-input')).toHaveValue('メインシート')
+    expect(screen.getByTestId('sheet-tab-0')).toHaveTextContent('メインシート')
     expect(await screen.findByText('シート名を「メインシート」に更新しました。')).toBeInTheDocument()
   })
 

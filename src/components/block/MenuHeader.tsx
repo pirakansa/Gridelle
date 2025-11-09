@@ -93,22 +93,64 @@ export default function MenuHeader({
   const [isMenuCollapsed, setMenuCollapsed] = React.useState<boolean>(false)
   const [activeMenuSection, setActiveMenuSection] = React.useState<MenuSectionId>('sheet')
   const [sheetNameDraft, setSheetNameDraft] = React.useState<string>(currentSheetName)
+  const [renamingSheetIndex, setRenamingSheetIndex] = React.useState<number | null>(null)
 
   React.useEffect(() => {
-    setSheetNameDraft(currentSheetName)
-  }, [currentSheetName])
+    if (renamingSheetIndex === null) {
+      setSheetNameDraft(currentSheetName)
+    }
+  }, [currentSheetName, renamingSheetIndex])
+
+  React.useEffect(() => {
+    if (renamingSheetIndex !== null && renamingSheetIndex >= sheetNames.length) {
+      setRenamingSheetIndex(null)
+      setSheetNameDraft(currentSheetName)
+    }
+  }, [renamingSheetIndex, sheetNames, currentSheetName])
 
   const commitSheetName = React.useCallback(() => {
     const trimmed = sheetNameDraft.trim()
-    if (!trimmed) {
-      setSheetNameDraft(currentSheetName)
+    if (renamingSheetIndex === null) {
       return
     }
 
-    if (trimmed !== currentSheetName) {
+    const originalName = sheetNames[renamingSheetIndex] ?? ''
+    if (!trimmed) {
+      setSheetNameDraft(originalName)
+      return
+    }
+
+    if (trimmed !== originalName) {
+      if (renamingSheetIndex !== activeSheetIndex) {
+        onSelectSheet(renamingSheetIndex)
+      }
       onRenameSheet(trimmed)
     }
-  }, [sheetNameDraft, currentSheetName, onRenameSheet])
+    setRenamingSheetIndex(null)
+  }, [sheetNameDraft, renamingSheetIndex, sheetNames, activeSheetIndex, onSelectSheet, onRenameSheet])
+
+  const cancelSheetRename = React.useCallback(() => {
+    if (renamingSheetIndex === null) {
+      return
+    }
+    const originalName = sheetNames[renamingSheetIndex] ?? currentSheetName
+    setSheetNameDraft(originalName)
+    setRenamingSheetIndex(null)
+  }, [renamingSheetIndex, sheetNames, currentSheetName])
+
+  const startSheetRename = React.useCallback(
+    (index: number) => {
+      if (renamingSheetIndex === index) {
+        return
+      }
+      setRenamingSheetIndex(index)
+      setSheetNameDraft(sheetNames[index] ?? '')
+      if (index !== activeSheetIndex) {
+        onSelectSheet(index)
+      }
+    },
+    [renamingSheetIndex, sheetNames, activeSheetIndex, onSelectSheet],
+  )
 
   const toggleMenu = React.useCallback(() => {
     setMenuCollapsed((prev) => !prev)
@@ -168,10 +210,12 @@ export default function MenuHeader({
                   onSelectSheet={onSelectSheet}
                   onAddSheet={onAddSheet}
                   onDeleteSheet={onDeleteSheet}
+                  renamingSheetIndex={renamingSheetIndex}
+                  onStartSheetRename={startSheetRename}
                   sheetNameDraft={sheetNameDraft}
                   onSheetNameDraftChange={setSheetNameDraft}
                   onCommitSheetName={commitSheetName}
-                  onCancelSheetRename={() => setSheetNameDraft(currentSheetName)}
+                  onCancelSheetRename={cancelSheetRename}
                   canDeleteSheet={canDeleteSheet}
                 />
               )}
