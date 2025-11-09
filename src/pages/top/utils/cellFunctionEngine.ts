@@ -16,26 +16,70 @@ export type CellFunctionHandler = (
   _context: CellFunctionContext,
 ) => string | number | null | undefined
 
-type Registry = Map<string, CellFunctionHandler>
+export type RegisteredFunctionMeta = {
+  id: string
+  label: string
+  description?: string
+  source: 'builtin' | 'wasm'
+  moduleId?: string
+  exportName?: string
+}
 
-const registry: Registry = new Map()
+type RegistryRecord = {
+  handler: CellFunctionHandler
+  meta: RegisteredFunctionMeta
+}
+
+const registry: Map<string, RegistryRecord> = new Map()
 
 const normalizeFunctionName = (name: string): string => name.trim().toLowerCase()
 
-export function registerCellFunction(name: string, handler: CellFunctionHandler): void {
+type RegisterOptions = {
+  label?: string
+  description?: string
+  source?: RegisteredFunctionMeta['source']
+  moduleId?: string
+  exportName?: string
+}
+
+export function registerCellFunction(
+  name: string,
+  handler: CellFunctionHandler,
+  options?: RegisterOptions,
+): RegisteredFunctionMeta {
   const normalized = normalizeFunctionName(name)
   if (!normalized) {
     throw new Error('セル関数名が空です。')
   }
-  registry.set(normalized, handler)
+  const recordMeta: RegisteredFunctionMeta = {
+    id: name,
+    label: options?.label ?? name,
+    description: options?.description ?? '',
+    source: options?.source ?? 'builtin',
+    moduleId: options?.moduleId,
+    exportName: options?.exportName,
+  }
+  registry.set(normalized, {
+    handler,
+    meta: recordMeta,
+  })
+  return recordMeta
 }
 
-const getCellFunctionHandler = (name: string): CellFunctionHandler | undefined => {
+const getCellFunctionRecord = (name: string): RegistryRecord | undefined => {
   if (!name.trim()) {
     return undefined
   }
   return registry.get(normalizeFunctionName(name))
 }
+
+const getCellFunctionHandler = (name: string): CellFunctionHandler | undefined =>
+  getCellFunctionRecord(name)?.handler
+
+export const listRegisteredFunctions = (): RegisteredFunctionMeta[] =>
+  Array.from(registry.values())
+    .map((record) => record.meta)
+    .sort((a, b) => a.label.localeCompare(b.label, 'ja'))
 
 type EvaluationEnv = {
   rows: TableRow[]
@@ -191,21 +235,30 @@ const resolveRowIndexes = (candidate: unknown, totalRows: number): number[] | nu
   return null
 }
 
-const sumFunctionHandler: CellFunctionHandler = (args, context) => {
-  const keyCandidate = args && typeof args.key === 'string' ? args.key.trim() : ''
-  const targetKey = keyCandidate || context.columnKey
+export const resolveFunctionRange = (
+  args: CellFunctionArgs,
+  context: CellFunctionContext,
+): { targetColumn: string; rowIndexes: number[] } => {
+  const record = (args ?? {}) as Record<string, unknown>
+  const keyCandidate = typeof record.key === 'string' ? record.key.trim() : ''
+  const targetColumn = keyCandidate || context.columnKey
   const totalRows = context.rows.length
   const indexes =
-    (args ? resolveRowIndexes((args as Record<string, unknown>).rows, totalRows) : null) ??
-    context.rows.map((_, index) => index)
-  const scopedIndexes = indexes.filter(
-    (rowIndex) => !(rowIndex === context.rowIndex && targetKey === context.columnKey),
+    (record.rows ? resolveRowIndexes(record.rows, totalRows) : null) ??
+    Array.from({ length: totalRows }, (_, index) => index)
+  return { targetColumn, rowIndexes: indexes }
+}
+
+const sumFunctionHandler: CellFunctionHandler = (args, context) => {
+  const { targetColumn, rowIndexes } = resolveFunctionRange(args, context)
+  const scopedIndexes = rowIndexes.filter(
+    (rowIndex) => !(rowIndex === context.rowIndex && targetColumn === context.columnKey),
   )
-  const targetIndexes = scopedIndexes.length ? scopedIndexes : indexes
+  const targetIndexes = scopedIndexes.length ? scopedIndexes : rowIndexes
 
   let total = 0
   targetIndexes.forEach((rowIndex) => {
-    const rawValue = context.getCellValue(rowIndex, targetKey)
+    const rawValue = context.getCellValue(rowIndex, targetColumn)
     const numericValue = Number(rawValue)
     if (!Number.isNaN(numericValue)) {
       total += numericValue
@@ -214,4 +267,8 @@ const sumFunctionHandler: CellFunctionHandler = (args, context) => {
   return total.toString()
 }
 
-registerCellFunction('sum', sumFunctionHandler)
+registerCellFunction('sum', sumFunctionHandler, {
+  label: '組み込み: sum',
+  source: 'builtin',
+  description: '指定列の値を合計します。',
+})

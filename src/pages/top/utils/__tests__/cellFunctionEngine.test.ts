@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyCellFunctions } from '../cellFunctionEngine'
+import { applyCellFunctions, listRegisteredFunctions, resolveFunctionRange } from '../cellFunctionEngine'
 import { createCell, type TableRow } from '../../../../services/workbookService'
 
 describe('applyCellFunctions', () => {
@@ -42,5 +42,25 @@ describe('applyCellFunctions', () => {
     const evaluated = applyCellFunctions(rows, ['metric'])
 
     expect(evaluated[3]?.metric?.value).toBe('6')
+  })
+
+  it('lists registered functions with metadata', () => {
+    const functions = listRegisteredFunctions()
+    const sumEntry = functions.find((entry) => entry.id === 'sum')
+    expect(sumEntry).toBeTruthy()
+    expect(sumEntry?.source).toBe('builtin')
+  })
+
+  it('resolves function ranges from arguments', () => {
+    const context = {
+      rows: [{ col: createCell('1') }, { col: createCell('2') }],
+      columns: ['col'],
+      rowIndex: 0,
+      columnKey: 'col',
+      getCellValue: () => '',
+    }
+    const range = resolveFunctionRange({ key: 'col', rows: { start: 2 } }, context)
+    expect(range.targetColumn).toBe('col')
+    expect(range.rowIndexes).toEqual([1])
   })
 })

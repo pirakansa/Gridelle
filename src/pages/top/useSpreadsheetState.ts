@@ -1,10 +1,13 @@
 // File Header: Custom hook composing spreadsheet data and interaction controllers.
 import React from 'react'
-import { createCell, type TableRow, type TableSheet } from '../../services/workbookService'
+import { createCell, type TableRow, type TableSheet, type CellFunctionConfig } from '../../services/workbookService'
 import { useSpreadsheetDataController } from './hooks/useSpreadsheetDataController'
 import { useSpreadsheetInteractionController } from './hooks/useSpreadsheetInteractionController'
 import { generateNextColumnKey } from './hooks/internal/spreadsheetDataUtils'
 import { createEmptyRow } from './utils/spreadsheetTableUtils'
+import { useMacroManager } from './hooks/useMacroManager'
+import type { RegisteredFunctionMeta } from './utils/cellFunctionEngine'
+import type { LoadedWasmModule } from '../../services/wasmMacroService'
 import { applyCellFunctions } from './utils/cellFunctionEngine'
 import type { CellPosition, Notice, SelectionRange } from './types'
 
@@ -80,6 +83,10 @@ type UseSpreadsheetState = {
   editingCell: CellPosition | null
   handleCellEditorBlur: () => void
   handleCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
+  macroFunctions: RegisteredFunctionMeta[]
+  loadedMacroModules: LoadedWasmModule[]
+  loadWasmModule: (_params: { moduleId: string; url: string }) => Promise<void>
+  applySelectionFunction: (_config: CellFunctionConfig | null) => void
 }
 
 const createSeedRow = (entries: Record<string, string>): TableRow =>
@@ -134,6 +141,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
   } = useSpreadsheetDataController(DEFAULT_SHEETS)
 
   const [bulkValue, setBulkValue] = React.useState<string>('')
+  const { registeredFunctions, loadedModules, loadWasmModule } = useMacroManager()
   const computedRows = React.useMemo(() => applyCellFunctions(rows, columns), [rows, columns])
 
   const {
@@ -150,6 +158,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     applySelectionTextColor,
     applySelectionBackgroundColor,
     clearSelectionStyles,
+    applySelectionFunction,
     handleCellPointerDown,
     handleCellPointerEnter,
     handleCellClick,
@@ -476,5 +485,9 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     editingCell,
     handleCellEditorBlur,
     handleCellEditorKeyDown,
+    macroFunctions: registeredFunctions,
+    loadedMacroModules: loadedModules,
+    loadWasmModule,
+    applySelectionFunction,
   }
 }

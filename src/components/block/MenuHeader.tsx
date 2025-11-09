@@ -7,9 +7,13 @@ import MenuTabs, { type MenuSectionId } from './menu/MenuTabs'
 import SheetSection from './menu/SheetSection'
 import StructureSection from './menu/StructureSection'
 import SelectionSection from './menu/SelectionSection'
+import MacroSection from './menu/MacroSection'
 import HelpSection from './menu/HelpSection'
 import UserSection from './menu/UserSection'
 import FileSection from './menu/FileSection'
+import type { RegisteredFunctionMeta } from '../../pages/top/utils/cellFunctionEngine'
+import type { LoadedWasmModule } from '../../services/wasmMacroService'
+import type { CellFunctionConfig } from '../../services/workbookService'
 
 type Props = {
   onYamlInputClick: () => void
@@ -19,6 +23,7 @@ type Props = {
   activeSheetIndex: number
   onSelectSheet: (_index: number) => void
   currentSheetName: string
+  columns: string[]
   onRenameSheet: (_name: string) => void
   onAddSheet: () => void
   onDeleteSheet: () => void
@@ -47,7 +52,11 @@ type Props = {
   onApplySelectionTextColor: (_color: string | null) => void
   onApplySelectionBackgroundColor: (_color: string | null) => void
   onClearSelectionStyles: () => void
+  onApplySelectionFunction: (_config: CellFunctionConfig | null) => void
   canDeleteSheet: boolean
+  macroFunctions: RegisteredFunctionMeta[]
+  loadedMacroModules: LoadedWasmModule[]
+  onLoadWasmModule: (_params: { moduleId: string; url: string }) => Promise<void>
   loginMode: LoginMode | null
   userEmail: string | null
   onLogout: () => Promise<void>
@@ -64,6 +73,7 @@ export default function MenuHeader({
   activeSheetIndex,
   onSelectSheet,
   currentSheetName,
+  columns,
   onRenameSheet,
   onAddSheet,
   onDeleteSheet,
@@ -92,7 +102,11 @@ export default function MenuHeader({
   onApplySelectionTextColor,
   onApplySelectionBackgroundColor,
   onClearSelectionStyles,
+  onApplySelectionFunction,
   canDeleteSheet,
+  macroFunctions,
+  loadedMacroModules,
+  onLoadWasmModule,
   loginMode,
   userEmail,
   onLogout,
@@ -261,6 +275,16 @@ export default function MenuHeader({
                   onApplyTextColor={onApplySelectionTextColor}
                   onApplyBackgroundColor={onApplySelectionBackgroundColor}
                   onClearSelectionStyles={onClearSelectionStyles}
+                />
+              )}
+              {activeMenuSection === 'macro' && (
+                <MacroSection
+                  columns={columns}
+                  hasSelection={hasSelection}
+                  availableFunctions={macroFunctions}
+                  loadedModules={loadedMacroModules}
+                  onLoadModule={onLoadWasmModule}
+                  onApplyFunction={onApplySelectionFunction}
                 />
               )}
               {activeMenuSection === 'user' && (
