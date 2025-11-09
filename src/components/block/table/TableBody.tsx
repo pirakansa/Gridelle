@@ -23,9 +23,10 @@ type TableBodyProps = {
   onCellDoubleClick: (_rowIndex: number, _columnIndex: number) => void
   onCellChange: (_rowIndex: number, _column: string, _value: string) => void
   onStartFillDrag: (_event: React.PointerEvent<HTMLButtonElement>) => void
-  onDeleteRow: (_rowIndex: number) => void
   onCellEditorBlur: () => void
   onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
+  viewportHeight: number
+  scrollTop: number
 }
 
 // Function Header: Renders table rows or a placeholder when empty.
@@ -44,10 +45,71 @@ export default function TableBody({
   onCellDoubleClick,
   onCellChange,
   onStartFillDrag,
-  onDeleteRow,
   onCellEditorBlur,
   onCellEditorKeyDown,
+  viewportHeight,
+  scrollTop,
 }: TableBodyProps): React.ReactElement {
+  const VIRTUALIZATION_THRESHOLD = 200
+  const DEFAULT_ROW_HEIGHT = 36
+  const OVERSCAN_ROWS = 10
+
+  const [rowHeight, setRowHeight] = React.useState<number>(DEFAULT_ROW_HEIGHT)
+  const measurementRowRef = React.useRef<HTMLTableRowElement | null>(null)
+
+  const virtualizationEnabled = rows.length > VIRTUALIZATION_THRESHOLD && viewportHeight > 0
+
+  const { startIndex, endIndex, topPaddingHeight, bottomPaddingHeight } = React.useMemo(() => {
+    if (!virtualizationEnabled) {
+      return {
+        startIndex: 0,
+        endIndex: rows.length,
+        topPaddingHeight: 0,
+        bottomPaddingHeight: 0,
+      }
+    }
+    const safeRowHeight = Math.max(1, rowHeight || DEFAULT_ROW_HEIGHT)
+    const rawStart = Math.floor(scrollTop / safeRowHeight) - OVERSCAN_ROWS
+    const clampedStart = Math.max(0, rawStart)
+    const visibleCapacity = Math.ceil(viewportHeight / safeRowHeight) + OVERSCAN_ROWS * 2
+    const rawEnd = clampedStart + visibleCapacity
+    const clampedEnd = Math.min(rows.length, rawEnd)
+    const topPadding = clampedStart * safeRowHeight
+    const bottomPadding = Math.max(0, (rows.length - clampedEnd) * safeRowHeight)
+    return {
+      startIndex: clampedStart,
+      endIndex: clampedEnd,
+      topPaddingHeight: topPadding,
+      bottomPaddingHeight: bottomPadding,
+    }
+  }, [virtualizationEnabled, rows.length, rowHeight, scrollTop, viewportHeight])
+
+  const visibleRows = React.useMemo(() => rows.slice(startIndex, endIndex), [rows, startIndex, endIndex])
+
+  const handleMeasurementRef = React.useCallback(
+    (node: HTMLTableRowElement | null) => {
+      measurementRowRef.current = node
+      if (!node) {
+        return
+      }
+      const measured = node.getBoundingClientRect().height
+      if (measured && Math.abs(measured - rowHeight) > 1) {
+        setRowHeight(measured)
+      }
+    },
+    [rowHeight],
+  )
+
+  React.useLayoutEffect(() => {
+    if (!measurementRowRef.current) {
+      return
+    }
+    const measured = measurementRowRef.current.getBoundingClientRect().height
+    if (measured && Math.abs(measured - rowHeight) > 1) {
+      setRowHeight(measured)
+    }
+  }, [columns.length, rowHeight, visibleRows.length])
+
   if (!rows.length) {
     return (
       <tbody>
@@ -65,29 +127,43 @@ export default function TableBody({
 
   return (
     <tbody>
-      {rows.map((row, rowIndex) => (
-        <TableRow
-          key={`row-${rowIndex}`}
-          row={row}
-          rowIndex={rowIndex}
-          columns={columns}
-          selection={selection}
-          activeRange={activeRange}
-          fillPreview={fillPreview}
-          isFillDragActive={isFillDragActive}
-          editingCell={editingCell}
-          onRowNumberClick={onRowNumberClick}
-          onPointerDown={onPointerDown}
-          onPointerEnter={onPointerEnter}
-          onCellClick={onCellClick}
-          onCellDoubleClick={onCellDoubleClick}
-          onCellChange={onCellChange}
-          onStartFillDrag={onStartFillDrag}
-          onDeleteRow={onDeleteRow}
-          onCellEditorBlur={onCellEditorBlur}
-          onCellEditorKeyDown={onCellEditorKeyDown}
-        />
-      ))}
+      {virtualizationEnabled && topPaddingHeight > 0 ? (
+        <tr aria-hidden="true" style={{ height: topPaddingHeight }}>
+          <td colSpan={columns.length + 1} style={{ padding: 0, border: 'none' }} />
+        </tr>
+      ) : null}
+      {visibleRows.map((row, offsetIndex) => {
+        const actualRowIndex = startIndex + offsetIndex
+        const ref = offsetIndex === 0 ? handleMeasurementRef : undefined
+        return (
+          <TableRow
+            key={`row-${actualRowIndex}`}
+            ref={ref}
+            row={row}
+            rowIndex={actualRowIndex}
+            columns={columns}
+            selection={selection}
+            activeRange={activeRange}
+            fillPreview={fillPreview}
+            isFillDragActive={isFillDragActive}
+            editingCell={editingCell}
+            onRowNumberClick={onRowNumberClick}
+            onPointerDown={onPointerDown}
+            onPointerEnter={onPointerEnter}
+            onCellClick={onCellClick}
+            onCellDoubleClick={onCellDoubleClick}
+            onCellChange={onCellChange}
+            onStartFillDrag={onStartFillDrag}
+            onCellEditorBlur={onCellEditorBlur}
+            onCellEditorKeyDown={onCellEditorKeyDown}
+          />
+        )
+      })}
+      {virtualizationEnabled && bottomPaddingHeight > 0 ? (
+        <tr aria-hidden="true" style={{ height: bottomPaddingHeight }}>
+          <td colSpan={columns.length + 1} style={{ padding: 0, border: 'none' }} />
+        </tr>
+      ) : null}
     </tbody>
   )
 }

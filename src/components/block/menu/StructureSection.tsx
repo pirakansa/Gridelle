@@ -1,40 +1,135 @@
 // File Header: Row/column manipulation commands grouped under the structure tab.
 import React from 'react'
 import Button from '../../atom/Button'
-import TextInput from '../../atom/TextInput'
 import MenuSectionCard from './MenuSectionCard'
 
 type StructureSectionProps = {
-  newColumnName: string
-  onColumnNameChange: (_value: string) => void
   onAddRow: () => void
+  onInsertRowBelowSelection: () => void
+  onMoveSelectedRowsUp: () => void
+  onMoveSelectedRowsDown: () => void
   onAddColumn: () => void
+  onInsertColumnRightOfSelection: () => void
+  onDeleteSelectedColumns: () => void
+  onDeleteSelectedRows: () => void
+  onMoveSelectedColumnsLeft: () => void
+  onMoveSelectedColumnsRight: () => void
+  canMoveSelectedColumnsLeft: boolean
+  canMoveSelectedColumnsRight: boolean
+  canMoveSelectedRowsUp: boolean
+  canMoveSelectedRowsDown: boolean
+  hasSelection: boolean
 }
 
 // Function Header: Presents actions for adding rows and columns.
 export default function StructureSection({
-  newColumnName,
-  onColumnNameChange,
   onAddRow,
+  onInsertRowBelowSelection,
+  onMoveSelectedRowsUp,
+  onMoveSelectedRowsDown,
   onAddColumn,
+  onInsertColumnRightOfSelection,
+  onDeleteSelectedColumns,
+  onDeleteSelectedRows,
+  onMoveSelectedColumnsLeft,
+  onMoveSelectedColumnsRight,
+  canMoveSelectedColumnsLeft,
+  canMoveSelectedColumnsRight,
+  canMoveSelectedRowsUp,
+  canMoveSelectedRowsDown,
+  hasSelection,
 }: StructureSectionProps): React.ReactElement {
   return (
     <MenuSectionCard>
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" onClick={onAddRow}>
-          行を追加
-        </Button>
-        <div className="flex items-center gap-2">
-          <TextInput
-            type="text"
-            placeholder="列名を入力"
-            value={newColumnName}
-            onChange={(event) => onColumnNameChange(event.target.value)}
-          />
-          <Button type="button" variant="ghost" onClick={onAddColumn}>
-            列を追加
-          </Button>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <section className="flex flex-col gap-3" aria-label="行の操作">
+          <h3 className="text-sm font-semibold text-slate-700">行</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" onClick={onAddRow}>
+              行を追加
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onMoveSelectedRowsUp}
+              disabled={!canMoveSelectedRowsUp}
+              data-testid="move-selected-rows-up"
+            >
+              選択行を上へ移動
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onMoveSelectedRowsDown}
+              disabled={!canMoveSelectedRowsDown}
+              data-testid="move-selected-rows-down"
+            >
+              選択行を下へ移動
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onInsertRowBelowSelection}
+              disabled={!hasSelection}
+              data-testid="insert-row-below-selection"
+            >
+              選択行の下に行を追加
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onDeleteSelectedRows}
+              disabled={!hasSelection}
+              data-testid="delete-selected-rows"
+            >
+              選択行を削除
+            </Button>
+          </div>
+        </section>
+        <section className="flex flex-col gap-3" aria-label="列の操作">
+          <h3 className="text-sm font-semibold text-slate-700">列</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="ghost" onClick={onAddColumn}>
+              列を追加
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onInsertColumnRightOfSelection}
+              disabled={!hasSelection}
+              data-testid="insert-column-right-of-selection"
+            >
+              選択列の右に列を追加
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onMoveSelectedColumnsLeft}
+              disabled={!canMoveSelectedColumnsLeft}
+              data-testid="move-selected-columns-left"
+            >
+              選択列を左へ移動
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onMoveSelectedColumnsRight}
+              disabled={!canMoveSelectedColumnsRight}
+              data-testid="move-selected-columns-right"
+            >
+              選択列を右へ移動
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onDeleteSelectedColumns}
+              disabled={!hasSelection}
+              data-testid="delete-selected-columns"
+            >
+              選択列を削除
+            </Button>
+          </div>
+        </section>
       </div>
     </MenuSectionCard>
   )

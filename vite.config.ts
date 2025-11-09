@@ -24,6 +24,9 @@ export default defineConfig({
       ],
     },
   },
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version ?? '0.0.0'),
+  },
   envDir: __dirname,
   root: ROOT_DIR,
   publicDir: resolve(__dirname, 'public'),
@@ -34,6 +37,7 @@ export default defineConfig({
       input: {
         index: resolve(ROOT_DIR, 'index.html'),
         top: resolve(ROOT_DIR, 'top.html'),
+        login: resolve(ROOT_DIR, 'login.html'),
       },
       output: {
         manualChunks: {},

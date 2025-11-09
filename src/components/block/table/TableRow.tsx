@@ -24,34 +24,35 @@ type TableRowProps = {
   onCellDoubleClick: (_rowIndex: number, _columnIndex: number) => void
   onCellChange: (_rowIndex: number, _column: string, _value: string) => void
   onStartFillDrag: (_event: React.PointerEvent<HTMLButtonElement>) => void
-  onDeleteRow: (_rowIndex: number) => void
   onCellEditorBlur: () => void
   onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }
 
 // Function Header: Renders a single spreadsheet row with editable cells.
-export default function TableRow({
-  row,
-  rowIndex,
-  columns,
-  selection,
-  activeRange,
-  fillPreview,
-  isFillDragActive,
-  editingCell,
-  onRowNumberClick,
-  onPointerDown,
-  onPointerEnter,
-  onCellClick,
-  onCellDoubleClick,
-  onCellChange,
-  onStartFillDrag,
-  onDeleteRow,
-  onCellEditorBlur,
-  onCellEditorKeyDown,
-}: TableRowProps): React.ReactElement {
+const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(function TableRow(
+  {
+    row,
+    rowIndex,
+    columns,
+    selection,
+    activeRange,
+    fillPreview,
+    isFillDragActive,
+    editingCell,
+    onRowNumberClick,
+    onPointerDown,
+    onPointerEnter,
+    onCellClick,
+    onCellDoubleClick,
+    onCellChange,
+    onStartFillDrag,
+    onCellEditorBlur,
+    onCellEditorKeyDown,
+  },
+  ref,
+): React.ReactElement {
   return (
-    <tr className="border-t border-slate-200">
+    <tr ref={ref} className="border-t border-slate-200">
       <th scope="row" className="row-number-cell" data-testid={`row-number-${rowIndex}`}>
         <div className="row-number-content">
           <button
@@ -61,17 +62,6 @@ export default function TableRow({
             onClick={(event) => onRowNumberClick(rowIndex, event.shiftKey)}
           >
             {rowIndex + 1}
-          </button>
-          <button
-            type="button"
-            className="row-number-delete-button"
-            aria-label={`行${rowIndex + 1}を削除`}
-            onClick={(event) => {
-              event.stopPropagation()
-              onDeleteRow(rowIndex)
-            }}
-          >
-            削除
           </button>
         </div>
       </th>
@@ -99,4 +89,6 @@ export default function TableRow({
       ))}
     </tr>
   )
-}
+})
+
+export default TableRow

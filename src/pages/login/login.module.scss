@@ -1,0 +1,145 @@
+.root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: linear-gradient(160deg, #141f3d 0%, #2a3d7c 50%, #f1f6ff 100%);
+  color: #101624;
+}
+
+.card {
+  width: min(520px, 100%);
+  padding: clamp(32px, 4vw, 48px);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 48px rgba(16, 22, 36, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.8rem, 2.2vw + 1rem, 2.4rem);
+  font-weight: 700;
+}
+
+.description {
+  margin: 0;
+  line-height: 1.6;
+  color: rgba(16, 22, 36, 0.74);
+}
+
+.abilityNote {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.95rem;
+  color: rgba(16, 22, 36, 0.82);
+}
+
+.abilityNote[data-can-octokit='false'] {
+  color: #d12b47;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.button {
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 120ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+
+.button:hover,
+.button:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(16, 22, 36, 0.18);
+}
+
+.button:disabled {
+  cursor: progress;
+  opacity: 0.65;
+  transform: none;
+  box-shadow: none;
+}
+
+.buttonPrimary {
+  background: #24292f;
+  color: #ffffff;
+}
+
+.buttonSecondary {
+  background: #d6d8db;
+  color: #101624;
+}
+
+.status {
+  margin: 0;
+  font-weight: 600;
+}
+
+.error {
+  margin: 0;
+  color: #d12b47;
+  font-size: 0.95rem;
+}
+
+.detailsBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detailsTitle {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.details {
+  margin: 0;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(20, 31, 61, 0.06);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  font-size: 0.85rem;
+  color: rgba(16, 22, 36, 0.7);
+}
+
+.link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-decoration-color: rgba(16, 22, 36, 0.3);
+}
+
+.link:hover,
+.link:focus-visible {
+  text-decoration-color: rgba(16, 22, 36, 0.7);
+}

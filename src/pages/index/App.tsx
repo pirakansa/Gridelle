@@ -11,8 +11,8 @@ const App: React.FC = () => (
   <main className={styles.root}>
     <a
       className={styles.logoLink}
-      href="/top.html"
-      aria-label="Gridelleトップページへ移動"
+      href="/login.html"
+      aria-label="Gridelleログインページへ移動"
     >
       <img
         className={styles.logoImage}

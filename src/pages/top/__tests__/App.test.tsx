@@ -1,11 +1,19 @@
 /// <reference types="vitest" />
 import React from 'react'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+vi.mock('../../../utils/navigation', () => ({
+  redirectToLogin: vi.fn(),
+  redirectToTop: vi.fn(),
+}))
+
 import App from '../App'
 
 const writeTextMock = vi.fn(async (_text: string) => undefined)
+const TABLE_STORAGE_KEY = 'gridelle:tableYaml'
+const BUFFER_STORAGE_KEY = 'gridelle:yamlBuffer'
 
 beforeEach(() => {
   writeTextMock.mockClear()
@@ -18,6 +26,9 @@ beforeEach(() => {
     value: clipboard,
     configurable: true,
   })
+  if (typeof window !== 'undefined' && window.localStorage) {
+    window.localStorage.clear()
+  }
 })
 
 describe('App', () => {
@@ -31,6 +42,12 @@ describe('App', () => {
   it('設定メニューのヘッダーを表示する', () => {
     render(<App />)
     expect(screen.getByLabelText('Gridelleメニュー')).toBeInTheDocument()
+  })
+
+  it('ヘルプタブでバージョン情報を確認できる', () => {
+    render(<App />)
+    fireEvent.click(screen.getByTestId('menu-tab-help'))
+    expect(screen.getByTestId('app-version')).toHaveTextContent(import.meta.env.VITE_APP_VERSION)
   })
 
   it('各行に行番号を表示する', () => {
@@ -121,10 +138,259 @@ describe('App', () => {
     const beforeTitles = screen.getAllByTestId('column-title').map((node) => node.textContent)
     expect(beforeTitles).toEqual(['feature', 'owner', 'status', 'effort'])
 
-    await user.click(screen.getByRole('button', { name: 'owner列を左へ移動' }))
+    await user.click(screen.getByTestId('menu-tab-structure'))
+    await user.click(screen.getByTestId('column-select-1'))
+
+    const moveLeftButton = await screen.findByTestId('move-selected-columns-left')
+    expect(moveLeftButton).toBeEnabled()
+    await user.click(moveLeftButton)
 
     const afterTitles = screen.getAllByTestId('column-title').map((node) => node.textContent)
     expect(afterTitles).toEqual(['owner', 'feature', 'status', 'effort'])
+  })
+
+  it('列を追加すると自動採番された列が連続して追加される', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    await user.click(screen.getByRole('button', { name: '列を追加' }))
+
+    await waitFor(() => {
+      const titles = screen.getAllByTestId('column-title').map((node) => node.textContent)
+      expect(titles).toContain('column_5')
+    })
+
+    expect(await screen.findByTestId('cell-display-0-column_5')).toHaveTextContent('')
+
+    await user.click(screen.getByRole('button', { name: '列を追加' }))
+
+    await waitFor(() => {
+      const titles = screen.getAllByTestId('column-title').map((node) => node.textContent)
+      expect(titles).toContain('column_6')
+    })
+
+    expect(await screen.findByTestId('cell-display-0-column_6')).toHaveTextContent('')
+  })
+
+  it('選択行の下に行を追加できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    const rowButton = within(screen.getByTestId('row-number-0')).getByRole('button', {
+      name: '行1を選択',
+    })
+    await user.click(rowButton)
+
+    const insertRowButton = screen.getByTestId('insert-row-below-selection')
+    expect(insertRowButton).toBeEnabled()
+
+    await user.click(insertRowButton)
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/row-number-/)).toHaveLength(6)
+    })
+
+    const insertedRowCell = await screen.findByTestId('cell-display-1-feature')
+    expect(insertedRowCell).toHaveTextContent('')
+  })
+
+  it('選択列の右に列を追加できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    await user.click(screen.getByTestId('column-select-0'))
+
+    const insertColumnButton = screen.getByTestId('insert-column-right-of-selection')
+    expect(insertColumnButton).toBeEnabled()
+
+    await user.click(insertColumnButton)
+
+    await waitFor(() => {
+      const titles = screen.getAllByTestId('column-title').map((node) => node.textContent)
+      expect(titles).toEqual(['feature', 'column_5', 'owner', 'status', 'effort'])
+    })
+
+    const insertedColumnCell = await screen.findByTestId('cell-display-0-column_5')
+    expect(insertedColumnCell).toHaveTextContent('')
+  })
+
+  it('列ヘッダーのボタンで列全体を選択できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('column-select-1'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-box-0-owner')).toHaveAttribute('data-selected', 'true')
+      expect(screen.getByTestId('cell-box-1-owner')).toHaveAttribute('data-selected', 'true')
+    })
+  })
+
+  it('選択列を左へ移動できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+    await user.click(screen.getByTestId('column-select-2'))
+
+    const moveLeftButton = screen.getByTestId('move-selected-columns-left')
+    expect(moveLeftButton).toBeEnabled()
+
+    await user.click(moveLeftButton)
+
+    await waitFor(() => {
+      const titles = screen.getAllByTestId('column-title').map((node) => node.textContent)
+      expect(titles).toEqual(['feature', 'status', 'owner', 'effort'])
+    })
+
+    expect(screen.getByTestId('cell-box-0-status')).toHaveAttribute('data-selected', 'true')
+  })
+
+  it('選択列を右へ移動できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+    await user.click(screen.getByTestId('column-select-0'))
+
+    const moveRightButton = screen.getByTestId('move-selected-columns-right')
+    expect(moveRightButton).toBeEnabled()
+
+    await user.click(moveRightButton)
+
+    await waitFor(() => {
+      const titles = screen.getAllByTestId('column-title').map((node) => node.textContent)
+      expect(titles).toEqual(['owner', 'feature', 'status', 'effort'])
+    })
+
+    expect(screen.getByTestId('cell-box-0-feature')).toHaveAttribute('data-selected', 'true')
+  })
+
+  it('複数列を移動しても選択範囲が拡張されない', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    await user.click(screen.getByTestId('column-select-1'))
+    fireEvent.click(screen.getByTestId('column-select-2'), { shiftKey: true })
+
+    const moveRightButton = screen.getByTestId('move-selected-columns-right')
+    expect(moveRightButton).toBeEnabled()
+
+    await user.click(moveRightButton)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-box-0-owner')).toHaveAttribute('data-selected', 'true')
+      expect(screen.getByTestId('cell-box-0-status')).toHaveAttribute('data-selected', 'true')
+      expect(screen.getByTestId('cell-box-0-feature')).not.toHaveAttribute('data-selected')
+      expect(screen.getByTestId('cell-box-0-effort')).not.toHaveAttribute('data-selected')
+    })
+  })
+
+  it('選択行を下へ移動できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    const firstRowButton = within(screen.getByTestId('row-number-0')).getByRole('button', {
+      name: '行1を選択',
+    })
+    await user.click(firstRowButton)
+
+    const moveDownButton = screen.getByTestId('move-selected-rows-down')
+    expect(moveDownButton).toBeEnabled()
+
+    await user.click(moveDownButton)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('YAML Export')
+      expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('テーブル編集')
+    })
+
+    expect(screen.getByTestId('cell-box-1-feature')).toHaveAttribute('data-selected', 'true')
+  })
+
+  it('選択行を上へ移動できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    const secondRowButton = within(screen.getByTestId('row-number-1')).getByRole('button', {
+      name: '行2を選択',
+    })
+    await user.click(secondRowButton)
+
+    const moveUpButton = screen.getByTestId('move-selected-rows-up')
+    expect(moveUpButton).toBeEnabled()
+
+    await user.click(moveUpButton)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('YAML Export')
+      expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('テーブル編集')
+    })
+
+    expect(screen.getByTestId('cell-box-0-feature')).toHaveAttribute('data-selected', 'true')
+  })
+
+  it('複数行を移動しても選択範囲が拡張されない', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    const secondRowButton = within(screen.getByTestId('row-number-1')).getByRole('button', {
+      name: '行2を選択',
+    })
+    await user.click(secondRowButton)
+
+    const thirdRowButton = within(screen.getByTestId('row-number-2')).getByRole('button', {
+      name: '行3を選択',
+    })
+    fireEvent.click(thirdRowButton, { shiftKey: true })
+
+    const moveUpButton = screen.getByTestId('move-selected-rows-up')
+    expect(moveUpButton).toBeEnabled()
+
+    await user.click(moveUpButton)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-box-0-feature')).toHaveAttribute('data-selected', 'true')
+      expect(screen.getByTestId('cell-box-1-feature')).toHaveAttribute('data-selected', 'true')
+      expect(screen.getByTestId('cell-box-2-feature')).not.toHaveAttribute('data-selected')
+    })
+  })
+
+  it('すべての列を削除するとテーブルが空状態になる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-structure'))
+
+    await user.click(screen.getByTestId('column-select-0'))
+    fireEvent.click(screen.getByTestId('column-select-3'), { shiftKey: true })
+
+    const deleteColumnsButton = screen.getByTestId('delete-selected-columns')
+    expect(deleteColumnsButton).toBeEnabled()
+
+    await user.click(deleteColumnsButton)
+
+    expect(await screen.findByText('すべての列を削除しました。')).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(screen.queryAllByTestId('column-title')).toHaveLength(0)
+    })
+
+    expect(await screen.findByText('表示するデータがありません。')).toBeInTheDocument()
   })
 
   it('セルの値をコピーできる', async () => {
@@ -199,6 +465,34 @@ describe('App', () => {
     })
   })
 
+  it('セル編集中に複数行をペーストしても範囲展開されない', async () => {
+    render(<App />)
+
+    const editableBox = screen.getByTestId('cell-box-0-feature')
+    fireEvent.doubleClick(editableBox)
+    const editor = (await screen.findByTestId('cell-0-feature')) as HTMLTextAreaElement
+
+    fireEvent.change(editor, { target: { value: '' } })
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent
+    const clipboardData = {
+      getData: vi.fn().mockReturnValue('Line1\nLine2'),
+    }
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: clipboardData,
+    })
+
+    fireEvent(editor, pasteEvent)
+    fireEvent.change(editor, { target: { value: 'Line1\nLine2' } })
+    fireEvent.blur(editor)
+
+    expect(clipboardData.getData).not.toHaveBeenCalled()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature').textContent).toBe('Line1\nLine2')
+      expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('YAML Export')
+    })
+  })
+
   it('DELキーで選択セルの内容を削除できる', async () => {
     render(<App />)
 
@@ -256,8 +550,8 @@ describe('App', () => {
     fireEvent.click(screen.getByTestId('cell-box-0-feature'))
     fireEvent.click(screen.getByTestId('cell-box-1-effort'), { shiftKey: true })
 
-    await user.click(screen.getByTestId('menu-tab-bulk'))
-    const bulkInput = screen.getByTestId('bulk-input') as HTMLInputElement
+    await user.click(screen.getByTestId('menu-tab-selection'))
+  const bulkInput = screen.getByTestId('bulk-input') as HTMLTextAreaElement
     await user.clear(bulkInput)
     await user.type(bulkInput, 'DONE')
     await user.click(screen.getByTestId('bulk-apply'))
@@ -266,18 +560,89 @@ describe('App', () => {
     expect(screen.getByTestId('cell-display-1-effort')).toHaveTextContent('DONE')
   })
 
-  it('フィルハンドルで下方向に値をコピーできる', () => {
+  it('一括入力で改行区切りの値を行ごとに反映できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-0-feature'))
+    fireEvent.click(screen.getByTestId('cell-box-2-feature'), { shiftKey: true })
+
+    await user.click(screen.getByTestId('menu-tab-selection'))
+  const bulkInput = screen.getByTestId('bulk-input') as HTMLTextAreaElement
+    fireEvent.change(bulkInput, { target: { value: 'First\nSecond\nThird' } })
+    await user.click(screen.getByTestId('bulk-apply'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('First')
+      expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('Second')
+      expect(screen.getByTestId('cell-display-2-feature')).toHaveTextContent('Third')
+    })
+  })
+
+  it('一括入力で複数列を選択しても改行を含む文字列をそのまま適用できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-0-feature'))
+    fireEvent.click(screen.getByTestId('cell-box-0-owner'), { shiftKey: true })
+
+    await user.click(screen.getByTestId('menu-tab-selection'))
+    const bulkInput = screen.getByTestId('bulk-input') as HTMLTextAreaElement
+    fireEvent.change(bulkInput, { target: { value: 'Line1\nLine2' } })
+    await user.click(screen.getByTestId('bulk-apply'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature').textContent).toBe('Line1\nLine2')
+      expect(screen.getByTestId('cell-display-0-owner').textContent).toBe('Line1\nLine2')
+    })
+  })
+
+  it('テーブル編集内容がリロード後も保持される', async () => {
+    const user = userEvent.setup()
+    const { unmount } = render(<App />)
+
+    const targetCell = screen.getByTestId('cell-box-0-feature')
+    fireEvent.doubleClick(targetCell)
+    const editor = (await screen.findByTestId('cell-0-feature')) as HTMLTextAreaElement
+    await user.clear(editor)
+    await user.type(editor, '永続化テスト')
+    fireEvent.keyDown(editor, { key: 'Enter', code: 'Enter' })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('永続化テスト')
+      expect(window.localStorage.getItem(TABLE_STORAGE_KEY)).toContain('永続化テスト')
+      expect(window.localStorage.getItem(BUFFER_STORAGE_KEY)).toContain('永続化テスト')
+    })
+
+    unmount()
+
+    render(<App />)
+
+    expect(await screen.findByTestId('cell-display-0-feature')).toHaveTextContent('永続化テスト')
+  })
+
+  it('フィルハンドルで下方向に値をコピーできる', async () => {
     render(<App />)
 
     fireEvent.click(screen.getByTestId('cell-box-0-feature'))
     const handle = screen.getByTestId('fill-handle')
     const targetCell = screen.getByTestId('cell-box-1-feature')
 
-    fireEvent.pointerDown(handle)
-    fireEvent.pointerEnter(targetCell)
-    fireEvent.pointerUp(window)
+    await act(async () => {
+      fireEvent.pointerDown(handle)
+    })
 
-    expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('テーブル編集')
+    await act(async () => {
+      fireEvent.pointerEnter(targetCell)
+    })
+
+    await act(async () => {
+      fireEvent.pointerUp(window)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('テーブル編集')
+    })
   })
 
   it('行番号をクリックすると行全体が選択される', () => {
@@ -298,7 +663,7 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.selectOptions(screen.getByTestId('sheet-select'), '1')
+    await user.click(screen.getByTestId('sheet-tab-1'))
 
     expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('リリースノート作成')
     expect(screen.getByTestId('sheet-name-input')).toHaveValue('完了済み')
@@ -321,12 +686,28 @@ describe('App', () => {
     render(<App />)
 
     await user.click(screen.getByTestId('add-sheet-button'))
-    const sheetSelect = screen.getByTestId('sheet-select') as HTMLSelectElement
     await waitFor(() => {
-      expect(sheetSelect.value).toBe('2')
+      expect(screen.getByTestId('sheet-tab-2')).toBeInTheDocument()
     })
-    const options = Array.from(sheetSelect.options).map((option) => option.textContent)
-    expect(options).toContain('Sheet 3')
+    const newSheetTab = screen.getByTestId('sheet-tab-2')
+    expect(newSheetTab).toHaveTextContent('Sheet 3')
+    expect(newSheetTab).toHaveAttribute('aria-pressed', 'true')
     expect(await screen.findByText('表示するデータがありません。')).toBeInTheDocument()
+  })
+
+  it('アクティブシートを削除できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const deleteButton = screen.getByTestId('delete-sheet-button')
+    expect(deleteButton).toBeEnabled()
+
+    await user.click(deleteButton)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('sheet-tab-1')).not.toBeInTheDocument()
+    })
+    expect(screen.getByTestId('sheet-tab-0')).toHaveTextContent('完了済み')
+    expect(screen.getByTestId('delete-sheet-button')).toBeDisabled()
   })
 })

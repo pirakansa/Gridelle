@@ -1,18 +1,15 @@
-// File Header: Table head rendering column titles with move handles.
+// File Header: Table head rendering column titles and selection controls.
 import React from 'react'
 
 type TableHeadProps = {
   columns: string[]
-  onMoveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
+  onColumnHeaderClick: (_columnIndex: number, _extend: boolean) => void
 }
 
-const columnButtonClass =
-  'rounded-full border border-slate-200 p-1 text-[10px] text-slate-500 transition hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent'
-
-// Function Header: Renders header cells including move controls per column.
+// Function Header: Renders header cells with column selection buttons.
 export default function TableHead({
   columns,
-  onMoveColumn,
+  onColumnHeaderClick,
 }: TableHeadProps): React.ReactElement {
   return (
     <thead>
@@ -22,30 +19,18 @@ export default function TableHead({
         </th>
         {columns.map((column, columnIndex) => (
           <th key={column} data-testid="column-header">
-            <div className="flex items-center gap-2">
-              <span data-testid="column-title" className="font-semibold">
-                {column}
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  className={columnButtonClass}
-                  aria-label={`${column}列を左へ移動`}
-                  onClick={() => onMoveColumn(column, 'left')}
-                  disabled={columnIndex === 0}
-                >
-                  ←
-                </button>
-                <button
-                  type="button"
-                  className={columnButtonClass}
-                  aria-label={`${column}列を右へ移動`}
-                  onClick={() => onMoveColumn(column, 'right')}
-                  disabled={columnIndex === columns.length - 1}
-                >
-                  →
-                </button>
-              </div>
+            <div className="flex items-center">
+              <button
+                type="button"
+                className="column-header-button"
+                onClick={(event) => onColumnHeaderClick(columnIndex, event.shiftKey)}
+                aria-label={`${column}列を選択`}
+                data-testid={`column-select-${columnIndex}`}
+              >
+                <span data-testid="column-title" className="font-semibold">
+                  {column}
+                </span>
+              </button>
             </div>
           </th>
         ))}

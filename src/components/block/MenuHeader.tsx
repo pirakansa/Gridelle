@@ -7,7 +7,7 @@ import MenuTabs, { type MenuSectionId } from './menu/MenuTabs'
 import SheetSection from './menu/SheetSection'
 import StructureSection from './menu/StructureSection'
 import SelectionSection from './menu/SelectionSection'
-import BulkSection from './menu/BulkSection'
+import HelpSection from './menu/HelpSection'
 
 type Props = {
   onYamlInputClick: () => void
@@ -18,16 +18,28 @@ type Props = {
   currentSheetName: string
   onRenameSheet: (_name: string) => void
   onAddSheet: () => void
-  newColumnName: string
-  onColumnNameChange: (_value: string) => void
+  onDeleteSheet: () => void
   onAddRow: () => void
+  onInsertRowBelowSelection: () => void
+  onMoveSelectedRowsUp: () => void
+  onMoveSelectedRowsDown: () => void
   onAddColumn: () => void
+  onInsertColumnRightOfSelection: () => void
+  onDeleteSelectedColumns: () => void
+  onDeleteSelectedRows: () => void
+  onMoveSelectedColumnsLeft: () => void
+  onMoveSelectedColumnsRight: () => void
+  canMoveSelectedColumnsLeft: boolean
+  canMoveSelectedColumnsRight: boolean
+  canMoveSelectedRowsUp: boolean
+  canMoveSelectedRowsDown: boolean
   selectionSummary: string
   onClearSelection: () => void
   hasSelection: boolean
   bulkValue: string
   onBulkValueChange: (_value: string) => void
   onBulkApply: () => void
+  canDeleteSheet: boolean
 }
 
 // Function Header: Renders the sticky menu along with spreadsheet utility commands and collapse toggle.
@@ -40,16 +52,28 @@ export default function MenuHeader({
   currentSheetName,
   onRenameSheet,
   onAddSheet,
-  newColumnName,
-  onColumnNameChange,
+  onDeleteSheet,
   onAddRow,
+  onInsertRowBelowSelection,
+  onMoveSelectedRowsUp,
+  onMoveSelectedRowsDown,
   onAddColumn,
+  onInsertColumnRightOfSelection,
+  onDeleteSelectedColumns,
+  onDeleteSelectedRows,
+  onMoveSelectedColumnsLeft,
+  onMoveSelectedColumnsRight,
+  canMoveSelectedColumnsLeft,
+  canMoveSelectedColumnsRight,
+  canMoveSelectedRowsUp,
+  canMoveSelectedRowsDown,
   selectionSummary,
   onClearSelection,
   hasSelection,
   bulkValue,
   onBulkValueChange,
   onBulkApply,
+  canDeleteSheet,
 }: Props): React.ReactElement {
   const menuPanelId = React.useId()
   const [isMenuCollapsed, setMenuCollapsed] = React.useState<boolean>(false)
@@ -125,18 +149,31 @@ export default function MenuHeader({
                   activeSheetIndex={activeSheetIndex}
                   onSelectSheet={onSelectSheet}
                   onAddSheet={onAddSheet}
+                  onDeleteSheet={onDeleteSheet}
                   sheetNameDraft={sheetNameDraft}
                   onSheetNameDraftChange={setSheetNameDraft}
                   onCommitSheetName={commitSheetName}
                   onCancelSheetRename={() => setSheetNameDraft(currentSheetName)}
+                  canDeleteSheet={canDeleteSheet}
                 />
               )}
               {activeMenuSection === 'structure' && (
                 <StructureSection
-                  newColumnName={newColumnName}
-                  onColumnNameChange={onColumnNameChange}
                   onAddRow={onAddRow}
+                  onInsertRowBelowSelection={onInsertRowBelowSelection}
+                  onMoveSelectedRowsUp={onMoveSelectedRowsUp}
+                  onMoveSelectedRowsDown={onMoveSelectedRowsDown}
                   onAddColumn={onAddColumn}
+                  onInsertColumnRightOfSelection={onInsertColumnRightOfSelection}
+                  onDeleteSelectedColumns={onDeleteSelectedColumns}
+                  onDeleteSelectedRows={onDeleteSelectedRows}
+                  onMoveSelectedColumnsLeft={onMoveSelectedColumnsLeft}
+                  onMoveSelectedColumnsRight={onMoveSelectedColumnsRight}
+                  canMoveSelectedColumnsLeft={canMoveSelectedColumnsLeft}
+                  canMoveSelectedColumnsRight={canMoveSelectedColumnsRight}
+                  canMoveSelectedRowsUp={canMoveSelectedRowsUp}
+                  canMoveSelectedRowsDown={canMoveSelectedRowsDown}
+                  hasSelection={hasSelection}
                 />
               )}
               {activeMenuSection === 'selection' && (
@@ -144,16 +181,12 @@ export default function MenuHeader({
                   selectionSummary={selectionSummary}
                   hasSelection={hasSelection}
                   onClearSelection={onClearSelection}
-                />
-              )}
-              {activeMenuSection === 'bulk' && (
-                <BulkSection
                   bulkValue={bulkValue}
                   onBulkValueChange={onBulkValueChange}
                   onBulkApply={onBulkApply}
-                  hasSelection={hasSelection}
                 />
               )}
+              {activeMenuSection === 'help' && <HelpSection />}
             </div>
           </div>
         )}

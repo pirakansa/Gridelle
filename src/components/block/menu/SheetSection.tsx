@@ -1,7 +1,6 @@
 // File Header: Sheet management controls for switching, naming, and adding sheets.
 import React from 'react'
 import Button from '../../atom/Button'
-import SelectField from '../../atom/SelectField'
 import TextInput from '../../atom/TextInput'
 import MenuSectionCard from './MenuSectionCard'
 
@@ -10,10 +9,12 @@ type SheetSectionProps = {
   activeSheetIndex: number
   onSelectSheet: (_index: number) => void
   onAddSheet: () => void
+  onDeleteSheet: () => void
   sheetNameDraft: string
   onSheetNameDraftChange: (_value: string) => void
   onCommitSheetName: () => void
   onCancelSheetRename: () => void
+  canDeleteSheet: boolean
 }
 
 // Function Header: Renders the sheet selector, rename input, and add-sheet button.
@@ -22,34 +23,63 @@ export default function SheetSection({
   activeSheetIndex,
   onSelectSheet,
   onAddSheet,
+  onDeleteSheet,
   sheetNameDraft,
   onSheetNameDraftChange,
   onCommitSheetName,
   onCancelSheetRename,
+  canDeleteSheet,
 }: SheetSectionProps): React.ReactElement {
+  const sheetGroupLabelId = React.useId()
+  const sheetTabBaseClass =
+    'rounded-full border px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-200'
+  const sheetTabActiveClass = 'border-slate-900 bg-slate-900 text-white shadow'
+  const sheetTabInactiveClass =
+    'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100 focus:border-slate-300'
+
   return (
     <MenuSectionCard>
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-sm text-slate-600">
-            <label htmlFor="sheet-select" className="font-medium text-slate-700">
+            <span id={sheetGroupLabelId} className="font-medium text-slate-700">
               シート
-            </label>
-            <SelectField
-              id="sheet-select"
-              value={activeSheetIndex}
-              onChange={(event) => onSelectSheet(Number(event.target.value))}
-              data-testid="sheet-select"
+            </span>
+            <div
+              className="flex flex-wrap items-center gap-2"
+              role="group"
+              aria-labelledby={sheetGroupLabelId}
+              data-testid="sheet-tablist"
             >
-              {sheetNames.map((name, index) => (
-                <option key={`${name}-${index}`} value={index}>
-                  {name}
-                </option>
-              ))}
-            </SelectField>
+              {sheetNames.map((name, index) => {
+                const isActive = index === activeSheetIndex
+                const buttonClass = `${sheetTabBaseClass} ${isActive ? sheetTabActiveClass : sheetTabInactiveClass}`
+                return (
+                  <button
+                    key={`${name}-${index}`}
+                    type="button"
+                    className={buttonClass}
+                    onClick={() => onSelectSheet(index)}
+                    aria-pressed={isActive}
+                    data-testid={`sheet-tab-${index}`}
+                  >
+                    {name}
+                  </button>
+                )
+              })}
+            </div>
           </div>
           <Button type="button" variant="ghost" onClick={onAddSheet} data-testid="add-sheet-button">
             シートを追加
+          </Button>
+          <Button
+            type="button"
+            variant="subtle"
+            onClick={onDeleteSheet}
+            disabled={!canDeleteSheet}
+            data-testid="delete-sheet-button"
+          >
+            シートを削除
           </Button>
         </div>
         <div className="flex w-full max-w-sm items-center gap-2 md:max-w-md">
