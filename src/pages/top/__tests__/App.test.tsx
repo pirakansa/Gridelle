@@ -161,6 +161,29 @@ describe('App', () => {
     })
   })
 
+  it('複数行セルを貼り付けてもセル内の改行を保持する', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByTestId('cell-box-0-feature'))
+    const shell = screen.getByTestId('interactive-table-shell')
+    shell.focus()
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent
+    const clipboardData = {
+      getData: vi.fn().mockReturnValue('"Line1\nLine2"'),
+    }
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: clipboardData,
+    })
+    Object.defineProperty(pasteEvent, 'preventDefault', {
+      value: vi.fn(),
+    })
+
+    fireEvent(shell, pasteEvent)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature').textContent).toBe('Line1\nLine2')
+    })
+  })
+
   it('選択範囲に一括入力できる', async () => {
     const user = userEvent.setup()
     render(<App />)

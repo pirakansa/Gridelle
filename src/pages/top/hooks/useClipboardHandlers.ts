@@ -7,6 +7,7 @@ import {
   ensureColumnCapacity,
   syncRowsToColumns,
 } from '../utils/spreadsheetTableUtils'
+import { parseClipboardText, serializeClipboardMatrix } from '../utils/clipboardFormat'
 
 type UseClipboardHandlersParams = {
   columns: string[]
@@ -66,7 +67,7 @@ export const useClipboardHandlers = ({
         endCol: Math.max(0, Math.min(activeRange.endCol, maxColIndex)),
       }
 
-      const rowStrings: string[] = []
+      const valueMatrix: string[][] = []
       for (let rowIndex = boundedRange.startRow; rowIndex <= boundedRange.endRow; rowIndex += 1) {
         const sourceRow = rows[rowIndex] ?? {}
         const cellValues: string[] = []
@@ -75,11 +76,11 @@ export const useClipboardHandlers = ({
           const value = sourceRow[columnKey]
           cellValues.push(value === undefined || value === null ? '' : String(value))
         }
-        rowStrings.push(cellValues.join('\t'))
+        valueMatrix.push(cellValues)
       }
 
       try {
-        await navigator.clipboard.writeText(rowStrings.join('\n'))
+        await navigator.clipboard.writeText(serializeClipboardMatrix(valueMatrix))
         setNotice({ text: 'セルの値をコピーしました。', tone: 'success' })
       } catch {
         setNotice({ text: 'セルのコピーに失敗しました。', tone: 'error' })
@@ -95,13 +96,11 @@ export const useClipboardHandlers = ({
         return
       }
       event.preventDefault()
-      const normalized = text.replace(/\r/g, '')
-      const lines = normalized.split('\n')
-      const trimmedLines =
-        lines[lines.length - 1] === '' ? lines.slice(0, lines.length - 1) : lines.slice()
-      const matrix = trimmedLines
-        .filter((line, index) => !(line === '' && index === trimmedLines.length - 1))
-        .map((line) => line.split('\t'))
+      const matrix = parseClipboardText(text)
+      const hasMeaningfulValue = matrix.some((row) => row.some((value) => value.length > 0))
+      if (!hasMeaningfulValue) {
+        return
+      }
       if (!matrix.length) {
         return
       }
