@@ -30,19 +30,7 @@ const LOGIN_FAILURE_MESSAGE = 'ログインに失敗しました。時間を置�
 const GUEST_FAILURE_MESSAGE = 'ゲストログインに失敗しました。時間を置いて再度お試しください。'
 const LOGOUT_FAILURE_MESSAGE = 'ログアウトに失敗しました。ブラウザを再読み込みしてください。'
 const LOGOUT_SUCCESS_STATUS = 'ログアウトしました。GitHub またはゲストでログインしてください。'
-
-/**
- * Masks a GitHub access token for safe UI presentation.
- * @param {string} token Raw GitHub access token.
- * @returns {string} Masked token string.
- */
-function maskGithubToken(token: string): string {
-  if (token.length <= 8) {
-    return `${token.slice(0, 4)}...`
-  }
-
-  return `${token.slice(0, 4)}...${token.slice(-4)}`
-}
+const CLEAR_STORAGE_STATUS = '保存済みのセッションとキャッシュを削除しました。'
 
 interface LoginDetailsState {
   readonly user: User | null
@@ -53,7 +41,6 @@ interface LoginDetailsState {
 interface LoginControllerState {
   readonly statusMessage: string
   readonly errorMessage: string | null
-  readonly detailsText: string
   readonly loginMode: LoginMode | null
   readonly loginModeLabel: string
   readonly canUseOctokit: boolean
@@ -62,7 +49,9 @@ interface LoginControllerState {
   readonly handleGithubLogin: () => Promise<void>
   readonly handleGuestLogin: () => Promise<void>
   readonly handleLogout: () => Promise<void>
+  readonly handleClearStorage: () => void
   readonly handleNavigateTop: () => void
+  readonly appVersion: string
 }
 
 /**
@@ -72,6 +61,7 @@ interface LoginControllerState {
 export function useLoginController(): LoginControllerState {
   const auth = React.useMemo(() => getFirebaseAuth(), [])
   const providerRef = React.useMemo<GithubAuthProvider>(() => getGithubAuthProvider(), [])
+  const appVersion = React.useMemo<string>(() => import.meta.env.VITE_APP_VERSION ?? '0.0.0', [])
 
   const [statusMessage, setStatusMessage] = React.useState<string>(UNAUTHENTICATED_STATUS)
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
@@ -87,26 +77,6 @@ export function useLoginController(): LoginControllerState {
     setDetails({ user: null, loginMode: null, accessToken: null })
     setStatusMessage(UNAUTHENTICATED_STATUS)
   }, [])
-
-  const buildDetailsText = React.useCallback(
-    (state: LoginDetailsState): string => {
-      if (!state.user) {
-        return UNAUTHENTICATED_STATUS
-      }
-
-      const lines = [
-        `UID: ${state.user.uid}`,
-        `表示名: ${state.user.displayName ?? '未設定'}`,
-        `メール: ${state.user.email ?? '未設定'}`,
-        `アイコン: ${state.user.photoURL ?? '未設定'}`,
-        `ログイン種別: ${state.loginMode === 'guest' ? 'ゲスト' : state.loginMode === 'github' ? 'GitHub OAuth' : '未設定'}`,
-        `アクセストークン: ${state.loginMode === 'github' && state.accessToken ? maskGithubToken(state.accessToken) : '未取得 (Octokit 使用不可)'}`,
-      ]
-
-      return lines.join('\n')
-    },
-    [],
-  )
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(
@@ -212,11 +182,21 @@ export function useLoginController(): LoginControllerState {
     }
   }, [auth, resetToLoggedOut])
 
+  const handleClearStorage = React.useCallback(() => {
+    clearAppStorage()
+    setDetails((prev) => ({
+      user: prev.user,
+      loginMode: prev.loginMode,
+      accessToken: null,
+    }))
+    setStatusMessage(CLEAR_STORAGE_STATUS)
+    setErrorMessage(null)
+  }, [])
+
   const handleNavigateTop = React.useCallback(() => {
     redirectToTop()
   }, [])
 
-  const detailsText = React.useMemo(() => buildDetailsText(details), [details, buildDetailsText])
   const loginModeLabel = details.loginMode === 'github' ? 'GitHub OAuth' : details.loginMode === 'guest' ? 'ゲスト' : '未設定'
   const canUseOctokit = details.loginMode === 'github' && Boolean(details.accessToken)
   const isLoggedIn = details.loginMode !== null
@@ -224,7 +204,6 @@ export function useLoginController(): LoginControllerState {
   return {
     statusMessage,
     errorMessage,
-    detailsText,
     loginMode: details.loginMode,
     loginModeLabel,
     canUseOctokit,
@@ -233,6 +212,8 @@ export function useLoginController(): LoginControllerState {
     handleGithubLogin,
     handleGuestLogin,
     handleLogout,
+    handleClearStorage,
     handleNavigateTop,
+    appVersion,
   }
 }

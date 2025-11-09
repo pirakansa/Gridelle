@@ -173,7 +173,7 @@ describe('pages/login/App', () => {
     ).toBeInTheDocument()
   })
 
-  it('GitHub 認証済みユーザーの情報を表示する', async () => {
+  it('GitHub 認証済みユーザーでも個人情報を表示しない', async () => {
     localStorage.setItem('gridelle/githubAccessToken', 'abcd1234efgh5678')
 
     render(<App />)
@@ -193,8 +193,9 @@ describe('pages/login/App', () => {
     expect(card).toHaveAttribute('data-login-mode', 'github')
     expect(card).toHaveAttribute('data-can-octokit', 'true')
     expect(screen.getByText('GitHub連携機能を利用できます。')).toBeInTheDocument()
-    expect(screen.getByText(/UID: github-user/)).toBeInTheDocument()
-    expect(screen.getByText(/アクセストークン: abcd...5678/)).toBeInTheDocument()
+    expect(screen.queryByText(/UID:/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/アクセストークン:/)).not.toBeInTheDocument()
+    expect(screen.getByTestId('app-version')).toHaveTextContent(import.meta.env.VITE_APP_VERSION)
   })
 
   it('ゲストログイン状態を表示する', async () => {
@@ -206,6 +207,7 @@ describe('pages/login/App', () => {
     expect(card).toHaveAttribute('data-can-octokit', 'false')
     expect(screen.getByText('Octokit 機能を利用するには GitHub でログインしてください。')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'トップページに進む' })).toBeInTheDocument()
+    expect(screen.getByTestId('app-version')).toHaveTextContent(import.meta.env.VITE_APP_VERSION)
   })
 
   it('GitHub ログインに成功するとトークンを保存しトップへ遷移する', async () => {
@@ -288,6 +290,30 @@ describe('pages/login/App', () => {
     expect(
       screen.getByText('ログアウトしました。GitHub またはゲストでログインしてください。'),
     ).toBeInTheDocument()
+  })
+
+  it('セッション・キャッシュ削除ボタンでストレージを削除する', async () => {
+    localStorage.setItem('gridelle:tableYaml', 'cached-table')
+    localStorage.setItem('gridelle:yamlBuffer', 'cached-buffer')
+    localStorage.setItem('gridelle/loginMode', 'guest')
+    sessionStorage.setItem('gridelle:sessionDraft', 'draft')
+
+    const user = userEvent.setup()
+    render(<App />)
+    emitAuthState(null)
+
+    await screen.findByRole('button', { name: 'GitHub でログイン' })
+
+    const clearButton = screen.getByTestId('clear-storage-button')
+    expect(clearButton).toBeInTheDocument()
+
+    await user.click(clearButton)
+
+    expect(localStorage.getItem('gridelle:tableYaml')).toBeNull()
+    expect(localStorage.getItem('gridelle:yamlBuffer')).toBeNull()
+    expect(localStorage.getItem('gridelle/loginMode')).toBeNull()
+    expect(sessionStorage.getItem('gridelle:sessionDraft')).toBeNull()
+    expect(screen.getByText('保存済みのセッションとキャッシュを削除しました。')).toBeInTheDocument()
   })
 
   it('認証状態の監視でエラーが発生した場合にメッセージを表示する', async () => {

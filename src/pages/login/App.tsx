@@ -8,7 +8,6 @@ export default function App(): React.ReactElement {
   const {
     statusMessage,
     errorMessage,
-    detailsText,
     loginMode,
     loginModeLabel,
     canUseOctokit,
@@ -17,7 +16,9 @@ export default function App(): React.ReactElement {
     handleGithubLogin,
     handleGuestLogin,
     handleLogout,
+    handleClearStorage,
     handleNavigateTop,
+    appVersion,
   } = useLoginController()
 
   return (
@@ -40,7 +41,7 @@ export default function App(): React.ReactElement {
             <p className={styles.abilityNote} data-can-octokit={canUseOctokit ? 'true' : 'false'}>
               {canUseOctokit
                 ? 'GitHub連携機能を利用できます。'
-                : 'Octokit 機能を利用するには GitHub でログインしてください。'}
+                : 'GitHub連携機能を利用するには GitHub でログインしてください。'}
             </p>
           )}
         </header>
@@ -89,8 +90,20 @@ export default function App(): React.ReactElement {
         <section className={styles.detailsBlock}>
           <p className={styles.status}>{statusMessage}</p>
           {errorMessage && <p className={styles.error}>{errorMessage}</p>}
-          <h2 className={styles.detailsTitle}>ユーザー情報</h2>
-          <pre className={styles.details}>{detailsText}</pre>
+          <h2 className={styles.detailsTitle}>セッションとキャッシュ</h2>
+          <div className={styles.metaRow}>
+            <span className={styles.metaLabel}>アプリケーションバージョン</span>
+            <span className={styles.metaValue} data-testid="app-version">{appVersion}</span>
+          </div>
+          <button
+            type="button"
+            className={`${styles.button} ${styles.buttonSecondary}`}
+            onClick={handleClearStorage}
+            disabled={isBusy}
+            data-testid="clear-storage-button"
+          >
+            セッション・キャッシュを削除
+          </button>
         </section>
         <footer className={styles.footer}>
           <a className={styles.link} href="/index.html">
