@@ -29,27 +29,30 @@ type TableRowProps = {
 }
 
 // Function Header: Renders a single spreadsheet row with editable cells.
-export default function TableRow({
-  row,
-  rowIndex,
-  columns,
-  selection,
-  activeRange,
-  fillPreview,
-  isFillDragActive,
-  editingCell,
-  onRowNumberClick,
-  onPointerDown,
-  onPointerEnter,
-  onCellClick,
-  onCellDoubleClick,
-  onCellChange,
-  onStartFillDrag,
-  onCellEditorBlur,
-  onCellEditorKeyDown,
-}: TableRowProps): React.ReactElement {
+const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(function TableRow(
+  {
+    row,
+    rowIndex,
+    columns,
+    selection,
+    activeRange,
+    fillPreview,
+    isFillDragActive,
+    editingCell,
+    onRowNumberClick,
+    onPointerDown,
+    onPointerEnter,
+    onCellClick,
+    onCellDoubleClick,
+    onCellChange,
+    onStartFillDrag,
+    onCellEditorBlur,
+    onCellEditorKeyDown,
+  },
+  ref,
+): React.ReactElement {
   return (
-    <tr className="border-t border-slate-200">
+    <tr ref={ref} className="border-t border-slate-200">
       <th scope="row" className="row-number-cell" data-testid={`row-number-${rowIndex}`}>
         <div className="row-number-content">
           <button
@@ -86,4 +89,6 @@ export default function TableRow({
       ))}
     </tr>
   )
-}
+})
+
+export default TableRow

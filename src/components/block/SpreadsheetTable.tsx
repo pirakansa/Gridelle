@@ -58,6 +58,42 @@ export default function SpreadsheetTable({
   onCellEditorBlur,
   onCellEditorKeyDown,
 }: Props): React.ReactElement {
+  const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
+  const [viewportHeight, setViewportHeight] = React.useState<number>(0)
+  const [scrollTop, setScrollTop] = React.useState<number>(0)
+
+  React.useLayoutEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) {
+      return undefined
+    }
+    const updateMetrics = () => {
+      setViewportHeight(container.clientHeight)
+      setScrollTop(container.scrollTop)
+    }
+    updateMetrics()
+    if (typeof ResizeObserver === 'undefined') {
+      return undefined
+    }
+    const observer = new ResizeObserver(() => updateMetrics())
+    observer.observe(container)
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
+  React.useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) {
+      return
+    }
+    setScrollTop(container.scrollTop)
+  }, [rows.length])
+
+  const handleScroll = React.useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(event.currentTarget.scrollTop)
+  }, [])
+
   return (
     <div
       className={`${layoutTheme.tableScroll} mt-6`}
@@ -66,8 +102,10 @@ export default function SpreadsheetTable({
       role="region"
       aria-label="スプレッドシートエリア"
       onPaste={onPaste}
+      onScroll={handleScroll}
       onKeyDown={onTableKeyDown}
       data-testid="interactive-table-shell"
+      ref={scrollContainerRef}
     >
       <table className="spreadsheet-table">
         <TableHead columns={columns} onColumnHeaderClick={onColumnHeaderClick} />
@@ -88,6 +126,8 @@ export default function SpreadsheetTable({
           onStartFillDrag={onStartFillDrag}
           onCellEditorBlur={onCellEditorBlur}
           onCellEditorKeyDown={onCellEditorKeyDown}
+          viewportHeight={viewportHeight}
+          scrollTop={scrollTop}
         />
       </table>
     </div>
