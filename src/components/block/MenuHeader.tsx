@@ -1,6 +1,7 @@
 // File Header: Application menu combining global controls with spreadsheet utilities.
 import React from 'react'
 import type { Notice } from '../../pages/top/types'
+import type { LoginMode } from '../../services/authService'
 import { layoutTheme } from '../../utils/Theme'
 import Button from '../atom/Button'
 import MenuTabs, { type MenuSectionId } from './menu/MenuTabs'
@@ -8,6 +9,7 @@ import SheetSection from './menu/SheetSection'
 import StructureSection from './menu/StructureSection'
 import SelectionSection from './menu/SelectionSection'
 import HelpSection from './menu/HelpSection'
+import UserSection from './menu/UserSection'
 
 type Props = {
   onYamlInputClick: () => void
@@ -40,6 +42,12 @@ type Props = {
   onBulkValueChange: (_value: string) => void
   onBulkApply: () => void
   canDeleteSheet: boolean
+  loginMode: LoginMode | null
+  userDisplayName: string | null
+  userEmail: string | null
+  onLogout: () => Promise<void>
+  isLoggingOut: boolean
+  logoutError: string | null
 }
 
 // Function Header: Renders the sticky menu along with spreadsheet utility commands and collapse toggle.
@@ -74,6 +82,12 @@ export default function MenuHeader({
   onBulkValueChange,
   onBulkApply,
   canDeleteSheet,
+  loginMode,
+  userDisplayName,
+  userEmail,
+  onLogout,
+  isLoggingOut,
+  logoutError,
 }: Props): React.ReactElement {
   const menuPanelId = React.useId()
   const [isMenuCollapsed, setMenuCollapsed] = React.useState<boolean>(false)
@@ -184,6 +198,16 @@ export default function MenuHeader({
                   bulkValue={bulkValue}
                   onBulkValueChange={onBulkValueChange}
                   onBulkApply={onBulkApply}
+                />
+              )}
+              {activeMenuSection === 'user' && (
+                <UserSection
+                  loginMode={loginMode}
+                  userDisplayName={userDisplayName}
+                  userEmail={userEmail}
+                  onLogout={onLogout}
+                  isLoggingOut={isLoggingOut}
+                  logoutError={logoutError}
                 />
               )}
               {activeMenuSection === 'help' && <HelpSection />}

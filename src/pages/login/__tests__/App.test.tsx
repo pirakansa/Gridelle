@@ -135,6 +135,7 @@ describe('pages/login/App', () => {
   beforeEach(() => {
     appMocks.mockApps.length = 0
     localStorage.clear()
+    sessionStorage.clear()
     vi.clearAllMocks()
     authMocks.credentialFromResultMock.mockReturnValue({ accessToken: 'abcd1234efgh5678' })
     authMocks.signInWithPopupMock.mockResolvedValue({
@@ -255,8 +256,11 @@ describe('pages/login/App', () => {
     expect(localStorage.getItem('gridelle/loginMode')).toBe('guest')
   })
 
-  it('ログアウト処理でトークンを削除する', async () => {
+  it('ログアウト処理でストレージを削除する', async () => {
     localStorage.setItem('gridelle/githubAccessToken', 'abcd1234efgh5678')
+    localStorage.setItem('gridelle:tableYaml', 'cached-table')
+    localStorage.setItem('gridelle:yamlBuffer', 'cached-buffer')
+    sessionStorage.setItem('gridelle:sessionDraft', 'draft')
     const user = userEvent.setup()
     render(<App />)
     emitAuthState({
@@ -278,6 +282,9 @@ describe('pages/login/App', () => {
     })
     expect(localStorage.getItem('gridelle/githubAccessToken')).toBeNull()
     expect(localStorage.getItem('gridelle/loginMode')).toBeNull()
+    expect(localStorage.getItem('gridelle:tableYaml')).toBeNull()
+    expect(localStorage.getItem('gridelle:yamlBuffer')).toBeNull()
+    expect(sessionStorage.getItem('gridelle:sessionDraft')).toBeNull()
     expect(
       screen.getByText('ログアウトしました。GitHub またはゲストでログインしてください。'),
     ).toBeInTheDocument()

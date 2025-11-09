@@ -8,6 +8,7 @@ import { useSheetState } from './internal/useSheetState'
 import { createSheetState, stripSheetState } from './internal/spreadsheetDataUtils'
 import { parseWorkbookAsync } from '../../../services/yamlWorkerClient'
 import { stringifyWorkbookAsync } from '../../../services/yamlStringifyWorkerClient'
+import { TABLE_STORAGE_KEY, BUFFER_STORAGE_KEY } from '../../../utils/storageKeys'
 
 type ParseLifecycleHooks = {
   onParseStart?: () => void
@@ -41,9 +42,6 @@ type UseSpreadsheetDataController = {
   handleCopyYaml: () => Promise<void>
   handleCellChange: (_rowIndex: number, _columnKey: string, _value: string) => void
 }
-
-const TABLE_STORAGE_KEY = 'gridelle:tableYaml'
-const BUFFER_STORAGE_KEY = 'gridelle:yamlBuffer'
 
 const readPersistedValue = (key: string): string | null => {
   if (typeof window === 'undefined' || !window.localStorage) {

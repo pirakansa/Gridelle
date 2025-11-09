@@ -44,6 +44,12 @@ describe('App', () => {
     expect(screen.getByLabelText('Gridelleメニュー')).toBeInTheDocument()
   })
 
+  it('ユーザーメニューでログアウトボタンを確認できる', () => {
+    render(<App />)
+    fireEvent.click(screen.getByTestId('menu-tab-user'))
+    expect(screen.getByTestId('logout-button')).toBeInTheDocument()
+  })
+
   it('ヘルプタブでバージョン情報を確認できる', () => {
     render(<App />)
     fireEvent.click(screen.getByTestId('menu-tab-help'))

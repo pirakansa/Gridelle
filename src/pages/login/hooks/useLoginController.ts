@@ -20,6 +20,7 @@ import {
   type LoginMode,
 } from '../../../services/authService'
 import { redirectToTop } from '../../../utils/navigation'
+import { clearAppStorage } from '../../../utils/storageCleanup'
 
 const UNAUTHENTICATED_STATUS = '未ログインです。GitHub またはゲストでログインしてください。'
 const GUEST_STATUS = 'ゲストユーザーとしてログインしています。利用できない機能がある場合があります。'
@@ -82,8 +83,7 @@ export function useLoginController(): LoginControllerState {
   }))
 
   const resetToLoggedOut = React.useCallback(() => {
-    clearStoredGithubToken()
-    setLoginMode(null)
+    clearAppStorage()
     setDetails({ user: null, loginMode: null, accessToken: null })
     setStatusMessage(UNAUTHENTICATED_STATUS)
   }, [])

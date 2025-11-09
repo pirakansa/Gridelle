@@ -2,7 +2,7 @@
 import React from 'react'
 import IconButton from '../../atom/IconButton'
 
-export type MenuSectionId = 'sheet' | 'structure' | 'selection' | 'help'
+export type MenuSectionId = 'sheet' | 'structure' | 'selection' | 'user' | 'help'
 
 type MenuTabsProps = {
   activeSection: MenuSectionId
@@ -50,6 +50,7 @@ export default function MenuTabs({
             { id: 'sheet' as const, label: 'シート' },
             { id: 'structure' as const, label: '行列' },
             { id: 'selection' as const, label: '選択' },
+            { id: 'user' as const, label: 'ユーザー' },
             { id: 'help' as const, label: 'ヘルプ' },
           ] satisfies Array<{ id: MenuSectionId; label: string }>
         ).map((tab) => {
