@@ -49,7 +49,7 @@ export default function MenuTabs({
           [
             { id: 'sheet' as const, label: 'シート' },
             { id: 'structure' as const, label: '構造' },
-            { id: 'selection' as const, label: '選択・一括' },
+            { id: 'selection' as const, label: '選択' },
           ] satisfies Array<{ id: MenuSectionId; label: string }>
         ).map((tab) => {
           const isActive = activeSection === tab.id
