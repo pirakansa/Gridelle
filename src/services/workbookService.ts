@@ -1,10 +1,16 @@
 // File Header: Workbook service handling YAML serialization and sheet normalization.
 import { dump, load } from 'js-yaml'
 
+export type CellFunctionConfig = {
+  name: string
+  args?: Record<string, unknown>
+}
+
 export type TableCell = {
   value: string
   color?: string
   bgColor?: string
+  func?: CellFunctionConfig
 }
 
 export type TableRow = Record<string, TableCell>
@@ -122,7 +128,8 @@ function normalizeCell(value: unknown): TableCell {
       Object.prototype.hasOwnProperty.call(record, 'value') ||
       Object.prototype.hasOwnProperty.call(record, 'color') ||
       Object.prototype.hasOwnProperty.call(record, 'bgColor') ||
-      Object.prototype.hasOwnProperty.call(record, 'bgcolor')
+      Object.prototype.hasOwnProperty.call(record, 'bgcolor') ||
+      Object.prototype.hasOwnProperty.call(record, 'func')
 
     if (hasCellShape) {
       const normalized: TableCell = {
@@ -137,6 +144,11 @@ function normalizeCell(value: unknown): TableCell {
       const bgColorCandidate = record.bgColor ?? record.bgcolor
       if (typeof bgColorCandidate === 'string' && bgColorCandidate.trim().length > 0) {
         normalized.bgColor = bgColorCandidate
+      }
+
+      const funcConfig = normalizeCellFunction(record.func)
+      if (funcConfig) {
+        normalized.func = funcConfig
       }
 
       return normalized
@@ -170,32 +182,45 @@ function serializeRow(row: TableRow): Record<string, unknown> {
   return serialized
 }
 
-function serializeCell(cell: TableCell): string | { value: string; color?: string; bgColor?: string } {
+function serializeCell(
+  cell: TableCell,
+): string | { value: string; color?: string; bgColor?: string; func?: string | Record<string, unknown> } {
   const trimmedColor = typeof cell.color === 'string' ? cell.color.trim() : ''
   const trimmedBg = typeof cell.bgColor === 'string' ? cell.bgColor.trim() : ''
-  const hasStyle = Boolean(trimmedColor || trimmedBg)
+  const hasMetadata = Boolean(trimmedColor || trimmedBg || cell.func)
 
-  if (!hasStyle) {
+  if (!hasMetadata) {
     return cell.value
   }
 
-  const serialized: { value: string; color?: string; bgColor?: string } = { value: cell.value }
+  const serialized: { value: string; color?: string; bgColor?: string; func?: string | Record<string, unknown> } = {
+    value: cell.value,
+  }
   if (trimmedColor) {
     serialized.color = trimmedColor
   }
   if (trimmedBg) {
     serialized.bgColor = trimmedBg
   }
+  if (cell.func) {
+    serialized.func = serializeCellFunction(cell.func)
+  }
   return serialized
 }
 
-export function createCell(value = '', color?: string, bgColor?: string): TableCell {
+export function createCell(value = '', color?: string, bgColor?: string, func?: CellFunctionConfig): TableCell {
   const cell: TableCell = { value }
   if (color && color.trim().length > 0) {
     cell.color = color
   }
   if (bgColor && bgColor.trim().length > 0) {
     cell.bgColor = bgColor
+  }
+  if (func) {
+    cell.func = {
+      name: func.name,
+      ...(func.args ? { args: { ...func.args } } : {}),
+    }
   }
   return cell
 }
@@ -206,6 +231,14 @@ export function cloneCell(cell: TableCell | undefined): TableCell {
     value: source.value,
     ...(source.color ? { color: source.color } : {}),
     ...(source.bgColor ? { bgColor: source.bgColor } : {}),
+    ...(source.func
+      ? {
+          func: {
+            name: source.func.name,
+            ...(source.func.args ? { args: { ...source.func.args } } : {}),
+          },
+        }
+      : {}),
   }
 }
 
@@ -223,4 +256,53 @@ export function cloneRows(rows: TableRow[]): TableRow[] {
 
 export function getCellValue(cell: TableCell | undefined): string {
   return cell?.value ?? ''
+}
+
+function normalizeCellFunction(source: unknown): CellFunctionConfig | undefined {
+  if (typeof source === 'string') {
+    const trimmed = source.trim()
+    return trimmed ? { name: trimmed } : undefined
+  }
+  if (!source || typeof source !== 'object' || Array.isArray(source)) {
+    return undefined
+  }
+  const record = source as Record<string, unknown>
+  const nameCandidate = record.name
+  if (typeof nameCandidate !== 'string') {
+    return undefined
+  }
+  const name = nameCandidate.trim()
+  if (!name) {
+    return undefined
+  }
+
+  const argsCandidate = record.args
+  if (argsCandidate && typeof argsCandidate === 'object' && !Array.isArray(argsCandidate)) {
+    const argsEntries = Object.entries(argsCandidate as Record<string, unknown>)
+    return argsEntries.length
+      ? {
+          name,
+          args: { ...argsCandidate },
+        }
+      : { name }
+  }
+
+  const inlineArgs: Record<string, unknown> = {}
+  Object.entries(record).forEach(([key, value]) => {
+    if (key === 'name') {
+      return
+    }
+    inlineArgs[key] = value
+  })
+  return Object.keys(inlineArgs).length ? { name, args: inlineArgs } : { name }
+}
+
+function serializeCellFunction(func: CellFunctionConfig): string | Record<string, unknown> {
+  if (!func.args || !Object.keys(func.args).length) {
+    return func.name
+  }
+  return {
+    name: func.name,
+    ...func.args,
+  }
 }

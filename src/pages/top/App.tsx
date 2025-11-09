@@ -9,7 +9,9 @@ import SpreadsheetTable from '../../components/block/SpreadsheetTable'
 import MenuHeader from '../../components/block/MenuHeader'
 import YamlPanel from '../../components/block/YamlPanel'
 import SettingsOverlay from '../../components/block/SettingsOverlay'
-import GithubIntegrationPanel from '../../components/block/GithubIntegrationPanel'
+import GithubIntegrationPanel, {
+  type GithubIntegrationLoadedFileInfo,
+} from '../../components/block/GithubIntegrationPanel'
 import { clearStoredGithubToken, deriveLoginMode, getFirebaseAuth, getLoginMode, getStoredGithubToken, setLoginMode } from '../../services/authService'
 import type { LoginMode } from '../../services/authService'
 
@@ -19,6 +21,8 @@ export default function App(): React.ReactElement {
   const spreadsheet = useSpreadsheetState()
   const [isYamlInputOpen, setYamlInputOpen] = React.useState<boolean>(false)
   const [isGithubIntegrationOpen, setGithubIntegrationOpen] = React.useState<boolean>(false)
+  const [githubRepositoryUrl, setGithubRepositoryUrl] = React.useState<string>('')
+  const [githubLastLoadedFile, setGithubLastLoadedFile] = React.useState<GithubIntegrationLoadedFileInfo | null>(null)
   const [loginMode, setLoginModeState] = React.useState<LoginMode | null>(() => getLoginMode())
   const [currentUser, setCurrentUser] = React.useState<User | null>(() => auth.currentUser ?? null)
   const [isLoggingOut, setLoggingOut] = React.useState<boolean>(false)
@@ -78,6 +82,26 @@ export default function App(): React.ReactElement {
     setGithubIntegrationOpen(false)
   }, [])
 
+  const handleRepositoryUrlSubmit = React.useCallback((url: string) => {
+    setGithubRepositoryUrl(url)
+  }, [])
+
+  const handleGithubYamlLoaded = React.useCallback(
+    async ({ yaml, ...info }: GithubIntegrationLoadedFileInfo & { yaml: string }) => {
+      try {
+        await spreadsheet.ingestYamlContent(yaml, {
+          successNotice: `GitHubから ${info.filePath} を読み込みました。`,
+          errorNoticePrefix: 'GitHubファイルの解析に失敗しました',
+        })
+        setGithubLastLoadedFile(info)
+        closeGithubIntegration()
+      } catch (error) {
+        console.error('GitHubファイルの取り込みでエラーが発生しました', error)
+      }
+    },
+    [closeGithubIntegration, setGithubLastLoadedFile, spreadsheet],
+  )
+
   const handleLogout = React.useCallback(async () => {
     if (isLoggingOut) {
       return
@@ -109,9 +133,10 @@ export default function App(): React.ReactElement {
         activeSheetIndex={spreadsheet.activeSheetIndex}
         onSelectSheet={spreadsheet.handleSelectSheet}
         currentSheetName={spreadsheet.currentSheetName}
-    onRenameSheet={spreadsheet.handleRenameSheet}
-    onAddSheet={spreadsheet.handleAddSheet}
-    onDeleteSheet={spreadsheet.handleDeleteSheet}
+        columns={spreadsheet.columns}
+        onRenameSheet={spreadsheet.handleRenameSheet}
+        onAddSheet={spreadsheet.handleAddSheet}
+        onDeleteSheet={spreadsheet.handleDeleteSheet}
         onAddRow={spreadsheet.handleAddRow}
         onInsertRowBelowSelection={spreadsheet.handleInsertRowBelowSelection}
         onMoveSelectedRowsUp={spreadsheet.handleMoveSelectedRowsUp}
@@ -132,12 +157,16 @@ export default function App(): React.ReactElement {
         bulkValue={spreadsheet.bulkValue}
         onBulkValueChange={spreadsheet.setBulkValue}
         onBulkApply={spreadsheet.applyBulkInput}
-  selectionTextColor={spreadsheet.selectionTextColor}
-  selectionBackgroundColor={spreadsheet.selectionBackgroundColor}
-  onApplySelectionTextColor={spreadsheet.applySelectionTextColor}
-  onApplySelectionBackgroundColor={spreadsheet.applySelectionBackgroundColor}
-  onClearSelectionStyles={spreadsheet.clearSelectionStyles}
+        selectionTextColor={spreadsheet.selectionTextColor}
+        selectionBackgroundColor={spreadsheet.selectionBackgroundColor}
+        onApplySelectionTextColor={spreadsheet.applySelectionTextColor}
+        onApplySelectionBackgroundColor={spreadsheet.applySelectionBackgroundColor}
+        onClearSelectionStyles={spreadsheet.clearSelectionStyles}
+        onApplySelectionFunction={spreadsheet.applySelectionFunction}
         canDeleteSheet={spreadsheet.canDeleteSheet}
+        macroFunctions={spreadsheet.macroFunctions}
+        loadedMacroModules={spreadsheet.loadedMacroModules}
+        onLoadWasmModule={spreadsheet.loadWasmModule}
         loginMode={loginMode}
         userEmail={currentUser?.email ?? null}
         onLogout={handleLogout}
@@ -192,7 +221,12 @@ export default function App(): React.ReactElement {
           onClose={closeGithubIntegration}
           panelId="github-file-actions"
         >
-          <GithubIntegrationPanel />
+          <GithubIntegrationPanel
+            initialRepositoryUrl={githubRepositoryUrl}
+            onRepositoryUrlSubmit={handleRepositoryUrlSubmit}
+            onYamlContentLoaded={handleGithubYamlLoaded}
+            lastLoadedFileInfo={githubLastLoadedFile}
+          />
         </SettingsOverlay>
       )}
     </div>

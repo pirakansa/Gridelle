@@ -1,6 +1,6 @@
 // File Header: Hook encapsulating selection, fill, clipboard, and editing interactions.
 import React from 'react'
-import { cloneCell, type TableCell, type TableRow } from '../../../services/workbookService'
+import { cloneCell, type TableCell, type TableRow, type CellFunctionConfig } from '../../../services/workbookService'
 import type { CellPosition, Notice, SelectionRange, UpdateRows } from '../types'
 import { stringifySelection } from '../utils/spreadsheetTableUtils'
 import { useClipboardHandlers } from './useClipboardHandlers'
@@ -34,6 +34,7 @@ type UseSpreadsheetInteractionController = {
   applySelectionTextColor: (_color: string | null) => void
   applySelectionBackgroundColor: (_color: string | null) => void
   clearSelectionStyles: () => void
+  applySelectionFunction: (_config: CellFunctionConfig | null) => void
   handleRowNumberClick: (_rowIndex: number, _extend: boolean) => void
   handleColumnHeaderClick: (_columnIndex: number, _extend: boolean) => void
   handleCellPointerDown: (
@@ -237,6 +238,49 @@ export const useSpreadsheetInteractionController = ({
       setNotice({ text: '選択セルのスタイルをクリアしました。', tone: 'success' })
     }
   }, [setNotice, updateSelectionCells])
+
+  const applySelectionFunction = React.useCallback(
+    (config: CellFunctionConfig | null): void => {
+      const changed = updateSelectionCells((cell) => {
+        if (!config) {
+          if (!cell.func) {
+            return { cell, changed: false }
+          }
+          const nextCell = { ...cell }
+          delete nextCell.func
+          return { cell: nextCell, changed: true }
+        }
+        const nextFunc = {
+          name: config.name,
+          ...(config.args ? { args: { ...config.args } } : {}),
+        }
+        if (cell.func && cell.func.name === nextFunc.name) {
+          const currentArgs = JSON.stringify(cell.func.args ?? {})
+          const incomingArgs = JSON.stringify(nextFunc.args ?? {})
+          if (currentArgs === incomingArgs) {
+            return { cell, changed: false }
+          }
+        }
+        return {
+          cell: {
+            ...cell,
+            func: nextFunc,
+          },
+          changed: true,
+        }
+      })
+
+      if (!changed) {
+        setNotice({ text: '関数を適用できるセルを選択してください。', tone: 'error' })
+        return
+      }
+      setNotice({
+        text: config ? '選択セルに関数を設定しました。' : '選択セルの関数をクリアしました。',
+        tone: 'success',
+      })
+    },
+    [setNotice, updateSelectionCells],
+  )
 
   useSelectionNormalizer({
     selection,
@@ -480,6 +524,7 @@ export const useSpreadsheetInteractionController = ({
     applySelectionTextColor,
     applySelectionBackgroundColor,
     clearSelectionStyles,
+    applySelectionFunction,
     handleRowNumberClick,
     handleColumnHeaderClick,
     handleCellPointerDown,

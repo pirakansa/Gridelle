@@ -56,20 +56,28 @@ export function useBulkInput({
       if (isSingleCellSelection) {
         const targetKey = targetColumns[0]
         const existing = updatedRow[targetKey] ?? createCell()
-        updatedRow[targetKey] = {
+        const nextCell = {
           ...existing,
           value: bulkValue,
         }
+        if (nextCell.func) {
+          delete nextCell.func
+        }
+        updatedRow[targetKey] = nextCell
         return updatedRow
       }
 
       if (shouldBroadcastLiteral) {
         targetColumns.forEach((columnKey) => {
           const existing = updatedRow[columnKey] ?? createCell()
-          updatedRow[columnKey] = {
+          const nextCell = {
             ...existing,
             value: bulkValue,
           }
+          if (nextCell.func) {
+            delete nextCell.func
+          }
+          updatedRow[columnKey] = nextCell
         })
         return updatedRow
       }
@@ -79,10 +87,14 @@ export function useBulkInput({
       targetColumns.forEach((columnKey, columnOffset) => {
         const sourceValue = sourceRow[Math.min(columnOffset, sourceRow.length - 1)] ?? ''
         const existing = updatedRow[columnKey] ?? createCell()
-        updatedRow[columnKey] = {
+        const nextCell = {
           ...existing,
           value: sourceValue,
         }
+        if (nextCell.func) {
+          delete nextCell.func
+        }
+        updatedRow[columnKey] = nextCell
       })
       return updatedRow
     })

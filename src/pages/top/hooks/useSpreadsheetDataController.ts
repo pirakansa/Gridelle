@@ -44,6 +44,13 @@ type UseSpreadsheetDataController = {
   handleRenameSheet: (_name: string) => void
   moveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   applyYamlBuffer: () => void
+  ingestYamlContent: (
+    _content: string,
+    _options?: {
+      successNotice?: string
+      errorNoticePrefix?: string
+    },
+  ) => Promise<void>
   handleFileUpload: (_event: React.ChangeEvent<HTMLInputElement>) => void
   handleDownloadYaml: () => void
   handleCopyYaml: () => Promise<void>
@@ -184,37 +191,56 @@ export const useSpreadsheetDataController = (
     writePersistedValue(BUFFER_STORAGE_KEY, yamlBuffer)
   }, [yamlBuffer])
 
-  const applyYamlBuffer = React.useCallback((): void => {
-    const requestId = Date.now()
-    parseRequestIdRef.current = requestId
-    setNotice({ text: 'YAMLを解析しています…', tone: 'success' })
-    parseWorkbookAsync(yamlBuffer, {
-      onParseStart: () => parseHooks?.onParseStart?.(),
-      onParseSuccess: () => parseHooks?.onParseSuccess?.(),
-      onParseError: (error: Error) => parseHooks?.onParseError?.(error),
-    })
-      .then((parsed) => {
+  const parseAndApplyYaml = React.useCallback(
+    async (
+      content: string,
+      options?: { successNotice?: string; errorNoticePrefix?: string },
+    ): Promise<void> => {
+      const requestId = Date.now()
+      parseRequestIdRef.current = requestId
+      setYamlBuffer(content)
+      setNotice({ text: 'YAMLを解析しています…', tone: 'success' })
+
+      try {
+        const parsedSheets = await parseWorkbookAsync(content, {
+          onParseStart: () => parseHooks?.onParseStart?.(),
+          onParseSuccess: () => parseHooks?.onParseSuccess?.(),
+          onParseError: (error: Error) => parseHooks?.onParseError?.(error),
+        })
+
         if (parseRequestIdRef.current !== requestId) {
           return
         }
-        const next = createSheetState(parsed)
-        replaceSheets(next)
+
+        const parsed = createSheetState(parsedSheets)
+        replaceSheets(parsed)
         setActiveSheetIndex((prev) => {
-          if (!next.length) {
+          if (!parsed.length) {
             return 0
           }
-          return Math.min(prev, next.length - 1)
+          return Math.min(prev, parsed.length - 1)
         })
-        setNotice({ text: 'YAMLをテーブルに反映しました。', tone: 'success' })
-      })
-      .catch((error) => {
+        setNotice({ text: options?.successNotice ?? 'YAMLをテーブルに反映しました。', tone: 'success' })
+      } catch (error) {
         if (parseRequestIdRef.current !== requestId) {
-          return
+          throw error
         }
         const message = error instanceof Error ? error.message : String(error)
-        setNotice({ text: message, tone: 'error' })
-      })
-  }, [parseHooks, parseRequestIdRef, replaceSheets, setActiveSheetIndex, setNotice, yamlBuffer])
+        const noticeMessage = options?.errorNoticePrefix
+          ? `${options.errorNoticePrefix}: ${message}`
+          : message
+        setNotice({ text: noticeMessage, tone: 'error' })
+        throw error
+      }
+    },
+    [parseHooks, parseRequestIdRef, replaceSheets, setActiveSheetIndex, setNotice, setYamlBuffer],
+  )
+
+  const applyYamlBuffer = React.useCallback((): void => {
+    void parseAndApplyYaml(yamlBuffer).catch(() => {
+      // Error notice already handled inside parseAndApplyYaml.
+    })
+  }, [parseAndApplyYaml, yamlBuffer])
 
   const handleFileUpload = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -227,40 +253,12 @@ export const useSpreadsheetDataController = (
 
       readFileAsText(file)
         .then((content) => {
-          setYamlBuffer(content)
-          const requestId = Date.now()
-          parseRequestIdRef.current = requestId
-          setNotice({ text: 'YAMLを解析しています…', tone: 'success' })
-          return parseWorkbookAsync(content, {
-            onParseStart: () => parseHooks?.onParseStart?.(),
-            onParseSuccess: () => parseHooks?.onParseSuccess?.(),
-            onParseError: (error: Error) => parseHooks?.onParseError?.(error),
+          void parseAndApplyYaml(content, {
+            successNotice: 'ファイルを読み込みました。',
+            errorNoticePrefix: 'アップロードしたファイルを解析できませんでした',
+          }).catch(() => {
+            // Notice already handled in parseAndApplyYaml.
           })
-            .then((parsedSheets) => {
-              if (parseRequestIdRef.current !== requestId) {
-                return
-              }
-              const parsed = createSheetState(parsedSheets)
-              replaceSheets(parsed)
-              setActiveSheetIndex((prev) => {
-                if (!parsed.length) {
-                  return 0
-                }
-                return Math.min(prev, parsed.length - 1)
-              })
-              setNotice({ text: 'ファイルを読み込みました。', tone: 'success' })
-            })
-            .catch((error) => {
-              if (parseRequestIdRef.current !== requestId) {
-                return
-              }
-              setNotice({
-                text: `アップロードしたファイルを解析できませんでした: ${
-                  error instanceof Error ? error.message : String(error)
-                }`,
-                tone: 'error',
-              })
-            })
         })
         .catch((error) => {
           const message = error instanceof Error ? error.message : String(error)
@@ -270,7 +268,7 @@ export const useSpreadsheetDataController = (
           })
         })
     },
-    [parseHooks, parseRequestIdRef, replaceSheets, setActiveSheetIndex, setNotice],
+    [parseAndApplyYaml, setNotice],
   )
 
   const handleDownloadYaml = React.useCallback((): void => {
@@ -295,10 +293,14 @@ export const useSpreadsheetDataController = (
         }
         const nextRow = cloneRow(row)
         const existing = nextRow[columnKey] ?? createCell()
-        nextRow[columnKey] = {
+        const nextCell = {
           ...existing,
           value,
         }
+        if (nextCell.func) {
+          delete nextCell.func
+        }
+        nextRow[columnKey] = nextCell
         return nextRow
       })
       updateRows(nextRows)
@@ -327,6 +329,7 @@ export const useSpreadsheetDataController = (
     handleRenameSheet: renameSheet,
     moveColumn,
     applyYamlBuffer,
+    ingestYamlContent: parseAndApplyYaml,
     handleFileUpload,
     handleDownloadYaml,
     handleCopyYaml,
