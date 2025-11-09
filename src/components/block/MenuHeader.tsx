@@ -7,7 +7,6 @@ import MenuTabs, { type MenuSectionId } from './menu/MenuTabs'
 import SheetSection from './menu/SheetSection'
 import StructureSection from './menu/StructureSection'
 import SelectionSection from './menu/SelectionSection'
-import BulkSection from './menu/BulkSection'
 
 type Props = {
   onYamlInputClick: () => void
@@ -144,14 +143,9 @@ export default function MenuHeader({
                   selectionSummary={selectionSummary}
                   hasSelection={hasSelection}
                   onClearSelection={onClearSelection}
-                />
-              )}
-              {activeMenuSection === 'bulk' && (
-                <BulkSection
                   bulkValue={bulkValue}
                   onBulkValueChange={onBulkValueChange}
                   onBulkApply={onBulkApply}
-                  hasSelection={hasSelection}
                 />
               )}
             </div>

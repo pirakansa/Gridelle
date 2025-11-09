@@ -256,7 +256,7 @@ describe('App', () => {
     fireEvent.click(screen.getByTestId('cell-box-0-feature'))
     fireEvent.click(screen.getByTestId('cell-box-1-effort'), { shiftKey: true })
 
-    await user.click(screen.getByTestId('menu-tab-bulk'))
+  await user.click(screen.getByTestId('menu-tab-selection'))
     const bulkInput = screen.getByTestId('bulk-input') as HTMLInputElement
     await user.clear(bulkInput)
     await user.type(bulkInput, 'DONE')

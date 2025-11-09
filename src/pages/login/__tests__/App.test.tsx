@@ -6,19 +6,17 @@ vi.stubEnv('VITE_FIREBASE_AUTH_DOMAIN', 'test.firebaseapp.com')
 type Spy = ReturnType<typeof vi.fn>
 
 type AuthListeners = {
-  onChange?: (user: unknown) => void
-  onError?: (error: Error) => void
+  onChange?: (_user: unknown) => void
+  onError?: (_error: Error) => void
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __firebaseAppMocks: {
     mockApps: unknown[]
     initializeAppMock: Spy
     getAppsMock: Spy
     getAppMock: Spy
   }
-  // eslint-disable-next-line no-var
   var __firebaseAuthMocks: {
     authListeners: AuthListeners
     unsubscribeMock: Spy
