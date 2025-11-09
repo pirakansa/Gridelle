@@ -13,7 +13,7 @@
     "clean": "rm -rf ./dist/",
     "check-deps": "npx depcheck",
     "preview": "vite preview --host",
-    "generate-large-sample": "node scripts/generate-large-yaml.mjs"
+    "generate-large-sample": "node docs/generate-large-yaml.mjs"
   },
   "author": "pirakansa",
   "license": "MIT",
