@@ -29,21 +29,6 @@ export default function MenuTabs({
 
   return (
     <nav aria-label="Gridelleメニュー" className="flex flex-wrap items-center gap-2 md:gap-3">
-      <IconButton
-        type="button"
-        onClick={onToggleCollapse}
-        aria-expanded={!isCollapsed}
-        aria-label={collapseLabel}
-        title={collapseLabel}
-        data-testid="menu-collapse-toggle"
-      >
-        <span className="sr-only">{collapseLabel}</span>
-        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5">
-          <path d={chevronPath} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
-          <path d="M8 7H16" stroke="currentColor" strokeLinecap="round" strokeOpacity="0.6" strokeWidth="1.4" />
-          <path d="M6 17H18" stroke="currentColor" strokeLinecap="round" strokeOpacity="0.4" strokeWidth="1.2" />
-        </svg>
-      </IconButton>
       <div className="flex flex-wrap items-center gap-2">
         {(
           [
@@ -70,6 +55,21 @@ export default function MenuTabs({
           )
         })}
       </div>
+      <IconButton
+        type="button"
+        onClick={onToggleCollapse}
+        aria-expanded={!isCollapsed}
+        aria-label={collapseLabel}
+        title={collapseLabel}
+        data-testid="menu-collapse-toggle"
+      >
+        <span className="sr-only">{collapseLabel}</span>
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5">
+          <path d={chevronPath} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+          <path d="M8 7H16" stroke="currentColor" strokeLinecap="round" strokeOpacity="0.6" strokeWidth="1.4" />
+          <path d="M6 17H18" stroke="currentColor" strokeLinecap="round" strokeOpacity="0.4" strokeWidth="1.2" />
+        </svg>
+      </IconButton>
     </nav>
   )
 }
