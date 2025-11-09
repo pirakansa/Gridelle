@@ -37,6 +37,17 @@
   color: rgba(16, 22, 36, 0.74);
 }
 
+.abilityNote {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.95rem;
+  color: rgba(16, 22, 36, 0.82);
+}
+
+.abilityNote[data-can-octokit='false'] {
+  color: #d12b47;
+}
+
 .actions {
   display: flex;
   gap: 12px;

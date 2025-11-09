@@ -1,6 +1,7 @@
 // File Header: Provides Firebase initialization and GitHub token storage helpers for authentication-aware pages.
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app'
 import { Auth, GithubAuthProvider, getAuth } from 'firebase/auth'
+import type { User } from 'firebase/auth'
 
 /**
  * Retrieves a required environment variable or throws if it is undefined.
@@ -143,8 +144,22 @@ export function getLoginMode(): LoginMode | null {
   return null
 }
 
+/**
+ * Derives the login mode from a Firebase user object.
+ * @param {User | null} user Firebase user instance.
+ * @returns {LoginMode | null} Deduced login mode.
+ */
+export function deriveLoginMode(user: User | null): LoginMode | null {
+  if (!user) {
+    return null
+  }
+
+  return user.isAnonymous ? 'guest' : 'github'
+}
+
 export {
   firebaseConfig as authFirebaseConfig,
   GITHUB_TOKEN_STORAGE_KEY,
   LOGIN_MODE_STORAGE_KEY,
+  getRequiredEnv,
 }

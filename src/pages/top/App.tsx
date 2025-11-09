@@ -2,6 +2,7 @@
 import React from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { layoutTheme } from '../../utils/Theme'
+import { redirectToLogin } from '../../utils/navigation'
 import { useSpreadsheetState } from './useSpreadsheetState'
 import SpreadsheetTable from '../../components/block/SpreadsheetTable'
 import MenuHeader from '../../components/block/MenuHeader'
@@ -9,6 +10,7 @@ import YamlPanel from '../../components/block/YamlPanel'
 import SettingsOverlay from '../../components/block/SettingsOverlay'
 import {
   clearStoredGithubToken,
+  deriveLoginMode,
   getFirebaseAuth,
   getLoginMode,
   getStoredGithubToken,
@@ -29,16 +31,21 @@ export default function App(): React.ReactElement {
         clearStoredGithubToken()
         setLoginMode(null)
         setLoginModeState(null)
-        window.location.replace('/login.html')
+        redirectToLogin()
         return
       }
 
-      const mode: LoginMode = currentUser.isAnonymous ? 'guest' : 'github'
+      const mode = deriveLoginMode(currentUser) as LoginMode
       setLoginMode(mode)
       setLoginModeState(mode)
 
-      if (mode === 'github' && !getStoredGithubToken()) {
-        window.location.replace('/login.html')
+      if (mode === 'guest') {
+        clearStoredGithubToken()
+        return
+      }
+
+      if (!getStoredGithubToken()) {
+        redirectToLogin()
       }
     })
 
