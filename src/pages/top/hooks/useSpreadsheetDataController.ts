@@ -34,7 +34,6 @@ type UseSpreadsheetDataController = {
   updateRows: (_rows: TableRow[]) => void
   handleAddRow: () => void
   handleAddColumn: () => void
-  handleDeleteRow: (_rowIndex: number) => void
   handleAddSheet: () => void
   handleRenameSheet: (_name: string) => void
   moveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
@@ -148,14 +147,6 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
     setNewColumnName('')
     setNotice({ text: `列「${trimmed}」を追加しました。`, tone: 'success' })
   }, [columns, newColumnName, rows, updateRows])
-
-  const handleDeleteRow = React.useCallback(
-    (rowIndex: number): void => {
-      const nextRows = rows.filter((_, index) => index !== rowIndex)
-      updateRows(nextRows)
-    },
-    [rows, updateRows],
-  )
 
   const handleAddSheet = React.useCallback((): void => {
     setSheets((current) => {
@@ -355,7 +346,6 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
     updateRows,
     handleAddRow,
     handleAddColumn,
-    handleDeleteRow,
     handleAddSheet,
     handleRenameSheet,
     moveColumn,

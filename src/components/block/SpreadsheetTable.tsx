@@ -32,7 +32,6 @@ type Props = {
   onCellChange: (_rowIndex: number, _column: string, _value: string) => void
   onPaste: (_event: React.ClipboardEvent<HTMLDivElement>) => void
   onMoveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
-  onDeleteRow: (_rowIndex: number) => void
   onCellEditorBlur: () => void
   onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }
@@ -56,7 +55,6 @@ export default function SpreadsheetTable({
   onCellChange,
   onPaste,
   onMoveColumn,
-  onDeleteRow,
   onCellEditorBlur,
   onCellEditorKeyDown,
 }: Props): React.ReactElement {
@@ -88,7 +86,6 @@ export default function SpreadsheetTable({
           onCellDoubleClick={onCellDoubleClick}
           onCellChange={onCellChange}
           onStartFillDrag={onStartFillDrag}
-          onDeleteRow={onDeleteRow}
           onCellEditorBlur={onCellEditorBlur}
           onCellEditorKeyDown={onCellEditorKeyDown}
         />

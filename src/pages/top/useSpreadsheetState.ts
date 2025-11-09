@@ -23,7 +23,7 @@ type UseSpreadsheetState = {
   setNewColumnName: React.Dispatch<React.SetStateAction<string>>
   handleAddRow: () => void
   handleAddColumn: () => void
-  handleDeleteRow: (_rowIndex: number) => void
+  handleDeleteSelectedRows: () => void
   handleAddSheet: () => void
   handleRenameSheet: (_name: string) => void
   moveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
@@ -98,11 +98,10 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     setColumnOrder,
     newColumnName,
     setNewColumnName,
-    updateRows,
-    handleAddRow,
-    handleAddColumn,
-    handleDeleteRow,
-    handleAddSheet,
+  updateRows,
+  handleAddRow,
+  handleAddColumn,
+  handleAddSheet,
     handleRenameSheet,
     moveColumn,
     applyYamlBuffer,
@@ -142,28 +141,49 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     setNotice,
   })
 
+  const handleDeleteSelectedRows = React.useCallback((): void => {
+    if (!selection) {
+      setNotice({ text: '削除する行を選択してください。', tone: 'error' })
+      return
+    }
+    if (!rows.length) {
+      setNotice({ text: '削除できる行がありません。', tone: 'error' })
+      return
+    }
+    const maxIndex = rows.length - 1
+    const start = Math.max(0, Math.min(selection.startRow, maxIndex))
+    const end = Math.max(0, Math.min(selection.endRow, maxIndex))
+    const normalizedStart = Math.min(start, end)
+    const normalizedEnd = Math.max(start, end)
+    const nextRows = rows.filter((_, index) => index < normalizedStart || index > normalizedEnd)
+    updateRows(nextRows)
+    clearSelection()
+    const removedCount = normalizedEnd - normalizedStart + 1
+    setNotice({ text: `${removedCount}行を削除しました。`, tone: 'success' })
+  }, [selection, rows, updateRows, clearSelection, setNotice])
+
   return {
     notice,
     yamlBuffer,
     setYamlBuffer,
     tableYaml,
-  sheets,
-  activeSheetIndex,
-  setActiveSheetIndex,
+    sheets,
+    activeSheetIndex,
+    setActiveSheetIndex,
     handleSelectSheet: (index: number) => {
       clearSelection()
       setActiveSheetIndex(index)
     },
-  currentSheetName: sheets[activeSheetIndex]?.name ?? '',
+    currentSheetName: sheets[activeSheetIndex]?.name ?? '',
     rows,
     columns,
     newColumnName,
     setNewColumnName,
     handleAddRow,
     handleAddColumn,
-    handleDeleteRow,
-  handleAddSheet,
-  handleRenameSheet,
+    handleDeleteSelectedRows,
+    handleAddSheet,
+    handleRenameSheet,
     moveColumn,
     applyYamlBuffer,
     handleFileUpload,

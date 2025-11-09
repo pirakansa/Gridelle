@@ -22,6 +22,7 @@ type Props = {
   onColumnNameChange: (_value: string) => void
   onAddRow: () => void
   onAddColumn: () => void
+  onDeleteSelectedRows: () => void
   selectionSummary: string
   onClearSelection: () => void
   hasSelection: boolean
@@ -44,6 +45,7 @@ export default function MenuHeader({
   onColumnNameChange,
   onAddRow,
   onAddColumn,
+  onDeleteSelectedRows,
   selectionSummary,
   onClearSelection,
   hasSelection,
@@ -137,6 +139,8 @@ export default function MenuHeader({
                   onColumnNameChange={onColumnNameChange}
                   onAddRow={onAddRow}
                   onAddColumn={onAddColumn}
+                  onDeleteSelectedRows={onDeleteSelectedRows}
+                  hasSelection={hasSelection}
                 />
               )}
               {activeMenuSection === 'selection' && (

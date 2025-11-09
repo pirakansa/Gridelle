@@ -23,7 +23,6 @@ type TableBodyProps = {
   onCellDoubleClick: (_rowIndex: number, _columnIndex: number) => void
   onCellChange: (_rowIndex: number, _column: string, _value: string) => void
   onStartFillDrag: (_event: React.PointerEvent<HTMLButtonElement>) => void
-  onDeleteRow: (_rowIndex: number) => void
   onCellEditorBlur: () => void
   onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }
@@ -44,7 +43,6 @@ export default function TableBody({
   onCellDoubleClick,
   onCellChange,
   onStartFillDrag,
-  onDeleteRow,
   onCellEditorBlur,
   onCellEditorKeyDown,
 }: TableBodyProps): React.ReactElement {
@@ -83,7 +81,6 @@ export default function TableBody({
           onCellDoubleClick={onCellDoubleClick}
           onCellChange={onCellChange}
           onStartFillDrag={onStartFillDrag}
-          onDeleteRow={onDeleteRow}
           onCellEditorBlur={onCellEditorBlur}
           onCellEditorKeyDown={onCellEditorKeyDown}
         />

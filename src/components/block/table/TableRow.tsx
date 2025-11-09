@@ -24,7 +24,6 @@ type TableRowProps = {
   onCellDoubleClick: (_rowIndex: number, _columnIndex: number) => void
   onCellChange: (_rowIndex: number, _column: string, _value: string) => void
   onStartFillDrag: (_event: React.PointerEvent<HTMLButtonElement>) => void
-  onDeleteRow: (_rowIndex: number) => void
   onCellEditorBlur: () => void
   onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }
@@ -46,7 +45,6 @@ export default function TableRow({
   onCellDoubleClick,
   onCellChange,
   onStartFillDrag,
-  onDeleteRow,
   onCellEditorBlur,
   onCellEditorKeyDown,
 }: TableRowProps): React.ReactElement {
@@ -61,17 +59,6 @@ export default function TableRow({
             onClick={(event) => onRowNumberClick(rowIndex, event.shiftKey)}
           >
             {rowIndex + 1}
-          </button>
-          <button
-            type="button"
-            className="row-number-delete-button"
-            aria-label={`行${rowIndex + 1}を削除`}
-            onClick={(event) => {
-              event.stopPropagation()
-              onDeleteRow(rowIndex)
-            }}
-          >
-            削除
           </button>
         </div>
       </th>

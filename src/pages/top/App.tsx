@@ -77,6 +77,7 @@ export default function App(): React.ReactElement {
         onColumnNameChange={spreadsheet.setNewColumnName}
         onAddRow={spreadsheet.handleAddRow}
         onAddColumn={spreadsheet.handleAddColumn}
+  onDeleteSelectedRows={spreadsheet.handleDeleteSelectedRows}
         selectionSummary={spreadsheet.selectionSummary}
         onClearSelection={spreadsheet.clearSelection}
         hasSelection={Boolean(spreadsheet.selection)}
@@ -103,7 +104,6 @@ export default function App(): React.ReactElement {
           onCellChange={spreadsheet.handleCellChange}
           onPaste={spreadsheet.handlePaste}
           onMoveColumn={spreadsheet.moveColumn}
-          onDeleteRow={spreadsheet.handleDeleteRow}
           onCellEditorBlur={spreadsheet.handleCellEditorBlur}
           onCellEditorKeyDown={spreadsheet.handleCellEditorKeyDown}
         />
