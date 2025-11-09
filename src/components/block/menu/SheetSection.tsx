@@ -98,6 +98,8 @@ export default function SheetSection({
               })}
             </div>
           </div>
+        </div>
+        <div className="flex items-center justify-end gap-3">
           <Button type="button" variant="ghost" onClick={onAddSheet} data-testid="add-sheet-button">
             シートを追加
           </Button>
