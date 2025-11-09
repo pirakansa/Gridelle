@@ -54,7 +54,7 @@ const decodeBase64Payload = (payload: string): string => {
       const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
       const decoder = new TextDecoder()
       return decoder.decode(bytes)
-    } catch (error) {
+  } catch {
       throw new GithubRepositoryAccessError(
         '取得したファイルのデコードに失敗しました。',
         'file-fetch-failed',
@@ -69,7 +69,7 @@ const decodeBase64Payload = (payload: string): string => {
   if (bufferLike) {
     try {
       return bufferLike.from(cleaned, 'base64').toString('utf-8')
-    } catch (error) {
+  } catch {
       throw new GithubRepositoryAccessError(
         '取得したファイルのデコードに失敗しました。',
         'file-fetch-failed',
@@ -100,7 +100,7 @@ export function parseGithubRepositoryUrl(rawUrl: string): GithubRepositoryCoordi
 
   try {
     parsed = new URL(rawUrl)
-  } catch (error) {
+  } catch {
     throw new GithubRepositoryAccessError(
       'GitHubリポジトリのURLが正しくありません。 https://github.com/owner/repository の形式で入力してください。',
       'invalid-url',
@@ -149,7 +149,7 @@ export function parseGithubBlobUrl(rawUrl: string): GithubBlobCoordinates {
 
   try {
     parsed = new URL(rawUrl)
-  } catch (error) {
+  } catch {
     throw new GithubRepositoryAccessError(
       'GitHubのBlob URLが正しくありません。 https://github.com/owner/repository/blob/branch/path の形式で入力してください。',
       'invalid-blob-url',
@@ -172,7 +172,7 @@ export function parseGithubBlobUrl(rawUrl: string): GithubBlobCoordinates {
     )
   }
 
-  const [owner, repository, _blobKeyword, ...rest] = segments
+  const [owner, repository, , ...rest] = segments
   const ref = rest.shift() ?? ''
   const filePath = rest.join('/')
 
@@ -210,7 +210,7 @@ export async function verifyRepositoryCollaborator(
   try {
     const { data } = await octokit.rest.users.getAuthenticated()
     username = data.login
-  } catch (error) {
+  } catch {
     throw new GithubRepositoryAccessError(
       'GitHubのユーザー情報を取得できませんでした。再度ログインし直してください。',
       'unauthorized',

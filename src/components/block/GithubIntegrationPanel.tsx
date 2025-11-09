@@ -18,6 +18,16 @@ import {
 
 type IntegrationMode = 'blob-url' | 'repository' | 'pull-request'
 
+type LoadedFileInfo = {
+  repository: GithubRepositoryCoordinates
+  branch: string
+  filePath: string
+  mode: IntegrationMode
+}
+
+export type GithubIntegrationMode = IntegrationMode
+export type GithubIntegrationLoadedFileInfo = LoadedFileInfo
+
 const integrationModeMeta: Array<{
   id: IntegrationMode
   label: string
@@ -51,7 +61,9 @@ type GithubIntegrationPanelProps = {
     repository: GithubRepositoryCoordinates
     branch: string
     filePath: string
+    mode: IntegrationMode
   }) => void
+  lastLoadedFileInfo?: LoadedFileInfo | null
 }
 
 const YAML_EXTENSION_PATTERN = /\.ya?ml$/i
@@ -64,8 +76,11 @@ export default function GithubIntegrationPanel({
   onBranchSelected,
   onFileSelected,
   onYamlContentLoaded,
+  lastLoadedFileInfo = null,
 }: GithubIntegrationPanelProps): React.ReactElement {
-  const [integrationMode, setIntegrationMode] = React.useState<IntegrationMode>('repository')
+  const [integrationMode, setIntegrationMode] = React.useState<IntegrationMode>(
+    lastLoadedFileInfo?.mode ?? 'repository',
+  )
 
   const [blobUrl, setBlobUrl] = React.useState<string>('')
   const [isBlobLoading, setIsBlobLoading] = React.useState<boolean>(false)
@@ -294,6 +309,7 @@ export default function GithubIntegrationPanel({
             repository: repositoryCoordinates,
             branch: selectedBranch,
             filePath,
+            mode: 'repository',
           })
         })
         .catch((error) => {
@@ -339,6 +355,7 @@ export default function GithubIntegrationPanel({
           },
           branch: result.coordinates.ref,
           filePath: result.coordinates.filePath,
+          mode: 'blob-url',
         })
       } catch (error) {
         if (error instanceof GithubRepositoryAccessError) {
@@ -378,6 +395,35 @@ export default function GithubIntegrationPanel({
           {integrationModeMeta.find((meta) => meta.id === integrationMode)?.helper ?? ''}
         </p>
       </section>
+
+      {lastLoadedFileInfo && (
+        <section
+          className="rounded border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-sm"
+          data-testid="github-last-loaded-info"
+        >
+          <p className="text-sm font-medium text-slate-700">最後に読み込んだファイル</p>
+          <p className="mt-1">
+            パターン:{' '}
+            <span className="font-mono text-slate-700">
+              {integrationModeMeta.find((meta) => meta.id === lastLoadedFileInfo.mode)?.label ?? lastLoadedFileInfo.mode}
+            </span>
+          </p>
+          <p>
+            リポジトリ:{' '}
+            <span className="font-mono text-slate-700">
+              {`${lastLoadedFileInfo.repository.owner}/${lastLoadedFileInfo.repository.repository}`}
+            </span>
+          </p>
+          <p>
+            ブランチ / Ref:{' '}
+            <span className="font-mono text-slate-700">{lastLoadedFileInfo.branch}</span>
+          </p>
+          <p>
+            ファイル:{' '}
+            <span className="font-mono text-slate-700">{lastLoadedFileInfo.filePath}</span>
+          </p>
+        </section>
+      )}
 
       {integrationMode === 'blob-url' && (
         <section className="flex flex-col gap-3">
@@ -452,7 +498,7 @@ export default function GithubIntegrationPanel({
             )}
           </form>
 
-          {repositoryCoordinates && (
+          {(repositoryCoordinates || selectedBranch || selectedFilePath || isFileLoading) && (
             <section className="flex flex-col gap-3">
               <div
                 className="rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600"
@@ -460,10 +506,16 @@ export default function GithubIntegrationPanel({
               >
                 <p className="font-medium text-slate-700">選択内容の確認</p>
                 <p>
-                  リポジトリ: <span className="font-mono text-slate-700">{`${repositoryCoordinates.owner}/${repositoryCoordinates.repository}`}</span>
+                  リポジトリ:{' '}
+                  <span className="font-mono text-slate-700">
+                    {repositoryCoordinates
+                      ? `${repositoryCoordinates.owner}/${repositoryCoordinates.repository}`
+                      : '未選択'}
+                  </span>
                 </p>
                 <p>
-                  ブランチ: <span className="font-mono text-slate-700">{selectedBranch || '未選択'}</span>
+                  ブランチ:{' '}
+                  <span className="font-mono text-slate-700">{selectedBranch || '未選択'}</span>
                 </p>
                 <p>
                   ファイル:{' '}
@@ -477,41 +529,43 @@ export default function GithubIntegrationPanel({
                 </p>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label htmlFor="repository-branch" className="text-sm font-medium text-slate-800">
-                  ブランチを選択
-                </label>
-                <SelectField
-                  id="repository-branch"
-                  value={selectedBranch}
-                  onChange={handleBranchChange}
-                  disabled={isBranchLoading || branches.length === 0}
-                  fullWidth
-                  data-testid="repository-branch-select"
-                >
-                  {branches.length === 0 && <option value="">ブランチが取得できませんでした</option>}
-                  {branches.map((branch) => (
-                    <option key={branch.name} value={branch.name}>
-                      {branch.name}
-                    </option>
-                  ))}
-                </SelectField>
-                <p className="text-xs text-slate-500">
-                  対象のブランチを選択すると、その内容からYAMLファイルなどを選べます。
-                </p>
-                {isBranchLoading && (
-                  <p className="text-xs text-slate-500" data-testid="repository-branch-loading">
-                    ブランチ一覧を取得中です...
+              {repositoryCoordinates && (
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="repository-branch" className="text-sm font-medium text-slate-800">
+                    ブランチを選択
+                  </label>
+                  <SelectField
+                    id="repository-branch"
+                    value={selectedBranch}
+                    onChange={handleBranchChange}
+                    disabled={isBranchLoading || branches.length === 0}
+                    fullWidth
+                    data-testid="repository-branch-select"
+                  >
+                    {branches.length === 0 && <option value="">ブランチが取得できませんでした</option>}
+                    {branches.map((branch) => (
+                      <option key={branch.name} value={branch.name}>
+                        {branch.name}
+                      </option>
+                    ))}
+                  </SelectField>
+                  <p className="text-xs text-slate-500">
+                    対象のブランチを選択すると、その内容からYAMLファイルなどを選べます。
                   </p>
-                )}
-                {branchErrorMessage && (
-                  <p className="text-sm text-red-600" role="alert" data-testid="repository-branch-error">
-                    {branchErrorMessage}
-                  </p>
-                )}
-              </div>
+                  {isBranchLoading && (
+                    <p className="text-xs text-slate-500" data-testid="repository-branch-loading">
+                      ブランチ一覧を取得中です...
+                    </p>
+                  )}
+                  {branchErrorMessage && (
+                    <p className="text-sm text-red-600" role="alert" data-testid="repository-branch-error">
+                      {branchErrorMessage}
+                    </p>
+                  )}
+                </div>
+              )}
 
-              {selectedBranch && (
+              {repositoryCoordinates && selectedBranch && (
                 <div className="flex flex-col gap-2">
                   <span className="text-sm font-medium text-slate-800">ファイルを選択</span>
                   <div
