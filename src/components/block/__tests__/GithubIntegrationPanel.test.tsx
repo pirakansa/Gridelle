@@ -8,6 +8,7 @@ import {
   listRepositoryBranches,
   fetchRepositoryTree,
   fetchRepositoryFileContent,
+  fetchFileFromBlobUrl,
 } from '../../../services/githubRepositoryAccessService'
 
 vi.mock('../../../services/githubRepositoryAccessService', async (importOriginal) => {
@@ -18,6 +19,7 @@ vi.mock('../../../services/githubRepositoryAccessService', async (importOriginal
     listRepositoryBranches: vi.fn(),
     fetchRepositoryTree: vi.fn(),
     fetchRepositoryFileContent: vi.fn(),
+    fetchFileFromBlobUrl: vi.fn(),
   }
 })
 
@@ -178,5 +180,47 @@ describe('GithubIntegrationPanel', () => {
     expect(screen.getByTestId('repository-file-error')).toHaveTextContent(
       'YAMLファイル（.yml / .yaml）のみ選択できます。',
     )
+  })
+
+  it('reads yaml content via blob url workflow', async () => {
+    const handleFileSelected = vi.fn()
+    const handleYamlContentLoaded = vi.fn()
+    const fetchBlobMock = vi.mocked(fetchFileFromBlobUrl)
+
+    fetchBlobMock.mockResolvedValue({
+      content: 'key: value\n',
+      coordinates: {
+        owner: 'example',
+        repository: 'repo',
+        ref: 'main',
+        filePath: 'configs/config.yaml',
+      },
+    })
+
+    render(
+      <GithubIntegrationPanel
+        onFileSelected={handleFileSelected}
+        onYamlContentLoaded={handleYamlContentLoaded}
+      />,
+    )
+
+    const blobModeButton = screen.getByTestId('github-integration-mode-blob-url')
+    fireEvent.click(blobModeButton)
+
+    fireEvent.change(screen.getByTestId('blob-url-input'), {
+      target: { value: 'https://github.com/example/repo/blob/main/configs/config.yaml' },
+    })
+
+    fireEvent.submit(screen.getByTestId('blob-url-form'))
+
+    expect(fetchBlobMock).toHaveBeenCalledWith('https://github.com/example/repo/blob/main/configs/config.yaml')
+    await screen.findByTestId('blob-url-success')
+    expect(handleFileSelected).toHaveBeenCalledWith('configs/config.yaml')
+    expect(handleYamlContentLoaded).toHaveBeenCalledWith({
+      yaml: 'key: value\n',
+      repository: { owner: 'example', repository: 'repo' },
+      branch: 'main',
+      filePath: 'configs/config.yaml',
+    })
   })
 })

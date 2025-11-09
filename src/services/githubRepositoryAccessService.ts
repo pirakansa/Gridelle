@@ -24,6 +24,9 @@ export type GithubRepositoryAccessErrorCode =
   | 'branch-fetch-failed'
   | 'tree-fetch-failed'
   | 'file-fetch-failed'
+  | 'invalid-blob-url'
+  | 'invalid-pull-request-url'
+  | 'pull-request-fetch-failed'
   | 'unknown'
 
 export type RepositoryBranch = {
@@ -35,6 +38,11 @@ export type RepositoryTreeEntry = {
   path: string
   type: 'blob' | 'tree'
   sha: string
+}
+
+export type GithubBlobCoordinates = GithubRepositoryCoordinates & {
+  ref: string
+  filePath: string
 }
 
 const decodeBase64Payload = (payload: string): string => {
@@ -132,6 +140,61 @@ export function parseGithubRepositoryUrl(rawUrl: string): GithubRepositoryCoordi
   return {
     owner,
     repository,
+  }
+}
+
+// Function Header: Parses a GitHub blob URL to identify repository coordinates, ref, and file path.
+export function parseGithubBlobUrl(rawUrl: string): GithubBlobCoordinates {
+  let parsed: URL
+
+  try {
+    parsed = new URL(rawUrl)
+  } catch (error) {
+    throw new GithubRepositoryAccessError(
+      'GitHubのBlob URLが正しくありません。 https://github.com/owner/repository/blob/branch/path の形式で入力してください。',
+      'invalid-blob-url',
+    )
+  }
+
+  if (!GITHUB_HOST_PATTERN.test(parsed.hostname)) {
+    throw new GithubRepositoryAccessError(
+      'GitHubのBlob URLのホスト名が無効です。 https://github.com/owner/repository/blob/branch/path の形式で入力してください。',
+      'invalid-blob-url',
+    )
+  }
+
+  const segments = parsed.pathname.split('/').filter(Boolean)
+
+  if (segments.length < 5 || segments[2] !== 'blob') {
+    throw new GithubRepositoryAccessError(
+      'Blob URLからブランチとファイルパスを判別できません。 https://github.com/owner/repository/blob/branch/path の形式で入力してください。',
+      'invalid-blob-url',
+    )
+  }
+
+  const [owner, repository, _blobKeyword, ...rest] = segments
+  const ref = rest.shift() ?? ''
+  const filePath = rest.join('/')
+
+  if (!OWNER_REPO_PATTERN.test(owner) || !OWNER_REPO_PATTERN.test(repository)) {
+    throw new GithubRepositoryAccessError(
+      'Blob URLに含まれる所有者またはリポジトリ名が無効です。',
+      'invalid-blob-url',
+    )
+  }
+
+  if (!ref || !filePath) {
+    throw new GithubRepositoryAccessError(
+      'Blob URLにブランチまたはファイルパスが含まれていません。',
+      'invalid-blob-url',
+    )
+  }
+
+  return {
+    owner,
+    repository,
+    ref,
+    filePath,
   }
 }
 
@@ -344,5 +407,23 @@ export async function fetchRepositoryFileContent(
       'GitHubファイルの取得に失敗しました。時間を置いて再度お試しください。',
       'file-fetch-failed',
     )
+  }
+}
+
+// Function Header: Downloads a file referenced by a GitHub blob URL and returns decoded content with coordinates.
+export async function fetchFileFromBlobUrl(blobUrl: string): Promise<{
+  content: string
+  coordinates: GithubBlobCoordinates
+}> {
+  const coordinates = parseGithubBlobUrl(blobUrl)
+  const content = await fetchRepositoryFileContent(
+    { owner: coordinates.owner, repository: coordinates.repository },
+    coordinates.ref,
+    coordinates.filePath,
+  )
+
+  return {
+    content,
+    coordinates,
   }
 }

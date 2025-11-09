@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   GithubRepositoryAccessError,
   parseGithubRepositoryUrl,
+  parseGithubBlobUrl,
   verifyRepositoryCollaborator,
   listRepositoryBranches,
   fetchRepositoryTree,
   fetchRepositoryFileContent,
+  fetchFileFromBlobUrl,
 } from '../githubRepositoryAccessService'
 import { createOctokitClient } from '../octokitService'
 
@@ -192,5 +194,47 @@ describe('githubRepositoryAccessService', () => {
     await expect(
       fetchRepositoryFileContent({ owner: 'gridelle', repository: 'app' }, 'main', 'table.yaml'),
     ).rejects.toMatchObject({ code: 'file-fetch-failed' })
+  })
+
+  it('parses blob url into coordinates', () => {
+    expect(
+      parseGithubBlobUrl('https://github.com/gridelle/app/blob/main/config/table.yaml'),
+    ).toEqual({
+      owner: 'gridelle',
+      repository: 'app',
+      ref: 'main',
+      filePath: 'config/table.yaml',
+    })
+  })
+
+  it('fetches file content from blob url', async () => {
+    const base64 = Buffer.from('yaml: 24\n', 'utf-8').toString('base64')
+    const octokit = {
+      rest: {
+        repos: {
+          getContent: vi.fn().mockResolvedValue({
+            data: {
+              type: 'file',
+              content: base64,
+              encoding: 'base64',
+            },
+          }),
+        },
+      },
+    }
+
+    vi.mocked(createOctokitClient).mockReturnValue(octokit as never)
+
+    const result = await fetchFileFromBlobUrl('https://github.com/gridelle/app/blob/main/config/table.yaml')
+
+    expect(result).toEqual({
+      content: 'yaml: 24\n',
+      coordinates: {
+        owner: 'gridelle',
+        repository: 'app',
+        ref: 'main',
+        filePath: 'config/table.yaml',
+      },
+    })
   })
 })
