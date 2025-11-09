@@ -4,6 +4,7 @@ import React from 'react'
 type TableHeadProps = {
   columns: string[]
   onMoveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
+  onColumnHeaderClick: (_columnIndex: number, _extend: boolean) => void
 }
 
 const columnButtonClass =
@@ -13,6 +14,7 @@ const columnButtonClass =
 export default function TableHead({
   columns,
   onMoveColumn,
+  onColumnHeaderClick,
 }: TableHeadProps): React.ReactElement {
   return (
     <thead>
@@ -23,9 +25,17 @@ export default function TableHead({
         {columns.map((column, columnIndex) => (
           <th key={column} data-testid="column-header">
             <div className="flex items-center gap-2">
-              <span data-testid="column-title" className="font-semibold">
-                {column}
-              </span>
+              <button
+                type="button"
+                className="column-header-button"
+                onClick={(event) => onColumnHeaderClick(columnIndex, event.shiftKey)}
+                aria-label={`${column}列を選択`}
+                data-testid={`column-select-${columnIndex}`}
+              >
+                <span data-testid="column-title" className="font-semibold">
+                  {column}
+                </span>
+              </button>
               <div className="flex items-center gap-1">
                 <button
                   type="button"

@@ -38,6 +38,7 @@ type UseSpreadsheetState = {
   setBulkValue: React.Dispatch<React.SetStateAction<string>>
   applyBulkInput: () => void
   handleRowNumberClick: (_rowIndex: number, _extend: boolean) => void
+  handleColumnHeaderClick: (_columnIndex: number, _extend: boolean) => void
   selection: SelectionRange | null
   activeRange: SelectionRange | null
   selectionSummary: string
@@ -133,6 +134,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleCellEditorBlur,
     handleCellEditorKeyDown,
     handleRowNumberClick,
+    handleColumnHeaderClick,
   } = useSpreadsheetInteractionController({
     columns,
     rows,
@@ -268,7 +270,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleInsertRowBelowSelection,
     handleAddColumn,
     handleInsertColumnRightOfSelection,
-  handleDeleteSelectedColumns,
+    handleDeleteSelectedColumns,
     handleDeleteSelectedRows,
     handleAddSheet,
     handleRenameSheet,
@@ -281,6 +283,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     setBulkValue,
     applyBulkInput,
     handleRowNumberClick,
+    handleColumnHeaderClick,
     selection,
     activeRange,
     fillPreview,

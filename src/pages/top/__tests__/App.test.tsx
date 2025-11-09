@@ -194,7 +194,7 @@ describe('App', () => {
 
     await user.click(screen.getByTestId('menu-tab-structure'))
 
-    await user.click(screen.getByTestId('cell-box-0-feature'))
+    await user.click(screen.getByTestId('column-select-0'))
 
     const insertColumnButton = screen.getByTestId('insert-column-right-of-selection')
     expect(insertColumnButton).toBeEnabled()
@@ -210,14 +210,26 @@ describe('App', () => {
     expect(insertedColumnCell).toHaveTextContent('')
   })
 
+  it('列ヘッダーのボタンで列全体を選択できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('column-select-1'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-box-0-owner')).toHaveAttribute('data-selected', 'true')
+      expect(screen.getByTestId('cell-box-1-owner')).toHaveAttribute('data-selected', 'true')
+    })
+  })
+
   it('すべての列を削除するとテーブルが空状態になる', async () => {
     const user = userEvent.setup()
     render(<App />)
 
     await user.click(screen.getByTestId('menu-tab-structure'))
 
-    await user.click(screen.getByTestId('cell-box-0-feature'))
-  fireEvent.click(screen.getByTestId('cell-box-0-effort'), { shiftKey: true })
+    await user.click(screen.getByTestId('column-select-0'))
+    fireEvent.click(screen.getByTestId('column-select-3'), { shiftKey: true })
 
     const deleteColumnsButton = screen.getByTestId('delete-selected-columns')
     expect(deleteColumnsButton).toBeEnabled()

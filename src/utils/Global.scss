@@ -43,6 +43,10 @@ body {
   @apply w-full rounded border border-transparent px-2 py-1 text-xs font-semibold text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-200;
 }
 
+.column-header-button {
+  @apply rounded border border-transparent px-2 py-1 text-xs font-semibold text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-200;
+}
+
 .selected-cell {
   @apply bg-blue-50/80 ring-1 ring-inset ring-blue-200;
 }

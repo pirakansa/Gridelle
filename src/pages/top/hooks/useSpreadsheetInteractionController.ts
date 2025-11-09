@@ -30,6 +30,7 @@ type UseSpreadsheetInteractionController = {
   clearSelection: () => void
   applyBulkInput: () => void
   handleRowNumberClick: (_rowIndex: number, _extend: boolean) => void
+  handleColumnHeaderClick: (_columnIndex: number, _extend: boolean) => void
   handleCellPointerDown: (
     _event: React.PointerEvent<HTMLTableCellElement>,
     _rowIndex: number,
@@ -164,6 +165,40 @@ export const useSpreadsheetInteractionController = ({
     [columns.length, selection, resetFillState, setSelection, setAnchorCell, setIsSelecting, setEditingCell],
   )
 
+  const handleColumnHeaderClick = React.useCallback(
+    (columnIndex: number, extend: boolean): void => {
+      if (!columns.length) {
+        return
+      }
+      resetFillState()
+      const hasRows = rows.length > 0
+      const startRow = 0
+      const endRow = hasRows ? rows.length - 1 : 0
+      if (extend && selection) {
+        const startCol = Math.min(selection.startCol, columnIndex)
+        const endCol = Math.max(selection.endCol, columnIndex)
+        setSelection({
+          startRow,
+          endRow,
+          startCol,
+          endCol,
+        })
+        setAnchorCell({ rowIndex: startRow, columnIndex: startCol })
+      } else {
+        setAnchorCell({ rowIndex: startRow, columnIndex })
+        setSelection({
+          startRow,
+          endRow,
+          startCol: columnIndex,
+          endCol: columnIndex,
+        })
+      }
+      setIsSelecting(false)
+      setEditingCell(null)
+    },
+    [columns.length, rows.length, selection, resetFillState, setSelection, setAnchorCell, setIsSelecting, setEditingCell],
+  )
+
   const handleCellPointerEnter = React.useCallback(
     (rowIndex: number, columnIndex: number): void => {
       if (isFillDragActive && selection) {
@@ -256,6 +291,7 @@ export const useSpreadsheetInteractionController = ({
     clearSelection,
     applyBulkInput,
     handleRowNumberClick,
+  handleColumnHeaderClick,
     handleCellPointerDown,
     handleCellPointerEnter,
     handleCellClick,

@@ -15,6 +15,7 @@ type Props = {
   isFillDragActive: boolean
   editingCell: CellPosition | null
   onRowNumberClick: (_rowIndex: number, _extend: boolean) => void
+  onColumnHeaderClick: (_columnIndex: number, _extend: boolean) => void
   onPointerDown: (
     _event: React.PointerEvent<HTMLTableCellElement>,
     _rowIndex: number,
@@ -46,6 +47,7 @@ export default function SpreadsheetTable({
   isFillDragActive,
   editingCell,
   onRowNumberClick,
+  onColumnHeaderClick,
   onPointerDown,
   onPointerEnter,
   onCellClick,
@@ -70,7 +72,7 @@ export default function SpreadsheetTable({
       data-testid="interactive-table-shell"
     >
       <table className="spreadsheet-table">
-        <TableHead columns={columns} onMoveColumn={onMoveColumn} />
+        <TableHead columns={columns} onMoveColumn={onMoveColumn} onColumnHeaderClick={onColumnHeaderClick} />
         <TableBody
           rows={rows}
           columns={columns}
