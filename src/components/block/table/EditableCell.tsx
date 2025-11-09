@@ -120,6 +120,7 @@ export default function EditableCell({
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => event.stopPropagation()}
             onDoubleClick={(event) => event.stopPropagation()}
+            onPaste={(event) => event.stopPropagation()}
           />
         ) : (
           <div

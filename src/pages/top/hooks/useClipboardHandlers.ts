@@ -91,6 +91,13 @@ export const useClipboardHandlers = ({
 
   const handlePaste = React.useCallback(
     (event: React.ClipboardEvent<HTMLDivElement>): void => {
+      const targetNode = event.target as HTMLElement | null
+      if (targetNode) {
+        const tagName = targetNode.tagName
+        if (tagName === 'TEXTAREA' || tagName === 'INPUT' || targetNode.isContentEditable) {
+          return
+        }
+      }
       const text = event.clipboardData?.getData('text/plain') ?? ''
       if (!text.trim()) {
         return

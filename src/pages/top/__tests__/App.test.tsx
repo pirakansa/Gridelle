@@ -460,6 +460,34 @@ describe('App', () => {
     })
   })
 
+  it('セル編集中に複数行をペーストしても範囲展開されない', async () => {
+    render(<App />)
+
+    const editableBox = screen.getByTestId('cell-box-0-feature')
+    fireEvent.doubleClick(editableBox)
+    const editor = (await screen.findByTestId('cell-0-feature')) as HTMLTextAreaElement
+
+    fireEvent.change(editor, { target: { value: '' } })
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent
+    const clipboardData = {
+      getData: vi.fn().mockReturnValue('Line1\nLine2'),
+    }
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: clipboardData,
+    })
+
+    fireEvent(editor, pasteEvent)
+    fireEvent.change(editor, { target: { value: 'Line1\nLine2' } })
+    fireEvent.blur(editor)
+
+    expect(clipboardData.getData).not.toHaveBeenCalled()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature').textContent).toBe('Line1\nLine2')
+      expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('YAML Export')
+    })
+  })
+
   it('DELキーで選択セルの内容を削除できる', async () => {
     render(<App />)
 
@@ -525,6 +553,25 @@ describe('App', () => {
 
     expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('DONE')
     expect(screen.getByTestId('cell-display-1-effort')).toHaveTextContent('DONE')
+  })
+
+  it('一括入力で改行区切りの値を行ごとに反映できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-0-feature'))
+    fireEvent.click(screen.getByTestId('cell-box-2-feature'), { shiftKey: true })
+
+    await user.click(screen.getByTestId('menu-tab-selection'))
+    const bulkInput = screen.getByTestId('bulk-input') as HTMLInputElement
+    fireEvent.change(bulkInput, { target: { value: 'First\nSecond\nThird' } })
+    await user.click(screen.getByTestId('bulk-apply'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('First')
+      expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('Second')
+      expect(screen.getByTestId('cell-display-2-feature')).toHaveTextContent('Third')
+    })
   })
 
   it('フィルハンドルで下方向に値をコピーできる', () => {
