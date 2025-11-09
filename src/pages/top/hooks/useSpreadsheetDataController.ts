@@ -1,11 +1,12 @@
 // File Header: Hook responsible for spreadsheet data state and YAML/column operations.
 import React from 'react'
-import { parseWorkbook, stringifyWorkbook, type TableRow, type TableSheet } from '../../../services/workbookService'
+import { stringifyWorkbook, type TableRow, type TableSheet } from '../../../services/workbookService'
 import { copyText } from '../../../services/clipboardService'
 import { downloadTextFile, readFileAsText } from '../../../services/fileTransferService'
 import type { Notice } from '../types'
 import { useSheetState } from './internal/useSheetState'
 import { createSheetState, stripSheetState } from './internal/spreadsheetDataUtils'
+import { parseWorkbookAsync } from '../../../services/yamlWorkerClient'
 
 type UseSpreadsheetDataController = {
   notice: Notice | null
@@ -57,27 +58,39 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
   replaceSheets,
   } = useSheetState({ initialSheets, setNotice, setYamlBuffer })
 
+  const parseRequestIdRef = React.useRef<number>(0)
+
   const tableYaml = React.useMemo(
     () => stringifyWorkbook(sheets.map(stripSheetState)),
     [sheets],
   )
 
   const applyYamlBuffer = React.useCallback((): void => {
-    try {
-      const parsed = parseWorkbook(yamlBuffer)
-      const next = createSheetState(parsed)
-      replaceSheets(next)
-      setActiveSheetIndex((prev) => {
-        if (!next.length) {
-          return 0
+    const requestId = Date.now()
+    parseRequestIdRef.current = requestId
+    parseWorkbookAsync(yamlBuffer)
+      .then((parsed) => {
+        if (parseRequestIdRef.current !== requestId) {
+          return
         }
-        return Math.min(prev, next.length - 1)
+        const next = createSheetState(parsed)
+        replaceSheets(next)
+        setActiveSheetIndex((prev) => {
+          if (!next.length) {
+            return 0
+          }
+          return Math.min(prev, next.length - 1)
+        })
+        setNotice({ text: 'YAMLをテーブルに反映しました。', tone: 'success' })
       })
-      setNotice({ text: 'YAMLをテーブルに反映しました。', tone: 'success' })
-    } catch (error) {
-      setNotice({ text: (error as Error).message, tone: 'error' })
-    }
-  }, [replaceSheets, setActiveSheetIndex, setNotice, yamlBuffer])
+      .catch((error) => {
+        if (parseRequestIdRef.current !== requestId) {
+          return
+        }
+        const message = error instanceof Error ? error.message : String(error)
+        setNotice({ text: message, tone: 'error' })
+      })
+  }, [parseRequestIdRef, replaceSheets, setActiveSheetIndex, setNotice, yamlBuffer])
 
   const handleFileUpload = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -91,22 +104,34 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
       readFileAsText(file)
         .then((content) => {
           setYamlBuffer(content)
-          try {
-            const parsed = createSheetState(parseWorkbook(content))
-            replaceSheets(parsed)
-            setActiveSheetIndex((prev) => {
-              if (!parsed.length) {
-                return 0
+          const requestId = Date.now()
+          parseRequestIdRef.current = requestId
+          return parseWorkbookAsync(content)
+            .then((parsedSheets) => {
+              if (parseRequestIdRef.current !== requestId) {
+                return
               }
-              return Math.min(prev, parsed.length - 1)
+              const parsed = createSheetState(parsedSheets)
+              replaceSheets(parsed)
+              setActiveSheetIndex((prev) => {
+                if (!parsed.length) {
+                  return 0
+                }
+                return Math.min(prev, parsed.length - 1)
+              })
+              setNotice({ text: 'ファイルを読み込みました。', tone: 'success' })
             })
-            setNotice({ text: 'ファイルを読み込みました。', tone: 'success' })
-          } catch (error) {
-            setNotice({
-              text: `アップロードしたファイルを解析できませんでした: ${(error as Error).message}`,
-              tone: 'error',
+            .catch((error) => {
+              if (parseRequestIdRef.current !== requestId) {
+                return
+              }
+              setNotice({
+                text: `アップロードしたファイルを解析できませんでした: ${
+                  error instanceof Error ? error.message : String(error)
+                }`,
+                tone: 'error',
+              })
             })
-          }
         })
         .catch((error) => {
           const message = error instanceof Error ? error.message : String(error)
@@ -116,7 +141,7 @@ export const useSpreadsheetDataController = (initialSheets: TableSheet[]): UseSp
           })
         })
     },
-    [replaceSheets, setActiveSheetIndex, setNotice],
+    [parseRequestIdRef, replaceSheets, setActiveSheetIndex, setNotice],
   )
 
   const handleDownloadYaml = React.useCallback((): void => {

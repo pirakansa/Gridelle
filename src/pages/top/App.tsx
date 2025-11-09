@@ -113,7 +113,6 @@ export default function App(): React.ReactElement {
           onStartFillDrag={spreadsheet.startFillDrag}
           onCellChange={spreadsheet.handleCellChange}
           onPaste={spreadsheet.handlePaste}
-          onMoveColumn={spreadsheet.moveColumn}
           onCellEditorBlur={spreadsheet.handleCellEditorBlur}
           onCellEditorKeyDown={spreadsheet.handleCellEditorKeyDown}
         />
