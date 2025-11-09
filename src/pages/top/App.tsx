@@ -71,10 +71,12 @@ export default function App(): React.ReactElement {
         activeSheetIndex={spreadsheet.activeSheetIndex}
         onSelectSheet={spreadsheet.handleSelectSheet}
         currentSheetName={spreadsheet.currentSheetName}
-        onRenameSheet={spreadsheet.handleRenameSheet}
-        onAddSheet={spreadsheet.handleAddSheet}
+    onRenameSheet={spreadsheet.handleRenameSheet}
+    onAddSheet={spreadsheet.handleAddSheet}
     onAddRow={spreadsheet.handleAddRow}
+    onInsertRowBelowSelection={spreadsheet.handleInsertRowBelowSelection}
     onAddColumn={spreadsheet.handleAddColumn}
+    onInsertColumnRightOfSelection={spreadsheet.handleInsertColumnRightOfSelection}
     onDeleteSelectedRows={spreadsheet.handleDeleteSelectedRows}
         selectionSummary={spreadsheet.selectionSummary}
         onClearSelection={spreadsheet.clearSelection}

@@ -19,7 +19,9 @@ type Props = {
   onRenameSheet: (_name: string) => void
   onAddSheet: () => void
   onAddRow: () => void
+  onInsertRowBelowSelection: () => void
   onAddColumn: () => void
+  onInsertColumnRightOfSelection: () => void
   onDeleteSelectedRows: () => void
   selectionSummary: string
   onClearSelection: () => void
@@ -40,7 +42,9 @@ export default function MenuHeader({
   onRenameSheet,
   onAddSheet,
   onAddRow,
+  onInsertRowBelowSelection,
   onAddColumn,
+  onInsertColumnRightOfSelection,
   onDeleteSelectedRows,
   selectionSummary,
   onClearSelection,
@@ -132,7 +136,9 @@ export default function MenuHeader({
               {activeMenuSection === 'structure' && (
                 <StructureSection
                   onAddRow={onAddRow}
+                  onInsertRowBelowSelection={onInsertRowBelowSelection}
                   onAddColumn={onAddColumn}
+                  onInsertColumnRightOfSelection={onInsertColumnRightOfSelection}
                   onDeleteSelectedRows={onDeleteSelectedRows}
                   hasSelection={hasSelection}
                 />

@@ -3,6 +3,8 @@ import React from 'react'
 import type { TableRow, TableSheet } from '../../services/workbookService'
 import { useSpreadsheetDataController } from './hooks/useSpreadsheetDataController'
 import { useSpreadsheetInteractionController } from './hooks/useSpreadsheetInteractionController'
+import { generateNextColumnKey } from './hooks/internal/spreadsheetDataUtils'
+import { createEmptyRow } from './utils/spreadsheetTableUtils'
 import type { CellPosition, Notice, SelectionRange } from './types'
 
 export type { CellPosition, SelectionRange } from './types'
@@ -20,7 +22,9 @@ type UseSpreadsheetState = {
   rows: TableRow[]
   columns: string[]
   handleAddRow: () => void
+  handleInsertRowBelowSelection: () => void
   handleAddColumn: () => void
+  handleInsertColumnRightOfSelection: () => void
   handleDeleteSelectedRows: () => void
   handleAddSheet: () => void
   handleRenameSheet: (_name: string) => void
@@ -137,6 +141,53 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     setNotice,
   })
 
+  const handleInsertRowBelowSelection = React.useCallback((): void => {
+    if (!selection) {
+      setNotice({ text: '挿入する行を選択してください。', tone: 'error' })
+      return
+    }
+    const baseColumns = columns.length ? columns : ['column_1']
+    const newRow = createEmptyRow(baseColumns)
+    if (!rows.length) {
+      updateRows([newRow])
+      setNotice({ text: '行を追加しました。', tone: 'success' })
+      return
+    }
+    const maxIndex = rows.length - 1
+    const insertAfter = Math.min(Math.max(selection.endRow, 0), maxIndex)
+    const insertIndex = insertAfter + 1
+    const nextRows = insertIndex >= rows.length
+      ? [...rows, newRow]
+      : [...rows.slice(0, insertIndex), newRow, ...rows.slice(insertIndex)]
+    updateRows(nextRows)
+    setNotice({ text: '選択行の下に行を追加しました。', tone: 'success' })
+  }, [selection, columns, rows, updateRows, setNotice])
+
+  const handleInsertColumnRightOfSelection = React.useCallback((): void => {
+    if (!selection) {
+      setNotice({ text: '挿入する列を選択してください。', tone: 'error' })
+      return
+    }
+    const newColumnKey = generateNextColumnKey(columns)
+    const updatedRows = rows.length
+      ? rows.map((row) => ({ ...row, [newColumnKey]: row[newColumnKey] ?? '' }))
+      : [{ [newColumnKey]: '' }]
+    const insertAfter = columns.length ? Math.min(Math.max(selection.endCol, 0), columns.length - 1) : -1
+    const insertIndex = insertAfter + 1
+    updateRows(updatedRows)
+    setColumnOrder((currentOrder) => {
+      const baseOrder = currentOrder.length ? currentOrder : columns
+      if (!baseOrder.length) {
+        return [newColumnKey]
+      }
+      const filtered = baseOrder.filter((key) => key !== newColumnKey)
+      const targetIndex = Math.min(insertIndex, filtered.length)
+      filtered.splice(targetIndex, 0, newColumnKey)
+      return filtered
+    })
+    setNotice({ text: `列「${newColumnKey}」を選択列の右に追加しました。`, tone: 'success' })
+  }, [selection, columns, rows, updateRows, setColumnOrder, setNotice])
+
   const handleDeleteSelectedRows = React.useCallback((): void => {
     if (!selection) {
       setNotice({ text: '削除する行を選択してください。', tone: 'error' })
@@ -174,7 +225,9 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     rows,
     columns,
     handleAddRow,
+    handleInsertRowBelowSelection,
     handleAddColumn,
+    handleInsertColumnRightOfSelection,
     handleDeleteSelectedRows,
     handleAddSheet,
     handleRenameSheet,
