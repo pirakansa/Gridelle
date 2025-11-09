@@ -48,7 +48,7 @@ export default function MenuTabs({
         {(
           [
             { id: 'sheet' as const, label: 'シート' },
-            { id: 'structure' as const, label: '構造' },
+            { id: 'structure' as const, label: '行列' },
             { id: 'selection' as const, label: '選択' },
             { id: 'help' as const, label: 'ヘルプ' },
           ] satisfies Array<{ id: MenuSectionId; label: string }>
