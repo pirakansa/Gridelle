@@ -129,10 +129,14 @@ export const useClipboardHandlers = ({
           const targetColumnIndex = start.columnIndex + columnOffset
           const columnKey = nextColumns[targetColumnIndex]
           const existing = updatedRow[columnKey] ?? createCell()
-          updatedRow[columnKey] = {
+          const nextCell = {
             ...existing,
             value,
           }
+          if (nextCell.func) {
+            delete nextCell.func
+          }
+          updatedRow[columnKey] = nextCell
         })
         nextRows[targetRowIndex] = updatedRow
       })

@@ -295,10 +295,14 @@ export const useSpreadsheetDataController = (
         }
         const nextRow = cloneRow(row)
         const existing = nextRow[columnKey] ?? createCell()
-        nextRow[columnKey] = {
+        const nextCell = {
           ...existing,
           value,
         }
+        if (nextCell.func) {
+          delete nextCell.func
+        }
+        nextRow[columnKey] = nextCell
         return nextRow
       })
       updateRows(nextRows)

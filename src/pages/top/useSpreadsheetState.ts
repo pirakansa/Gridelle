@@ -5,6 +5,7 @@ import { useSpreadsheetDataController } from './hooks/useSpreadsheetDataControll
 import { useSpreadsheetInteractionController } from './hooks/useSpreadsheetInteractionController'
 import { generateNextColumnKey } from './hooks/internal/spreadsheetDataUtils'
 import { createEmptyRow } from './utils/spreadsheetTableUtils'
+import { applyCellFunctions } from './utils/cellFunctionEngine'
 import type { CellPosition, Notice, SelectionRange } from './types'
 
 export type { CellPosition, SelectionRange } from './types'
@@ -133,6 +134,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
   } = useSpreadsheetDataController(DEFAULT_SHEETS)
 
   const [bulkValue, setBulkValue] = React.useState<string>('')
+  const computedRows = React.useMemo(() => applyCellFunctions(rows, columns), [rows, columns])
 
   const {
     selection,
@@ -161,7 +163,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleColumnHeaderClick,
   } = useSpreadsheetInteractionController({
     columns,
-    rows,
+    rows: computedRows,
     bulkValue,
     updateRows,
     setColumnOrder,
@@ -422,7 +424,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
       setActiveSheetIndex(index)
     },
     currentSheetName: sheets[activeSheetIndex]?.name ?? '',
-    rows,
+    rows: computedRows,
     columns,
     handleAddRow,
     handleInsertRowBelowSelection,

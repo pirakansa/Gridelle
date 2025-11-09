@@ -178,6 +178,28 @@ describe('App', () => {
   expect(await screen.findByTestId('sheet-tab-0')).toHaveTextContent('新シート')
   })
 
+  it('YAMLの func sum を評価して列を集計する', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-file'))
+    await user.click(screen.getByRole('button', { name: 'YAML入力 / プレビュー' }))
+    const textarea = (await screen.findByTestId('yaml-textarea')) as HTMLTextAreaElement
+    await user.clear(textarea)
+    await user.type(
+      textarea,
+      '- name: 集計{enter}  rows:{enter}    - metric: 5{enter}    - metric: 7{enter}    - metric:{enter}        value: ""{enter}        func:{enter}          name: sum{enter}          key: metric',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'YAMLを反映' }))
+    await user.click(screen.getByTestId('menu-tab-sheet'))
+
+    const metricCell = await screen.findByTestId('cell-display-2-metric')
+    await waitFor(() => {
+      expect(metricCell).toHaveTextContent('12')
+    })
+  })
+
   it('GitHub連携パネルを開閉できる', async () => {
     window.localStorage.setItem('gridelle/loginMode', 'github')
     window.localStorage.setItem('gridelle/githubAccessToken', 'dummy-token')
