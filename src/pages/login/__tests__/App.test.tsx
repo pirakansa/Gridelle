@@ -112,6 +112,7 @@ import {
   afterEach,
 } from 'vitest'
 import type { User } from 'firebase/auth'
+import { PROVIDER_TOKEN_STORAGE_KEY, resetAuthClient } from '../../../services/auth'
 import { redirectToTop } from '../../../utils/navigation'
 import App from '../App'
 
@@ -137,6 +138,7 @@ describe('pages/login/App', () => {
     localStorage.clear()
     sessionStorage.clear()
     vi.clearAllMocks()
+    resetAuthClient()
     authMocks.credentialFromResultMock.mockReturnValue({ accessToken: 'abcd1234efgh5678' })
     authMocks.signInWithPopupMock.mockResolvedValue({
       user: {
@@ -220,7 +222,10 @@ describe('pages/login/App', () => {
     await waitFor(() => {
       expect(authMocks.signInWithPopupMock).toHaveBeenCalledTimes(1)
     })
-    expect(localStorage.getItem('gridelle/githubAccessToken')).toBe('abcd1234efgh5678')
+    const storedTokensRaw = localStorage.getItem(PROVIDER_TOKEN_STORAGE_KEY)
+    expect(storedTokensRaw).not.toBeNull()
+    const storedTokens = storedTokensRaw ? JSON.parse(storedTokensRaw) : {}
+    expect(storedTokens.github).toBe('abcd1234efgh5678')
     expect(redirectToTopMock).toHaveBeenCalledTimes(1)
   })
 

@@ -2,7 +2,7 @@
 import React from 'react'
 import Button from '../../atom/Button'
 import MenuSectionCard from './MenuSectionCard'
-import type { LoginMode } from '../../../services/authService'
+import type { LoginMode } from '../../../services/auth'
 
 type UserSectionProps = {
   loginMode: LoginMode | null
