@@ -119,6 +119,12 @@ export default function EditableCell({
         activeRange && isCellWithinRange(activeRange, rowIndex, columnIndex) ? 'true' : undefined
       }
       onPointerDown={(event) => {
+        if (editingCell && !isEditing) {
+          const activeElement = document.activeElement
+          if (activeElement instanceof HTMLElement) {
+            activeElement.blur()
+          }
+        }
         if (!isEditing) {
           event.preventDefault()
         }
