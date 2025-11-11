@@ -1,12 +1,12 @@
+# Gridelle
+
 <p align="center">
 	<img src="public/images/icon-512x512.png" alt="Gridelle ロゴ" width="320">
 </p>
 
-# Gridelle
-
 Gridelle は、YAML ファイルをスプレッドシートのように編集・レビューできる Web アプリケーションです。GitHub 上の構成ファイルを扱う際の「差分が読みづらい」「一覧性が低い」という課題を解決するために、表形式 UI と YAML 変換を往復できる体験を提供します。
 
-運用中の環境: [http://gridelle.piradn.com/](http://gridelle.piradn.com/)
+- [http://gridelle.piradn.com/](http://gridelle.piradn.com/)
 
 ## 主な機能
 
@@ -56,10 +56,7 @@ npm install
 # Firebase 認証（デフォルト）
 npm run build
 
-# Amazon Cognito など別実装を用いたい場合
-VITE_LOGIN_APP=cognito npm run build
-
-# 認証不要（オフライン）モード
+# 認証不要モード
 VITE_LOGIN_APP=offline npm run build
 ```
 

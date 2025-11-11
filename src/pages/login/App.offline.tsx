@@ -69,13 +69,13 @@ export default function OfflineLoginApp(): React.ReactElement {
       >
         <header className={styles.header}>
           <div className={styles.titleRow}>
-            <h1 className={styles.title}>{select('Gridelle オフラインモード', 'Gridelle Offline Mode')}</h1>
+            <h1 className={styles.title}>{select('Gridelle ログイン', 'Gridelle Login')}</h1>
             <LanguageToggleButton />
           </div>
           <p className={styles.description}>
             {select(
-              '社内ネットワークでは認証不要で Gridelle を利用できます。GitHub 連携を行う場合は PAT を入力してください。',
-              'Intranet environments can use Gridelle without authentication. Provide a GitHub personal access token to enable repository features.',
+              '認証不要で Gridelle を利用できます。GitHub 連携を行う場合は PAT を入力してください。',
+              'Use Gridelle without authentication. Provide a GitHub personal access token to enable repository features.',
             )}
           </p>
           {isLoggedIn && (
