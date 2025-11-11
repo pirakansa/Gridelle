@@ -1,75 +1,90 @@
-<p align="center">
-	<img src="public/images/icon-512x512.png" alt="Gridelle ロゴ" width="320">
-</p>
-
 # Gridelle
 
-Gridelle は、YAML ファイルをスプレッドシートのように編集・レビューできる Web アプリケーションです。GitHub 上の構成ファイルを扱う際の「差分が読みづらい」「一覧性が低い」という課題を解決するために、表形式 UI と YAML 変換を往復できる体験を提供します。
+<p align="center">
+	<img src="public/images/icon-512x512.png" alt="Gridelle logo" width="320">
+</p>
 
-運用中の環境: [http://gridelle.piradn.com/](http://gridelle.piradn.com/)
+Gridelle is a web application that makes YAML files editable like spreadsheets. It targets the common pain points developers face when reviewing infrastructure repositories: poor readability, limited overview, and fragile copy/paste workflows. Gridelle lets you round-trip between a worksheet-like UI and the original YAML documents.
 
-## 主な機能
+- [http://gridelle.piradn.com/](http://gridelle.piradn.com/)
 
-### スプレッドシート編集
-- セル選択・Shift+クリックで矩形選択、フィルハンドルで繰り返しコピー。
-- Enter で編集モード、Shift+Enter で改行、Esc でキャンセル。
-- 行・列の追加／削除、並べ替え、選択範囲の一括入力。
-- セルの文字色・背景色を保持し、YAML へもシリアライズ。
-- 複数シートをタブで切り替え、リネームや追加・削除が可能。
+## Key Capabilities
 
-### YAML 入出力
-- 「YAML入力 / プレビュー」モーダルで YAML テキストを直接編集。
-- `.yml` / `.yaml` / `.json` などのファイルを取り込み、表へ展開。
-- 現在のワークブック状態を YAML としてダウンロード／コピー。
-- 解析エラーや適用結果を通知領域で共有。
+### Spreadsheet-style editing
+- Rectangular selection (click + Shift), fill handle, drag-copy, and fast range input.
+- Enter opens the editor, Shift+Enter inserts a newline, Esc cancels changes.
+- Add/remove rows and columns, sort, and bulk-edit selections.
+- Preserve cell styles (text/background colors) and carry them through YAML serialization.
+- Manage multiple sheets via tabs with rename/add/remove actions.
 
-### GitHub 連携プレビュー
-- Blob URL 指定で単一ファイルを即時ロード。
-- PR モードは今後の差分確認機能を想定した UI プレースホルダー。
+### YAML import/export
+- Edit YAML directly in the “YAML Input / Preview” modal.
+- Import `.yml`, `.yaml`, `.json`, and other compatible formats, then expand them into tables.
+- Download or copy the current workbook as YAML at any time.
+- Notify users about parse errors or apply results through the shared status area.
 
-## セットアップ
+### GitHub integration preview
+- Load a single file immediately by specifying a blob URL.
+- (WIP) Pull Request mode acts as a placeholder for future diff review features.
 
-### 前提
-- Node.js 18 以降
+## Setup
+
+### Requirements
+- Node.js 18+
 - npm
 
-### 初期化
+### Initial install
 ```bash
 npm install
 ```
 
-## 利用可能なスクリプト
+## Available npm scripts
 
-| コマンド | 説明 |
+| Command | Description |
 | --- | --- |
-| `npm run dev` | Vite 開発サーバーを起動します。 |
-| `npm run build` | プロダクションビルドを生成します。 |
-| `npm run type-check` | TypeScript 型チェックを実行します。 |
-| `npm run lint` | ESLint を実行し、警告ゼロを維持します。 |
-| `npm run test` | Vitest でユニットテストを実行します。 |
+| `npm run dev` | Start the Vite development server. |
+| `npm run build` | Produce a production build. |
+| `npm run type-check` | Run TypeScript in `--noEmit` mode. |
+| `npm run lint` | Execute ESLint with zero-warning tolerance. |
+| `npm run test` | Run the Vitest unit test suite. |
 
-## 開発ガイドライン
+## Authentication variants
 
-1. ブランチは `main` から作成し、GitHub Flow を採用します。
-2. 機能追加時は `npm run type-check && npm run lint && npm run test && npm run build` をローカルで実行してから PR を作成します。
-3. 新しい挙動にはユニットテストを追加し、既存テストの回帰を防ぎます。
-4. 仕様や UI を変える場合、README または `docs/` 配下の関連文書を更新します。
-5. PR 作成時は Motivation / Design / Tests / Risks を記載し、必要に応じて `docs/` に補足資料を置きます。
+Login bundles follow the naming convention `src/pages/login/App.<variant>.tsx`. The build selects a variant via the `VITE_LOGIN_APP` environment variable (default: `firebase`). Examples:
 
-## ドキュメント構成
+```bash
+# Default Firebase login
+npm run build
 
-- `README.md`: プロジェクト概要とセットアップ手順（本ファイル）。
-- `docs/`: 補足ドキュメント。大規模 YAML の生成スクリプトや WASM マクロ ABI の仕様などを保管しています。
-- `AGENTS.md`: AI エージェント向けの開発ルール。コミット方針やコード記述ルールを記載しています。
+# Offline mode with GitHub personal access tokens
+VITE_LOGIN_APP=offline npm run build
+```
 
-## 補足情報
+Offline mode provides both a guest button and a GitHub PAT input. Entering a token switches the session to `loginMode='github'`, enabling repository features without contacting external identity providers.
 
-- UI コンポーネントは `src/components/` に、ページ固有ロジックは `src/pages/` に配置します。
-- GitHub 連携サービスは `src/services/githubRepositoryAccessService.ts` で提供し、URL 解析や Octokit 経由の API 呼び出しを集約しています。
-- YAML の解析と適用は `src/pages/top/useSpreadsheetDataController.ts` と `src/services/yaml*` 系 Web Worker が担当します。
-- 関数マクロ機能は現在実験中であり、仕様が予告なく変更される可能性があります。
-- 本リポジトリで公開しているソースコードは `LICENSE` に記載のとおり MIT License の下で提供します。
-- Gridelle を商用サービスや大規模な社内利用向けに弊サーバー上でホスティングする場合は無償提供の対象外となるため、別途ご相談ください。
+When adding a new variant, create `App.<variant>.tsx` and configure authentication by calling `configureAuthClient()` with your custom implementation (Firebase, Cognito, corporate SSO, mock adapters, etc.). You can reuse the Firebase UI and only swap out the auth layer if desired.
 
-Issue / PR を作成する際は、変化点の背景とテスト結果を明記し、変更がユーザーに与える影響を簡潔にまとめてください。
+## Development guidelines
 
+1. Branch from `main` and follow GitHub Flow.  
+2. Before opening a PR, run `npm run type-check && npm run lint && npm run test && npm run build`.  
+3. Add unit tests for new behavior and guard against regressions.  
+4. Update README or `docs/` when the UX, API, or configuration changes.  
+5. PR descriptions should include Motivation / Design / Tests / Risks, with supplemental docs stored under `docs/` as needed.
+
+## Documentation layout
+
+- `README.md`: English developer guide (this file).
+- `docs/README.ja.md`: Legacy Japanese README retained for reference.
+- `docs/`: Additional design notes, large-YAML scripts, WASM macro specs, etc.
+- `AGENTS.md`: AI development rules—commit policy, lint expectations, and coding conventions.
+
+## Additional notes
+
+- Shared UI components live in `src/components/`, while page-specific logic belongs to `src/pages/`.
+- GitHub repository access helpers and Octokit wrappers reside in `src/services/githubRepositoryAccessService.ts`.
+- YAML parsing, application, and worker plumbing lives under `src/pages/top/useSpreadsheetDataController.ts` and `src/services/yaml*`.
+- The function macro feature is experimental; expect breaking changes.
+- Source code is MIT licensed (see `LICENSE`). Hosting Gridelle as a commercial or large-scale internal service on the provided servers requires a separate agreement.
+
+When opening issues or PRs, describe the background, user impact, and test results succinctly so collaborators can review efficiently.
