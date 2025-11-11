@@ -44,7 +44,7 @@ describe('pages/login/App.offline', () => {
     renderOfflineApp()
 
     expect(
-      screen.getByText('社内ネットワークでは認証不要で Gridelle を利用できます。GitHub 連携を行う場合は PAT を入力してください。'),
+      screen.getByText('認証不要で Gridelle を利用できます。GitHub 連携を行う場合は PAT を入力してください。'),
     ).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: '認証不要モードで利用' }))
