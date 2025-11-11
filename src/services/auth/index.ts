@@ -1,6 +1,16 @@
 // File Header: Provides the public authentication service facade with pluggable clients.
 import type { AuthClient, AuthClientFactory, AuthUser, LoginMode } from './types'
 import { createFirebaseAuthClient, resetFirebaseClientCache } from './firebaseClient'
+import { createOfflineAuthClient } from './offlineClient'
+import { getConfiguredLoginVariant } from './loginVariant'
+
+function resolveDefaultAuthClientFactory(): AuthClientFactory {
+  const normalized = getConfiguredLoginVariant().trim().toLowerCase()
+  if (normalized === 'offline' || normalized === 'local' || normalized === 'guest') {
+    return createOfflineAuthClient
+  }
+  return createFirebaseAuthClient
+}
 
 let activeFactory: AuthClientFactory | null = null
 let cachedClient: AuthClient | null = null
@@ -11,7 +21,7 @@ let cachedClient: AuthClient | null = null
  */
 export function getAuthClient(): AuthClient {
   if (!cachedClient) {
-    const factory = activeFactory ?? createFirebaseAuthClient
+    const factory = activeFactory ?? resolveDefaultAuthClientFactory()
     cachedClient = factory()
   }
 

@@ -5,6 +5,8 @@ type LoginAppModule = {
   default: ComponentType
 }
 
+import { getConfiguredLoginVariant, LOGIN_APP_DEFAULT_VARIANT } from '../../services/auth/loginVariant'
+
 const loginAppModules = import.meta.glob<LoginAppModule>('./App.*.tsx', {
   eager: true,
 })
@@ -29,10 +31,9 @@ for (const [modulePath, module] of Object.entries(loginAppModules)) {
   loginAppVariants.set(variantName, module.default)
 }
 
-const DEFAULT_VARIANT = 'firebase'
-const configuredVariant = import.meta.env.VITE_LOGIN_APP ?? DEFAULT_VARIANT
+const configuredVariant = getConfiguredLoginVariant()
 const resolvedVariant =
-  loginAppVariants.get(configuredVariant) ?? loginAppVariants.get(DEFAULT_VARIANT)
+  loginAppVariants.get(configuredVariant) ?? loginAppVariants.get(LOGIN_APP_DEFAULT_VARIANT)
 
 if (!resolvedVariant) {
   throw new Error('No login app variants are available. Ensure App.<variant>.tsx exists.')

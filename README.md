@@ -58,6 +58,9 @@ npm run build
 
 # Amazon Cognito など別実装を用いたい場合
 VITE_LOGIN_APP=cognito npm run build
+
+# 認証不要（オフライン）モード
+VITE_LOGIN_APP=offline npm run build
 ```
 
 新しいバリアントを追加する場合は、`App.<variant>.tsx` 内で必要に応じて `configureAuthClient()` を呼び出し、認証クライアント（Firebase / Cognito / 社内SSO など）を初期化してください。UI を共通化したい場合は Firebase 実装（`App.firebase.tsx`）を再利用し、認証レイヤーのみ差し替える構成がおすすめです。

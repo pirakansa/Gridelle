@@ -6,6 +6,7 @@ declare global {
     readonly VITE_FIREBASE_API_KEY: string
     readonly VITE_FIREBASE_AUTH_DOMAIN: string
     readonly VITE_APP_VERSION: string
+    readonly VITE_LOGIN_APP?: string
   }
 
   interface ImportMeta {
