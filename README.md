@@ -1,88 +1,90 @@
 # Gridelle
 
 <p align="center">
-	<img src="public/images/icon-512x512.png" alt="Gridelle ロゴ" width="320">
+	<img src="public/images/icon-512x512.png" alt="Gridelle logo" width="320">
 </p>
 
-Gridelle は、YAML ファイルをスプレッドシートのように編集・レビューできる Web アプリケーションです。GitHub 上の構成ファイルを扱う際の「差分が読みづらい」「一覧性が低い」という課題を解決するために、表形式 UI と YAML 変換を往復できる体験を提供します。
+Gridelle is a web application that makes YAML files editable like spreadsheets. It targets the common pain points developers face when reviewing infrastructure repositories: poor readability, limited overview, and fragile copy/paste workflows. Gridelle lets you round-trip between a worksheet-like UI and the original YAML documents.
 
 - [http://gridelle.piradn.com/](http://gridelle.piradn.com/)
 
-## 主な機能
+## Key Capabilities
 
-### スプレッドシート編集
-- セル選択・Shift+クリックで矩形選択、フィルハンドルで繰り返しコピー。
-- Enter で編集モード、Shift+Enter で改行、Esc でキャンセル。
-- 行・列の追加／削除、並べ替え、選択範囲の一括入力。
-- セルの文字色・背景色を保持し、YAML へもシリアライズ。
-- 複数シートをタブで切り替え、リネームや追加・削除が可能。
+### Spreadsheet-style editing
+- Rectangular selection (click + Shift), fill handle, drag-copy, and fast range input.
+- Enter opens the editor, Shift+Enter inserts a newline, Esc cancels changes.
+- Add/remove rows and columns, sort, and bulk-edit selections.
+- Preserve cell styles (text/background colors) and carry them through YAML serialization.
+- Manage multiple sheets via tabs with rename/add/remove actions.
 
-### YAML 入出力
-- 「YAML入力 / プレビュー」モーダルで YAML テキストを直接編集。
-- `.yml` / `.yaml` / `.json` などのファイルを取り込み、表へ展開。
-- 現在のワークブック状態を YAML としてダウンロード／コピー。
-- 解析エラーや適用結果を通知領域で共有。
+### YAML import/export
+- Edit YAML directly in the “YAML Input / Preview” modal.
+- Import `.yml`, `.yaml`, `.json`, and other compatible formats, then expand them into tables.
+- Download or copy the current workbook as YAML at any time.
+- Notify users about parse errors or apply results through the shared status area.
 
-### GitHub 連携プレビュー
-- Blob URL 指定で単一ファイルを即時ロード。
-- PR モードは今後の差分確認機能を想定した UI プレースホルダー。
+### GitHub integration preview
+- Load a single file immediately by specifying a blob URL.
+- (WIP) Pull Request mode acts as a placeholder for future diff review features.
 
-## セットアップ
+## Setup
 
-### 前提
-- Node.js 18 以降
+### Requirements
+- Node.js 18+
 - npm
 
-### 初期化
+### Initial install
 ```bash
 npm install
 ```
 
-## 利用可能なスクリプト
+## Available npm scripts
 
-| コマンド | 説明 |
+| Command | Description |
 | --- | --- |
-| `npm run dev` | Vite 開発サーバーを起動します。 |
-| `npm run build` | プロダクションビルドを生成します。 |
-| `npm run type-check` | TypeScript 型チェックを実行します。 |
-| `npm run lint` | ESLint を実行し、警告ゼロを維持します。 |
-| `npm run test` | Vitest でユニットテストを実行します。 |
+| `npm run dev` | Start the Vite development server. |
+| `npm run build` | Produce a production build. |
+| `npm run type-check` | Run TypeScript in `--noEmit` mode. |
+| `npm run lint` | Execute ESLint with zero-warning tolerance. |
+| `npm run test` | Run the Vitest unit test suite. |
 
-## 認証バリアントの切り替え
+## Authentication variants
 
-ログインページは `src/pages/login/App.<variant>.tsx` という命名規則のコンポーネントを参照し、`VITE_LOGIN_APP` で指定したバリアントをビルド時に選択します（既定値は `firebase`）。例:
+Login bundles follow the naming convention `src/pages/login/App.<variant>.tsx`. The build selects a variant via the `VITE_LOGIN_APP` environment variable (default: `firebase`). Examples:
 
 ```bash
-# Firebase 認証（デフォルト）
+# Default Firebase login
 npm run build
 
-# 認証不要モード
+# Offline mode with GitHub personal access tokens
 VITE_LOGIN_APP=offline npm run build
 ```
 
-新しいバリアントを追加する場合は、`App.<variant>.tsx` 内で必要に応じて `configureAuthClient()` を呼び出し、認証クライアント（Firebase / Cognito / 社内SSO など）を初期化してください。UI を共通化したい場合は Firebase 実装（`App.firebase.tsx`）を再利用し、認証レイヤーのみ差し替える構成がおすすめです。
+Offline mode provides both a guest button and a GitHub PAT input. Entering a token switches the session to `loginMode='github'`, enabling repository features without contacting external identity providers.
 
-## 開発ガイドライン
+When adding a new variant, create `App.<variant>.tsx` and configure authentication by calling `configureAuthClient()` with your custom implementation (Firebase, Cognito, corporate SSO, mock adapters, etc.). You can reuse the Firebase UI and only swap out the auth layer if desired.
 
-1. ブランチは `main` から作成し、GitHub Flow を採用します。
-2. 機能追加時は `npm run type-check && npm run lint && npm run test && npm run build` をローカルで実行してから PR を作成します。
-3. 新しい挙動にはユニットテストを追加し、既存テストの回帰を防ぎます。
-4. 仕様や UI を変える場合、README または `docs/` 配下の関連文書を更新します。
-5. PR 作成時は Motivation / Design / Tests / Risks を記載し、必要に応じて `docs/` に補足資料を置きます。
+## Development guidelines
 
-## ドキュメント構成
+1. Branch from `main` and follow GitHub Flow.  
+2. Before opening a PR, run `npm run type-check && npm run lint && npm run test && npm run build`.  
+3. Add unit tests for new behavior and guard against regressions.  
+4. Update README or `docs/` when the UX, API, or configuration changes.  
+5. PR descriptions should include Motivation / Design / Tests / Risks, with supplemental docs stored under `docs/` as needed.
 
-- `README.md`: プロジェクト概要とセットアップ手順（本ファイル）。
-- `docs/`: 補足ドキュメント。大規模 YAML の生成スクリプトや WASM マクロ ABI の仕様などを保管しています。
-- `AGENTS.md`: AI エージェント向けの開発ルール。コミット方針やコード記述ルールを記載しています。
+## Documentation layout
 
-## 補足情報
+- `README.md`: English developer guide (this file).
+- `docs/README.ja.md`: Legacy Japanese README retained for reference.
+- `docs/`: Additional design notes, large-YAML scripts, WASM macro specs, etc.
+- `AGENTS.md`: AI development rules—commit policy, lint expectations, and coding conventions.
 
-- UI コンポーネントは `src/components/` に、ページ固有ロジックは `src/pages/` に配置します。
-- GitHub 連携サービスは `src/services/githubRepositoryAccessService.ts` で提供し、URL 解析や Octokit 経由の API 呼び出しを集約しています。
-- YAML の解析と適用は `src/pages/top/useSpreadsheetDataController.ts` と `src/services/yaml*` 系 Web Worker が担当します。
-- 関数マクロ機能は現在実験中であり、仕様が予告なく変更される可能性があります。
-- 本リポジトリで公開しているソースコードは `LICENSE` に記載のとおり MIT License の下で提供します。
-- Gridelle を商用サービスや大規模な社内利用向けに弊サーバー上でホスティングする場合は無償提供の対象外となるため、別途ご相談ください。
+## Additional notes
 
-Issue / PR を作成する際は、変化点の背景とテスト結果を明記し、変更がユーザーに与える影響を簡潔にまとめてください。
+- Shared UI components live in `src/components/`, while page-specific logic belongs to `src/pages/`.
+- GitHub repository access helpers and Octokit wrappers reside in `src/services/githubRepositoryAccessService.ts`.
+- YAML parsing, application, and worker plumbing lives under `src/pages/top/useSpreadsheetDataController.ts` and `src/services/yaml*`.
+- The function macro feature is experimental; expect breaking changes.
+- Source code is MIT licensed (see `LICENSE`). Hosting Gridelle as a commercial or large-scale internal service on the provided servers requires a separate agreement.
+
+When opening issues or PRs, describe the background, user impact, and test results succinctly so collaborators can review efficiently.
