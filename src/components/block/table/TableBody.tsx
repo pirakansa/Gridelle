@@ -3,6 +3,7 @@ import React from 'react'
 import type { TableRow as TableRowData } from '../../../services/workbookService'
 import type { CellPosition, SelectionRange } from '../../../pages/top/useSpreadsheetState'
 import TableRow from './TableRow'
+import { useI18n } from '../../../utils/i18n'
 
 type TableBodyProps = {
   rows: TableRowData[]
@@ -50,6 +51,7 @@ export default function TableBody({
   viewportHeight,
   scrollTop,
 }: TableBodyProps): React.ReactElement {
+  const { select } = useI18n()
   const VIRTUALIZATION_THRESHOLD = 200
   const DEFAULT_ROW_HEIGHT = 36
   const OVERSCAN_ROWS = 10
@@ -116,8 +118,10 @@ export default function TableBody({
         <tr>
           <td colSpan={columns.length + 1}>
             <div className="flex h-40 flex-col items-center justify-center gap-2 text-center text-slate-500">
-              <p>表示するデータがありません。</p>
-              <p>YAMLを読み込むか、行・列を追加して開始してください。</p>
+              <p>{select('表示するデータがありません。', 'No data to display yet.')}</p>
+              <p>
+                {select('YAMLを読み込むか、行・列を追加して開始してください。', 'Import YAML or add rows/columns to get started.')}
+              </p>
             </div>
           </td>
         </tr>

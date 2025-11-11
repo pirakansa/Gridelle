@@ -4,6 +4,7 @@ import Button from '../../atom/Button'
 import TextAreaField from '../../atom/TextAreaField'
 import TextInput from '../../atom/TextInput'
 import MenuSectionCard from './MenuSectionCard'
+import { useI18n } from '../../../utils/i18n'
 
 type SelectionSectionProps = {
   selectionSummary: string
@@ -33,6 +34,7 @@ export default function SelectionSection({
   onApplyBackgroundColor,
   onClearSelectionStyles,
 }: SelectionSectionProps): React.ReactElement {
+  const { select } = useI18n()
   const [textColorDraft, setTextColorDraft] = React.useState<string>(selectionTextColor)
   const [backgroundColorDraft, setBackgroundColorDraft] = React.useState<string>(selectionBackgroundColor)
 
@@ -70,14 +72,14 @@ export default function SelectionSection({
             {selectionSummary}
           </p>
           <div className="flex items-center gap-3 text-xs text-slate-500">
-            <span>⌘/Ctrl+V で貼り付け / Escape で選択解除</span>
+            <span>{select('⌘/Ctrl+V で貼り付け / Escape で選択解除', '⌘/Ctrl+V to paste / Escape to clear selection')}</span>
             <Button type="button" variant="subtle" onClick={onClearSelection} disabled={!hasSelection}>
-              選択をクリア
+              {select('選択をクリア', 'Clear selection')}
             </Button>
           </div>
           <div className="flex flex-wrap items-center gap-2 md:gap-3 md:ml-auto">
             <TextAreaField
-              placeholder="選択セルへ一括入力"
+              placeholder={select('選択セルへ一括入力', 'Bulk fill the selected cells')}
               value={bulkValue}
               onChange={(event) => onBulkValueChange(event.target.value)}
               data-testid="bulk-input"
@@ -92,22 +94,24 @@ export default function SelectionSection({
               disabled={!hasSelection}
               data-testid="bulk-apply"
             >
-              一括入力する
+              {select('一括入力する', 'Apply to selection')}
             </Button>
           </div>
         </div>
         <div className="flex flex-col gap-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">セルのスタイル</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {select('セルのスタイル', 'Cell styles')}
+          </h3>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-center gap-2 md:gap-3">
               <label htmlFor="selection-text-color" className="text-xs font-semibold text-slate-600">
-                文字色
+                {select('文字色', 'Text color')}
               </label>
               <TextInput
                 id="selection-text-color"
                 value={textColorDraft}
                 onChange={(event) => setTextColorDraft(event.target.value)}
-                placeholder="例: #334155"
+                placeholder={select('例: #334155', 'e.g., #334155')}
                 className="w-32"
                 onPointerDown={(event) => event.stopPropagation()}
               />
@@ -119,18 +123,18 @@ export default function SelectionSection({
                 Aa
               </span>
               <Button type="button" variant="ghost" onClick={handleApplyTextColor} disabled={!hasSelection}>
-                文字色を適用
+                {select('文字色を適用', 'Apply text color')}
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2 md:gap-3">
               <label htmlFor="selection-background-color" className="text-xs font-semibold text-slate-600">
-                背景色
+                {select('背景色', 'Background color')}
               </label>
               <TextInput
                 id="selection-background-color"
                 value={backgroundColorDraft}
                 onChange={(event) => setBackgroundColorDraft(event.target.value)}
-                placeholder="例: rgba(59,130,246,0.2)"
+                placeholder={select('例: rgba(59,130,246,0.2)', 'e.g., rgba(59,130,246,0.2)')}
                 className="w-40"
                 onPointerDown={(event) => event.stopPropagation()}
               />
@@ -140,15 +144,20 @@ export default function SelectionSection({
                 style={{ backgroundColor: backgroundColorDraft || 'transparent' }}
               />
               <Button type="button" variant="ghost" onClick={handleApplyBackgroundColor} disabled={!hasSelection}>
-                背景色を適用
+                {select('背景色を適用', 'Apply background color')}
               </Button>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
             <Button type="button" variant="subtle" onClick={handleClearStyles} disabled={!hasSelection}>
-              スタイルをクリア
+              {select('スタイルをクリア', 'Clear styles')}
             </Button>
-            <span>CSSカラー値（例: #1f2937, rgba(15,23,42,0.6)）を入力できます。</span>
+            <span>
+              {select(
+                'CSSカラー値（例: #1f2937, rgba(15,23,42,0.6)）を入力できます。',
+                'Enter CSS color values (for example: #1f2937, rgba(15,23,42,0.6)).',
+              )}
+            </span>
           </div>
         </div>
       </div>

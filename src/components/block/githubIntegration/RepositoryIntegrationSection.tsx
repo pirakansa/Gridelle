@@ -12,6 +12,11 @@ import type {
   RepositoryTreeEntry,
 } from '../../../services/githubRepositoryAccessService'
 import { type YamlContentPayload } from './types'
+import { useI18n } from '../../../utils/i18n'
+
+type LocalizedMessage = { ja: string; en: string }
+
+const createMessage = (ja: string, en: string): LocalizedMessage => ({ ja, en })
 
 // Function Header: Renders repository verification, branch selection, and file loading controls.
 type RepositoryIntegrationSectionProps = {
@@ -59,22 +64,27 @@ export default function RepositoryIntegrationSection({
   onYamlContentLoaded,
   services,
 }: RepositoryIntegrationSectionProps): React.ReactElement {
+  const { select } = useI18n()
   const [isVerifying, setIsVerifying] = React.useState<boolean>(false)
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = React.useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = React.useState<LocalizedMessage | null>(null)
+  const [successMessage, setSuccessMessage] = React.useState<LocalizedMessage | null>(null)
   const [repositoryCoordinates, setRepositoryCoordinates] =
     React.useState<GithubRepositoryCoordinates | null>(null)
   const [branches, setBranches] = React.useState<RepositoryBranch[]>([])
   const [isBranchLoading, setIsBranchLoading] = React.useState<boolean>(false)
-  const [branchErrorMessage, setBranchErrorMessage] = React.useState<string | null>(null)
+  const [branchErrorMessage, setBranchErrorMessage] = React.useState<LocalizedMessage | null>(null)
   const [selectedBranch, setSelectedBranch] = React.useState<string>('')
   const [treeEntries, setTreeEntries] = React.useState<RepositoryTreeEntry[]>([])
   const [isTreeLoading, setIsTreeLoading] = React.useState<boolean>(false)
-  const [treeErrorMessage, setTreeErrorMessage] = React.useState<string | null>(null)
+  const [treeErrorMessage, setTreeErrorMessage] = React.useState<LocalizedMessage | null>(null)
   const [selectedFilePath, setSelectedFilePath] = React.useState<string | null>(null)
   const [isFileLoading, setIsFileLoading] = React.useState<boolean>(false)
-  const [fileErrorMessage, setFileErrorMessage] = React.useState<string | null>(null)
-  const [fileSuccessMessage, setFileSuccessMessage] = React.useState<string | null>(null)
+  const [fileErrorMessage, setFileErrorMessage] = React.useState<LocalizedMessage | null>(null)
+  const [fileSuccessMessage, setFileSuccessMessage] = React.useState<LocalizedMessage | null>(null)
+  const resolveMessage = React.useCallback(
+    (message: LocalizedMessage | null) => (message ? select(message.ja, message.en) : null),
+    [select],
+  )
 
   const resetRepositoryState = React.useCallback(() => {
     setRepositoryCoordinates(null)
@@ -111,9 +121,14 @@ export default function RepositoryIntegrationSection({
         }
       } catch (error) {
         if (error instanceof services.GithubRepositoryAccessError) {
-          setBranchErrorMessage(error.message)
+          setBranchErrorMessage(createMessage(error.jaMessage, error.enMessage))
         } else {
-          setBranchErrorMessage('ブランチ一覧の取得に失敗しました。時間を置いて再度お試しください。')
+          setBranchErrorMessage(
+            createMessage(
+              'ブランチ一覧の取得に失敗しました。時間を置いて再度お試しください。',
+              'Failed to fetch branches. Please try again later.',
+            ),
+          )
         }
       } finally {
         setIsBranchLoading(false)
@@ -141,9 +156,14 @@ export default function RepositoryIntegrationSection({
         setTreeEntries(fetchedTree)
       } catch (error) {
         if (error instanceof services.GithubRepositoryAccessError) {
-          setTreeErrorMessage(error.message)
+          setTreeErrorMessage(createMessage(error.jaMessage, error.enMessage))
         } else {
-          setTreeErrorMessage('ファイルツリーの取得に失敗しました。時間を置いて再度お試しください。')
+          setTreeErrorMessage(
+            createMessage(
+              'ファイルツリーの取得に失敗しました。時間を置いて再度お試しください。',
+              'Failed to fetch the repository tree. Please try again later.',
+            ),
+          )
         }
         setTreeEntries([])
       } finally {
@@ -171,7 +191,10 @@ export default function RepositoryIntegrationSection({
         const canonicalUrl = `https://github.com/${result.repository.owner}/${result.repository.repository}`
         onRepositoryUrlChange(canonicalUrl)
         setSuccessMessage(
-          `${result.username} が ${result.repository.owner}/${result.repository.repository} のコラボレーターとして確認できました。`,
+          createMessage(
+            `${result.username} が ${result.repository.owner}/${result.repository.repository} のコラボレーターとして確認できました。`,
+            `${result.username} is confirmed as a collaborator on ${result.repository.owner}/${result.repository.repository}.`,
+          ),
         )
         onRepositoryUrlSubmit?.(canonicalUrl)
         onRepositoryAccessConfirmed?.(result)
@@ -179,9 +202,14 @@ export default function RepositoryIntegrationSection({
         void loadBranches(result.repository)
       } catch (error) {
         if (error instanceof services.GithubRepositoryAccessError) {
-          setErrorMessage(error.message)
+          setErrorMessage(createMessage(error.jaMessage, error.enMessage))
         } else {
-          setErrorMessage('リポジトリの権限確認に失敗しました。時間を置いて再度お試しください。')
+          setErrorMessage(
+            createMessage(
+              'リポジトリの権限確認に失敗しました。時間を置いて再度お試しください。',
+              'Failed to verify repository access. Please try again later.',
+            ),
+          )
         }
       } finally {
         setIsVerifying(false)
@@ -225,7 +253,12 @@ export default function RepositoryIntegrationSection({
       }
 
       if (!YAML_EXTENSION_PATTERN.test(filePath)) {
-        setFileErrorMessage('YAMLファイル（.yml / .yaml）のみ選択できます。')
+        setFileErrorMessage(
+          createMessage(
+            'YAMLファイル（.yml / .yaml）のみ選択できます。',
+            'Only YAML files (.yml / .yaml) can be selected.',
+          ),
+        )
         return
       }
 
@@ -234,7 +267,9 @@ export default function RepositoryIntegrationSection({
       services
         .fetchRepositoryFileContent(repositoryCoordinates, selectedBranch, filePath)
         .then((content) => {
-          setFileSuccessMessage(`${filePath} を読み込みました。`)
+          setFileSuccessMessage(
+            createMessage(`${filePath} を読み込みました。`, `Loaded ${filePath}.`),
+          )
           onFileSelected?.(filePath)
           onYamlContentLoaded?.({
             yaml: content,
@@ -246,9 +281,14 @@ export default function RepositoryIntegrationSection({
         })
         .catch((error) => {
           if (error instanceof services.GithubRepositoryAccessError) {
-            setFileErrorMessage(error.message)
+            setFileErrorMessage(createMessage(error.jaMessage, error.enMessage))
           } else {
-            setFileErrorMessage('GitHubファイルの取得に失敗しました。時間を置いて再度お試しください。')
+            setFileErrorMessage(
+              createMessage(
+                'GitHubファイルの取得に失敗しました。時間を置いて再度お試しください。',
+                'Failed to fetch the GitHub file. Please try again later.',
+              ),
+            )
           }
         })
         .finally(() => {
@@ -269,11 +309,18 @@ export default function RepositoryIntegrationSection({
     [treeEntries],
   )
 
+  const repositoryErrorText = resolveMessage(errorMessage)
+  const repositorySuccessText = resolveMessage(successMessage)
+  const branchErrorText = resolveMessage(branchErrorMessage)
+  const treeErrorText = resolveMessage(treeErrorMessage)
+  const fileErrorText = resolveMessage(fileErrorMessage)
+  const fileSuccessText = resolveMessage(fileSuccessMessage)
+
   return (
     <>
       <form className="flex flex-col gap-3" onSubmit={handleRepositorySubmit} data-testid="repository-url-form">
         <label htmlFor="repository-url" className="text-sm font-medium text-slate-800">
-          対象リポジトリURL
+          {select('対象リポジトリURL', 'Target repository URL')}
         </label>
         <TextInput
           id="repository-url"
@@ -287,21 +334,24 @@ export default function RepositoryIntegrationSection({
           data-testid="repository-url-input"
         />
         <p className="text-xs text-slate-500">
-          公開・非公開を問わずGitHubのリポジトリURLを入力してください。後続のステップでブランチやファイルを選択できます。
+          {select(
+            '公開・非公開を問わずGitHubのリポジトリURLを入力してください。後続のステップでブランチやファイルを選択できます。',
+            'Enter any GitHub repository URL (public or private). You can choose the branch and file in later steps.',
+          )}
         </p>
         <div className="flex justify-end">
           <Button type="submit" disabled={!repositoryUrl.trim() || isVerifying}>
-            {isVerifying ? '確認中…' : 'URLを確定'}
+            {isVerifying ? select('確認中…', 'Verifying…') : select('URLを確定', 'Verify URL')}
           </Button>
         </div>
-        {errorMessage && (
+        {repositoryErrorText && (
           <p className="text-sm text-red-600" role="alert" data-testid="repository-url-error">
-            {errorMessage}
+            {repositoryErrorText}
           </p>
         )}
-        {successMessage && (
+        {repositorySuccessText && (
           <p className="text-sm text-emerald-600" role="status" data-testid="repository-url-success">
-            {successMessage}
+            {repositorySuccessText}
           </p>
         )}
       </form>
@@ -312,27 +362,31 @@ export default function RepositoryIntegrationSection({
             className="rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600"
             data-testid="repository-selection-summary"
           >
-            <p className="font-medium text-slate-700">選択内容の確認</p>
+            <p className="font-medium text-slate-700">
+              {select('選択内容の確認', 'Selection summary')}
+            </p>
             <p>
-              リポジトリ:{' '}
+              {select('リポジトリ', 'Repository')}:{' '}
               <span className="font-mono text-slate-700">
                 {repositoryCoordinates
                   ? `${repositoryCoordinates.owner}/${repositoryCoordinates.repository}`
-                  : '未選択'}
+                  : select('未選択', 'Not selected')}
               </span>
             </p>
             <p>
-              ブランチ:{' '}
-              <span className="font-mono text-slate-700">{selectedBranch || '未選択'}</span>
+              {select('ブランチ', 'Branch')}:{' '}
+              <span className="font-mono text-slate-700">
+                {selectedBranch || select('未選択', 'Not selected')}
+              </span>
             </p>
             <p>
-              ファイル:{' '}
+              {select('ファイル', 'File')}:{' '}
               <span className="font-mono text-slate-700">
                 {isFileLoading
                   ? selectedFilePath
-                    ? `${selectedFilePath} (読み込み中…)`
-                    : '読み込み中…'
-                  : selectedFilePath ?? '未選択'}
+                    ? `${selectedFilePath} (${select('読み込み中…', 'Loading…')})`
+                    : select('読み込み中…', 'Loading…')
+                  : selectedFilePath ?? select('未選択', 'Not selected')}
               </span>
             </p>
           </div>
@@ -340,7 +394,7 @@ export default function RepositoryIntegrationSection({
           {repositoryCoordinates && (
             <div className="flex flex-col gap-2">
               <label htmlFor="repository-branch" className="text-sm font-medium text-slate-800">
-                ブランチを選択
+                {select('ブランチを選択', 'Select a branch')}
               </label>
               <SelectField
                 id="repository-branch"
@@ -350,7 +404,9 @@ export default function RepositoryIntegrationSection({
                 fullWidth
                 data-testid="repository-branch-select"
               >
-                {branches.length === 0 && <option value="">ブランチが取得できませんでした</option>}
+                {branches.length === 0 && (
+                  <option value="">{select('ブランチが取得できませんでした', 'Unable to fetch branches')}</option>
+                )}
                 {branches.map((branch) => (
                   <option key={branch.name} value={branch.name}>
                     {branch.name}
@@ -358,16 +414,19 @@ export default function RepositoryIntegrationSection({
                 ))}
               </SelectField>
               <p className="text-xs text-slate-500">
-                対象のブランチを選択すると、その内容からYAMLファイルなどを選べます。
+                {select(
+                  '対象のブランチを選択すると、その内容からYAMLファイルなどを選べます。',
+                  'Select a branch to browse and choose YAML files from its contents.',
+                )}
               </p>
               {isBranchLoading && (
                 <p className="text-xs text-slate-500" data-testid="repository-branch-loading">
-                  ブランチ一覧を取得中です...
+                  {select('ブランチ一覧を取得中です...', 'Loading branch list...')}
                 </p>
               )}
-              {branchErrorMessage && (
+              {branchErrorText && (
                 <p className="text-sm text-red-600" role="alert" data-testid="repository-branch-error">
-                  {branchErrorMessage}
+                  {branchErrorText}
                 </p>
               )}
             </div>
@@ -375,25 +434,27 @@ export default function RepositoryIntegrationSection({
 
           {repositoryCoordinates && selectedBranch && (
             <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-slate-800">ファイルを選択</span>
+              <span className="text-sm font-medium text-slate-800">{select('ファイルを選択', 'Select a file')}</span>
               <div
                 className="max-h-72 overflow-y-auto rounded border border-slate-200 bg-white"
                 data-testid="repository-file-tree"
               >
                 {isTreeLoading && (
-                  <p className="px-3 py-2 text-xs text-slate-500">ファイルツリーを読み込み中です...</p>
-                )}
-                {!isTreeLoading && repositoryFiles.length === 0 && !treeErrorMessage && (
                   <p className="px-3 py-2 text-xs text-slate-500">
-                    このブランチで選択可能なファイルが見つかりませんでした。
+                    {select('ファイルツリーを読み込み中です...', 'Loading repository tree...')}
                   </p>
                 )}
-                {!isTreeLoading && treeErrorMessage && (
+                {!isTreeLoading && repositoryFiles.length === 0 && !treeErrorText && (
+                  <p className="px-3 py-2 text-xs text-slate-500">
+                    {select('このブランチで選択可能なファイルが見つかりませんでした。', 'No selectable files were found in this branch.')}
+                  </p>
+                )}
+                {!isTreeLoading && treeErrorText && (
                   <p className="px-3 py-2 text-sm text-red-600" role="alert" data-testid="repository-tree-error">
-                    {treeErrorMessage}
+                    {treeErrorText}
                   </p>
                 )}
-                {!isTreeLoading && !treeErrorMessage && repositoryFiles.length > 0 && (
+                {!isTreeLoading && !treeErrorText && repositoryFiles.length > 0 && (
                   <ul className="flex flex-col divide-y divide-slate-100" data-testid="repository-tree-list">
                     {repositoryFiles.map((entry) => {
                       const isSelected = selectedFilePath === entry.path
@@ -410,7 +471,9 @@ export default function RepositoryIntegrationSection({
                             data-path={entry.path}
                           >
                             <span className="truncate">{entry.path}</span>
-                            {isSelected && <span className="text-xs text-blue-600">選択中</span>}
+                            {isSelected && (
+                              <span className="text-xs text-blue-600">{select('選択中', 'Selected')}</span>
+                            )}
                           </button>
                         </li>
                       )
@@ -420,17 +483,17 @@ export default function RepositoryIntegrationSection({
               </div>
               {isFileLoading && (
                 <p className="text-xs text-slate-500" data-testid="repository-file-loading">
-                  ファイルを取得しています...
+                  {select('ファイルを取得しています...', 'Fetching file...')}
                 </p>
               )}
-              {fileErrorMessage && (
+              {fileErrorText && (
                 <p className="text-sm text-red-600" role="alert" data-testid="repository-file-error">
-                  {fileErrorMessage}
+                  {fileErrorText}
                 </p>
               )}
-              {fileSuccessMessage && (
+              {fileSuccessText && (
                 <p className="text-sm text-emerald-600" role="status" data-testid="repository-file-success">
-                  {fileSuccessMessage}
+                  {fileSuccessText}
                 </p>
               )}
             </div>

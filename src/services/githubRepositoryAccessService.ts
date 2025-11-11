@@ -77,11 +77,12 @@ const decodeBase64Payload = (payload: string): string => {
       const decoder = new TextDecoder()
       return decoder.decode(bytes)
   } catch {
-      throw new GithubRepositoryAccessError(
-        '取得したファイルのデコードに失敗しました。',
-        'file-fetch-failed',
-      )
-    }
+    throw new GithubRepositoryAccessError(
+      '取得したファイルのデコードに失敗しました。',
+      'file-fetch-failed',
+      'Failed to decode the fetched file.',
+    )
+  }
   }
 
   const bufferLike = (globalThis as {
@@ -92,27 +93,33 @@ const decodeBase64Payload = (payload: string): string => {
     try {
       return bufferLike.from(cleaned, 'base64').toString('utf-8')
   } catch {
-      throw new GithubRepositoryAccessError(
-        '取得したファイルのデコードに失敗しました。',
-        'file-fetch-failed',
-      )
-    }
+    throw new GithubRepositoryAccessError(
+      '取得したファイルのデコードに失敗しました。',
+      'file-fetch-failed',
+      'Failed to decode the fetched file.',
+    )
+  }
   }
 
   throw new GithubRepositoryAccessError(
     'ファイル内容を解読できませんでした。別の環境で再度お試しください。',
     'file-fetch-failed',
+    'Unable to decode the file content. Please try again in a different environment.',
   )
 }
 
 // Function Header: Represents a typed error describing repository access verification failures.
 export class GithubRepositoryAccessError extends Error {
   code: GithubRepositoryAccessErrorCode
+  jaMessage: string
+  enMessage: string
 
-  constructor(message: string, code: GithubRepositoryAccessErrorCode) {
+  constructor(message: string, code: GithubRepositoryAccessErrorCode, englishMessage?: string) {
     super(message)
     this.name = 'GithubRepositoryAccessError'
     this.code = code
+    this.jaMessage = message
+    this.enMessage = englishMessage ?? message
   }
 }
 
@@ -126,6 +133,7 @@ export function parseGithubRepositoryUrl(rawUrl: string): GithubRepositoryCoordi
     throw new GithubRepositoryAccessError(
       'GitHubリポジトリのURLが正しくありません。 https://github.com/owner/repository の形式で入力してください。',
       'invalid-url',
+      'The GitHub repository URL is invalid. Use the format https://github.com/owner/repository.',
     )
   }
 
@@ -133,6 +141,7 @@ export function parseGithubRepositoryUrl(rawUrl: string): GithubRepositoryCoordi
     throw new GithubRepositoryAccessError(
       'GitHubリポジトリURLのホスト名が無効です。 https://github.com/owner/repository の形式で入力してください。',
       'invalid-url',
+      'The GitHub repository URL host is invalid. Use the format https://github.com/owner/repository.',
     )
   }
 
@@ -142,6 +151,7 @@ export function parseGithubRepositoryUrl(rawUrl: string): GithubRepositoryCoordi
     throw new GithubRepositoryAccessError(
       'GitHubリポジトリURLから所有者とリポジトリ名を判別できません。 https://github.com/owner/repository の形式で入力してください。',
       'missing-owner-or-repo',
+      'Unable to determine the owner and repository from the URL. Use the format https://github.com/owner/repository.',
     )
   }
 
@@ -152,11 +162,16 @@ export function parseGithubRepositoryUrl(rawUrl: string): GithubRepositoryCoordi
     throw new GithubRepositoryAccessError(
       'GitHubの所有者（ユーザーまたは組織）名が無効です。',
       'invalid-owner',
+      'The GitHub owner (user or organization) name is invalid.',
     )
   }
 
   if (!OWNER_REPO_PATTERN.test(repository)) {
-    throw new GithubRepositoryAccessError('GitHubのリポジトリ名が無効です。', 'invalid-repo')
+    throw new GithubRepositoryAccessError(
+      'GitHubのリポジトリ名が無効です。',
+      'invalid-repo',
+      'The GitHub repository name is invalid.',
+    )
   }
 
   return {
@@ -175,6 +190,7 @@ export async function parseGithubBlobUrl(rawUrl: string): Promise<GithubBlobCoor
     throw new GithubRepositoryAccessError(
       'GitHubのBlob URLが正しくありません。 https://github.com/owner/repository/blob/branch/path の形式で入力してください。',
       'invalid-blob-url',
+      'The GitHub blob URL is invalid. Use the format https://github.com/owner/repository/blob/branch/path.',
     )
   }
 
@@ -182,6 +198,7 @@ export async function parseGithubBlobUrl(rawUrl: string): Promise<GithubBlobCoor
     throw new GithubRepositoryAccessError(
       'GitHubのBlob URLのホスト名が無効です。 https://github.com/owner/repository/blob/branch/path の形式で入力してください。',
       'invalid-blob-url',
+      'The GitHub blob URL host is invalid. Use the format https://github.com/owner/repository/blob/branch/path.',
     )
   }
 
@@ -191,6 +208,7 @@ export async function parseGithubBlobUrl(rawUrl: string): Promise<GithubBlobCoor
     throw new GithubRepositoryAccessError(
       'Blob URLからブランチとファイルパスを判別できません。 https://github.com/owner/repository/blob/branch/path の形式で入力してください。',
       'invalid-blob-url',
+      'Unable to determine the branch and file path from the blob URL. Use the format https://github.com/owner/repository/blob/branch/path.',
     )
   }
 
@@ -200,6 +218,7 @@ export async function parseGithubBlobUrl(rawUrl: string): Promise<GithubBlobCoor
     throw new GithubRepositoryAccessError(
       'Blob URLに含まれる所有者またはリポジトリ名が無効です。',
       'invalid-blob-url',
+      'The owner or repository name in the blob URL is invalid.',
     )
   }
 
@@ -207,6 +226,7 @@ export async function parseGithubBlobUrl(rawUrl: string): Promise<GithubBlobCoor
     throw new GithubRepositoryAccessError(
       'Blob URLにブランチまたはファイルパスが含まれていません。',
       'invalid-blob-url',
+      'The blob URL is missing the branch or file path.',
     )
   }
 
@@ -216,6 +236,7 @@ export async function parseGithubBlobUrl(rawUrl: string): Promise<GithubBlobCoor
     throw new GithubRepositoryAccessError(
       'Blob URLにブランチまたはファイルパスが含まれていません。',
       'invalid-blob-url',
+      'The blob URL is missing the branch or file path.',
     )
   }
 
@@ -253,6 +274,7 @@ export async function parseGithubBlobUrl(rawUrl: string): Promise<GithubBlobCoor
     throw new GithubRepositoryAccessError(
       'Blob URLからブランチ一覧を取得できませんでした。時間を置いて再度お試しください。',
       'branch-fetch-failed',
+      'Unable to fetch branches from the blob URL. Please try again later.',
     )
   }
 
@@ -263,6 +285,7 @@ export async function parseGithubBlobUrl(rawUrl: string): Promise<GithubBlobCoor
     throw new GithubRepositoryAccessError(
       'Blob URLからブランチ名を判別できませんでした。ブランチ名とファイルパスを確認してください。',
       'invalid-blob-url',
+      'Unable to determine the branch name from the blob URL. Check the branch name and file path.',
     )
   }
 
@@ -294,6 +317,7 @@ export async function verifyRepositoryCollaborator(
     throw new GithubRepositoryAccessError(
       'GitHubのユーザー情報を取得できませんでした。再度ログインし直してください。',
       'unauthorized',
+      'Unable to fetch your GitHub profile. Please sign in again.',
     )
   }
 
@@ -310,6 +334,7 @@ export async function verifyRepositoryCollaborator(
       throw new GithubRepositoryAccessError(
         'GitHubの認証に失敗しました。再度ログインし直してください。',
         'unauthorized',
+        'GitHub authentication failed. Please sign in again.',
       )
     }
 
@@ -317,12 +342,14 @@ export async function verifyRepositoryCollaborator(
       throw new GithubRepositoryAccessError(
         '対象リポジトリに対するコラボレーター権限がありません。リポジトリへの招待状況を確認してください。',
         'not-a-collaborator',
+        'You do not have collaborator access to the repository. Check your invitation status.',
       )
     }
 
     throw new GithubRepositoryAccessError(
       'リポジトリの権限確認で予期せぬエラーが発生しました。時間を置いて再度お試しください。',
       'unknown',
+      'An unexpected error occurred while verifying repository permissions. Please try again later.',
     )
   }
 
@@ -359,12 +386,14 @@ export async function listRepositoryBranches({
       throw new GithubRepositoryAccessError(
         'GitHubへのアクセス権限が確認できませんでした。再度ログインし直してください。',
         'unauthorized',
+        'Unable to confirm GitHub access permissions. Please sign in again.',
       )
     }
 
     throw new GithubRepositoryAccessError(
       'リポジトリのブランチ一覧を取得できませんでした。時間を置いて再度お試しください。',
       'branch-fetch-failed',
+      'Failed to retrieve the repository branches. Please try again later.',
     )
   }
 }
@@ -407,6 +436,7 @@ export async function fetchRepositoryTree(
       throw new GithubRepositoryAccessError(
         'GitHubへのアクセス権限が確認できませんでした。再度ログインし直してください。',
         'unauthorized',
+        'Unable to confirm GitHub access permissions. Please sign in again.',
       )
     }
 
@@ -414,12 +444,14 @@ export async function fetchRepositoryTree(
       throw new GithubRepositoryAccessError(
         '指定したブランチまたはファイルツリーが見つかりません。ブランチ名を確認してください。',
         'tree-fetch-failed',
+        'The specified branch or file tree was not found. Verify the branch name.',
       )
     }
 
     throw new GithubRepositoryAccessError(
       'リポジトリのファイルツリー取得で予期せぬエラーが発生しました。時間を置いて再度お試しください。',
       'tree-fetch-failed',
+      'An unexpected error occurred while fetching the repository tree. Please try again later.',
     )
   }
 }
@@ -444,6 +476,7 @@ export async function fetchRepositoryFileContent(
       throw new GithubRepositoryAccessError(
         '指定したパスがディレクトリとして扱われました。ファイルを選択してください。',
         'file-fetch-failed',
+        'The specified path is a directory. Please choose a file instead.',
       )
     }
 
@@ -451,6 +484,7 @@ export async function fetchRepositoryFileContent(
       throw new GithubRepositoryAccessError(
         '選択したファイルの内容を取得できませんでした。',
         'file-fetch-failed',
+        'Unable to retrieve the contents of the selected file.',
       )
     }
 
@@ -458,6 +492,7 @@ export async function fetchRepositoryFileContent(
       throw new GithubRepositoryAccessError(
         '取得したファイルのエンコード形式が想定外です。',
         'file-fetch-failed',
+        'The downloaded file used an unexpected encoding.',
       )
     }
 
@@ -473,6 +508,7 @@ export async function fetchRepositoryFileContent(
       throw new GithubRepositoryAccessError(
         'GitHubの認証に失敗しました。再度ログインし直してください。',
         'unauthorized',
+        'GitHub authentication failed. Please sign in again.',
       )
     }
 
@@ -480,12 +516,14 @@ export async function fetchRepositoryFileContent(
       throw new GithubRepositoryAccessError(
         '選択したファイルが見つかりませんでした。ブランチとファイルパスを確認してください。',
         'file-fetch-failed',
+        'The selected file could not be found. Check the branch and file path.',
       )
     }
 
     throw new GithubRepositoryAccessError(
       'GitHubファイルの取得に失敗しました。時間を置いて再度お試しください。',
       'file-fetch-failed',
+      'Failed to fetch the GitHub file. Please try again later.',
     )
   }
 }

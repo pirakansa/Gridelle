@@ -4,6 +4,7 @@ import { layoutTheme } from '../../utils/Theme'
 import Button from '../atom/Button'
 import TextAreaField from '../atom/TextAreaField'
 import TextInput from '../atom/TextInput'
+import { useI18n } from '../../utils/i18n'
 
 type Props = {
   notice: { text: string; tone: 'error' | 'success' } | null
@@ -49,6 +50,7 @@ export default function TableEditorPanel({
   notice,
   canDeleteSheet,
 }: Props): React.ReactElement {
+  const { select } = useI18n()
   const [sheetNameDraft, setSheetNameDraft] = React.useState<string>(currentSheetName)
 
   React.useEffect(() => {
@@ -78,14 +80,14 @@ export default function TableEditorPanel({
     'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100 focus:border-slate-300'
 
   return (
-    <section className="flex flex-col gap-4" aria-label="スプレッドシートメニュー">
+    <section className="flex flex-col gap-4" aria-label={select('スプレッドシートメニュー', 'Spreadsheet menu')}>
       <div className={`${layoutTheme.ribbonShell} p-4 md:p-6`}>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2 text-sm text-slate-600">
                 <span id={sheetGroupLabelId} className="font-medium text-slate-700">
-                  シート
+                  {select('シート', 'Sheets')}
                 </span>
                 <div
                   className="flex flex-wrap items-center gap-2"
@@ -112,7 +114,7 @@ export default function TableEditorPanel({
                 </div>
               </div>
               <Button type="button" variant="ghost" onClick={onAddSheet} data-testid="add-sheet-button">
-                シートを追加
+                {select('シートを追加', 'Add sheet')}
               </Button>
               <Button
                 type="button"
@@ -121,12 +123,12 @@ export default function TableEditorPanel({
                 disabled={!canDeleteSheet}
                 data-testid="delete-sheet-button"
               >
-                シートを削除
+                {select('シートを削除', 'Delete sheet')}
               </Button>
             </div>
             <div className="flex w-full max-w-sm items-center gap-2 md:max-w-md">
               <label htmlFor="sheet-name" className="text-sm text-slate-600">
-                シート名
+                {select('シート名', 'Sheet name')}
               </label>
               <TextInput
                 id="sheet-name"
@@ -156,41 +158,41 @@ export default function TableEditorPanel({
           )}
           <div className="grid gap-4 lg:grid-cols-3">
             <div className={ribbonGroupClass}>
-              <span className={ribbonTitleClass}>構造</span>
+              <span className={ribbonTitleClass}>{select('構造', 'Structure')}</span>
               <div className="flex flex-wrap items-center gap-3">
                 <Button type="button" onClick={onAddRow}>
-                  行を追加
+                  {select('行を追加', 'Add row')}
                 </Button>
                 <div className="flex items-center gap-2">
                   <TextInput
                     type="text"
-                    placeholder="列名を入力"
+                    placeholder={select('列名を入力', 'Enter a column name')}
                     value={newColumnName}
                     onChange={(event) => onColumnNameChange(event.target.value)}
                   />
                   <Button type="button" variant="ghost" onClick={onAddColumn}>
-                    列を追加
+                    {select('列を追加', 'Add column')}
                   </Button>
                 </div>
               </div>
             </div>
             <div className={ribbonGroupClass}>
-              <span className={ribbonTitleClass}>選択</span>
+              <span className={ribbonTitleClass}>{select('選択', 'Selection')}</span>
               <p data-testid="selection-summary" className="text-sm font-medium text-slate-700">
                 {selectionSummary}
               </p>
               <div className="flex items-center gap-3 text-xs text-slate-500">
-                <span>⌘/Ctrl+V で貼り付け / Escape で選択解除</span>
+                <span>{select('⌘/Ctrl+V で貼り付け / Escape で選択解除', '⌘/Ctrl+V to paste / Escape to clear selection')}</span>
                 <Button type="button" variant="subtle" onClick={onClearSelection} disabled={!hasSelection}>
-                  選択をクリア
+                  {select('選択をクリア', 'Clear selection')}
                 </Button>
               </div>
             </div>
             <div className={ribbonGroupClass}>
-              <span className={ribbonTitleClass}>一括入力</span>
+              <span className={ribbonTitleClass}>{select('一括入力', 'Bulk fill')}</span>
               <div className="flex flex-col gap-3">
                 <TextAreaField
-                  placeholder="選択セルへ一括入力"
+                  placeholder={select('選択セルへ一括入力', 'Bulk fill the selected cells')}
                   value={bulkValue}
                   onChange={(event) => onBulkValueChange(event.target.value)}
                   data-testid="bulk-input"
@@ -202,16 +204,18 @@ export default function TableEditorPanel({
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={onBulkApply}
-                    disabled={!hasSelection}
-                    data-testid="bulk-apply"
-                  >
-                    一括入力する
-                  </Button>
-                  <span className="text-xs text-slate-500">選択範囲に同じ値を設定</span>
-                </div>
+                  onClick={onBulkApply}
+                  disabled={!hasSelection}
+                  data-testid="bulk-apply"
+                >
+                  {select('一括入力する', 'Apply to selection')}
+                </Button>
+                <span className="text-xs text-slate-500">
+                  {select('選択範囲に同じ値を設定', 'Set the same value across the selection')}
+                </span>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>

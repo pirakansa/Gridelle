@@ -2,6 +2,7 @@
 import React from 'react'
 import type { TableCell } from '../../../services/workbookService'
 import type { CellPosition, SelectionRange } from '../../../pages/top/useSpreadsheetState'
+import { useI18n } from '../../../utils/i18n'
 
 type EditableCellProps = {
   column: string
@@ -43,6 +44,7 @@ export default function EditableCell({
   onCellEditorBlur,
   onCellEditorKeyDown,
 }: EditableCellProps): React.ReactElement {
+  const { select } = useI18n()
   const cellValue = cell?.value ?? ''
   const cellStyle = React.useMemo<React.CSSProperties>(() => {
     const style: React.CSSProperties = {}
@@ -155,7 +157,7 @@ export default function EditableCell({
             <button
               type="button"
               className="fill-handle"
-              aria-label="塗りつぶしハンドル"
+              aria-label={select('塗りつぶしハンドル', 'Fill handle')}
               data-testid="fill-handle"
               onPointerDown={onStartFillDrag}
             />

@@ -3,6 +3,7 @@ import React from 'react'
 import type { TableRow as TableRowData } from '../../../services/workbookService'
 import type { CellPosition, SelectionRange } from '../../../pages/top/useSpreadsheetState'
 import EditableCell from './EditableCell'
+import { useI18n } from '../../../utils/i18n'
 
 type TableRowProps = {
   row: TableRowData
@@ -51,6 +52,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(function T
   },
   ref,
 ): React.ReactElement {
+  const { select } = useI18n()
   return (
     <tr ref={ref} className="border-t border-slate-200">
       <th scope="row" className="row-number-cell" data-testid={`row-number-${rowIndex}`}>
@@ -58,7 +60,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(function T
           <button
             type="button"
             className="row-number-button"
-            aria-label={`行${rowIndex + 1}を選択`}
+            aria-label={select(`行${rowIndex + 1}を選択`, `Select row ${rowIndex + 1}`)}
             onClick={(event) => onRowNumberClick(rowIndex, event.shiftKey)}
           >
             {rowIndex + 1}

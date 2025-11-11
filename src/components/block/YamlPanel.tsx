@@ -3,6 +3,7 @@ import React from 'react'
 import { layoutTheme } from '../../utils/Theme'
 import Button from '../atom/Button'
 import { buildButtonClassName } from '../atom/buttonStyles'
+import { useI18n } from '../../utils/i18n'
 
 type Props = {
   yamlBuffer: string
@@ -24,16 +25,18 @@ export default function YamlPanel({
   onDownload,
   onCopy,
 }: Props): React.ReactElement {
+  const { select } = useI18n()
+
   return (
     <section className={layoutTheme.card}>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <label htmlFor="yaml-input" className={layoutTheme.sectionTitle}>
-            YAML入力 / プレビュー
+            {select('YAML入力 / プレビュー', 'YAML input / preview')}
           </label>
           <textarea
             id="yaml-input"
-            aria-label="YAML入力エリア"
+            aria-label={select('YAML入力エリア', 'YAML input area')}
             data-testid="yaml-textarea"
             value={yamlBuffer}
             onChange={(event) => onChange(event.target.value)}
@@ -41,16 +44,19 @@ export default function YamlPanel({
             spellCheck={false}
           />
           <p className={layoutTheme.helperText}>
-            直接編集して「YAMLを反映」ボタンを押すか、ファイルを読み込んでテーブルに変換してください。
+            {select(
+              '直接編集して「YAMLを反映」ボタンを押すか、ファイルを読み込んでテーブルに変換してください。',
+              'Edit directly and click “Apply YAML”, or import a file to populate the table.',
+            )}
           </p>
         </div>
 
         <div className="flex flex-wrap gap-3">
           <Button type="button" onClick={onApply} disabled={!yamlBuffer.trim()}>
-            YAMLを反映
+            {select('YAMLを反映', 'Apply YAML')}
           </Button>
           <label className={`${buildButtonClassName({ variant: 'ghost', size: 'md' })} cursor-pointer`}>
-            YAMLファイルを読み込む
+            {select('YAMLファイルを読み込む', 'Import a YAML file')}
             <input
               type="file"
               accept=".yml,.yaml,.json,text/yaml"
@@ -59,10 +65,10 @@ export default function YamlPanel({
             />
           </label>
           <Button type="button" variant="ghost" onClick={onDownload}>
-            YAMLをダウンロード
+            {select('YAMLをダウンロード', 'Download YAML')}
           </Button>
           <Button type="button" variant="ghost" onClick={onCopy}>
-            YAMLをコピー
+            {select('YAMLをコピー', 'Copy YAML')}
           </Button>
         </div>
 

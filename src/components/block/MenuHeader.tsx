@@ -14,6 +14,8 @@ import FileSection from './menu/FileSection'
 import type { RegisteredFunctionMeta } from '../../pages/top/utils/cellFunctionEngine'
 import type { LoadedWasmModule } from '../../services/wasmMacroService'
 import type { CellFunctionConfig } from '../../services/workbookService'
+import { useI18n } from '../../utils/i18n'
+import LanguageToggleButton from '../atom/LanguageToggleButton'
 
 type Props = {
   onYamlInputClick: () => void
@@ -113,6 +115,7 @@ export default function MenuHeader({
   isLoggingOut,
   logoutError,
 }: Props): React.ReactElement {
+  const { select } = useI18n()
   const menuPanelId = React.useId()
   const [isMenuCollapsed, setMenuCollapsed] = React.useState<boolean>(false)
   const [activeMenuSection, setActiveMenuSection] = React.useState<MenuSectionId>('sheet')
@@ -186,6 +189,7 @@ export default function MenuHeader({
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <span className="text-base font-semibold text-slate-900">Gridelle</span>
+            <LanguageToggleButton />
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <MenuTabs
@@ -208,7 +212,7 @@ export default function MenuHeader({
           <div
             id={menuPanelId}
             className={`${layoutTheme.ribbonShell} p-4`}
-            aria-label="スプレッドシート操作メニュー"
+            aria-label={select('スプレッドシート操作メニュー', 'Spreadsheet control menu')}
           >
             <div className="flex flex-col gap-4">
               {notice && (

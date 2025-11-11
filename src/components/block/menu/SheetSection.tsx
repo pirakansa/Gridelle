@@ -3,6 +3,7 @@ import React from 'react'
 import Button from '../../atom/Button'
 import TextInput from '../../atom/TextInput'
 import MenuSectionCard from './MenuSectionCard'
+import { useI18n } from '../../../utils/i18n'
 
 type SheetSectionProps = {
   sheetNames: string[]
@@ -34,6 +35,7 @@ export default function SheetSection({
   onCancelSheetRename,
   canDeleteSheet,
 }: SheetSectionProps): React.ReactElement {
+  const { select } = useI18n()
   const sheetGroupLabelId = React.useId()
   const sheetTabBaseClass =
     'rounded-full border px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-200'
@@ -47,7 +49,7 @@ export default function SheetSection({
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <span id={sheetGroupLabelId} className="font-medium text-slate-700">
-              シート
+              {select('シート', 'Sheets')}
             </span>
             <div
               className="flex flex-wrap items-center gap-2"
@@ -101,7 +103,7 @@ export default function SheetSection({
         </div>
         <div className="flex items-center justify-end gap-3">
           <Button type="button" variant="ghost" onClick={onAddSheet} data-testid="add-sheet-button">
-            シートを追加
+            {select('シートを追加', 'Add sheet')}
           </Button>
           <Button
             type="button"
@@ -110,7 +112,7 @@ export default function SheetSection({
             disabled={!canDeleteSheet}
             data-testid="delete-sheet-button"
           >
-            シートを削除
+            {select('シートを削除', 'Delete sheet')}
           </Button>
         </div>
       </div>
