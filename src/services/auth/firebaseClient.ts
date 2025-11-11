@@ -3,7 +3,6 @@ import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app'
 import {
   Auth,
   GithubAuthProvider,
-  type NextOrObserver,
   type Unsubscribe,
   type User,
   getAuth,
@@ -161,8 +160,9 @@ class FirebaseAuthClient implements AuthClient {
    * @returns {Unsubscribe} Detach handler for the listener.
    */
   subscribeAuthState(callbacks: AuthStateChangeCallbacks): Unsubscribe {
-    const observer: NextOrObserver<User | null> = {
-      next: (user) => {
+    return onAuthStateChanged(
+      this.auth,
+      (user) => {
         if (!user) {
           callbacks.onSignedOut()
           return
@@ -170,12 +170,10 @@ class FirebaseAuthClient implements AuthClient {
 
         callbacks.onAuthenticated(createSession(user, null, null, null))
       },
-      error: (error) => {
+      (error) => {
         callbacks.onError?.(error)
       },
-    }
-
-    return onAuthStateChanged(this.auth, observer.next, observer.error ?? undefined)
+    )
   }
 
   /**

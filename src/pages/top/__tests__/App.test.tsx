@@ -44,8 +44,8 @@ const authServiceMocks = vi.hoisted(() => {
     defaultSession,
     currentSession: defaultSession as MockSession | null,
     callbacks: null as MockAuthCallbacks | null,
-    loginWithProviderMock: vi.fn<[_providerId: string], Promise<MockSession>>(),
-    loginAsGuestMock: vi.fn<[], Promise<MockSession>>(),
+    loginWithProviderMock: vi.fn<(_providerId: string) => Promise<MockSession>>(),
+    loginAsGuestMock: vi.fn<() => Promise<MockSession>>(),
     logoutMock: vi.fn(async () => undefined),
     setSession: (session: MockSession | null) => {
       state.currentSession = session
