@@ -2,6 +2,16 @@
 import { createCell, cloneRow, type TableRow } from '../../../services/workbookService'
 import type { CellPosition, SelectionRange } from '../types'
 
+type SelectionSummaryMessages = {
+  empty: string
+  summary: (_count: number) => string
+}
+
+const DEFAULT_SELECTION_MESSAGES: SelectionSummaryMessages = {
+  empty: 'Click or drag cells to select',
+  summary: (count) => `${count} cells selected`,
+}
+
 // Function Header: Builds a normalized selection range given two cell positions.
 export const buildSelectionRange = (start: CellPosition, end: CellPosition): SelectionRange => ({
   startRow: Math.min(start.rowIndex, end.rowIndex),
@@ -11,13 +21,16 @@ export const buildSelectionRange = (start: CellPosition, end: CellPosition): Sel
 })
 
 // Function Header: Converts a selection into a readable summary string.
-export const stringifySelection = (selection: SelectionRange | null): string => {
+export const stringifySelection = (
+  selection: SelectionRange | null,
+  messages: SelectionSummaryMessages = DEFAULT_SELECTION_MESSAGES,
+): string => {
   if (!selection) {
-    return 'セルをクリックまたはドラッグして選択'
+    return messages.empty
   }
   const count =
     (selection.endRow - selection.startRow + 1) * (selection.endCol - selection.startCol + 1)
-  return `${count}セル選択中`
+  return messages.summary(count)
 }
 
 // Function Header: Creates an empty row that satisfies the provided column keys.
