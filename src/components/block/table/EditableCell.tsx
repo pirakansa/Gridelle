@@ -118,7 +118,18 @@ export default function EditableCell({
       data-selected={
         activeRange && isCellWithinRange(activeRange, rowIndex, columnIndex) ? 'true' : undefined
       }
-      onPointerDown={(event) => onPointerDown(event, rowIndex, columnIndex)}
+      onPointerDown={(event) => {
+        if (editingCell && !isEditing) {
+          const activeElement = document.activeElement
+          if (activeElement instanceof HTMLElement) {
+            activeElement.blur()
+          }
+        }
+        if (!isEditing) {
+          event.preventDefault()
+        }
+        onPointerDown(event, rowIndex, columnIndex)
+      }}
       onPointerEnter={() => onPointerEnter(rowIndex, columnIndex)}
       onClick={(event) => onCellClick(event, rowIndex, columnIndex)}
       onDoubleClick={() => onCellDoubleClick(rowIndex, columnIndex)}
