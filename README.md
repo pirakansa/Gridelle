@@ -48,6 +48,20 @@ npm install
 | `npm run lint` | ESLint を実行し、警告ゼロを維持します。 |
 | `npm run test` | Vitest でユニットテストを実行します。 |
 
+## 認証バリアントの切り替え
+
+ログインページは `src/pages/login/App.<variant>.tsx` という命名規則のコンポーネントを参照し、`VITE_LOGIN_APP` で指定したバリアントをビルド時に選択します（既定値は `firebase`）。例:
+
+```bash
+# Firebase 認証（デフォルト）
+npm run build
+
+# Amazon Cognito など別実装を用いたい場合
+VITE_LOGIN_APP=cognito npm run build
+```
+
+新しいバリアントを追加する場合は、`App.<variant>.tsx` 内で必要に応じて `configureAuthClient()` を呼び出し、認証クライアント（Firebase / Cognito / 社内SSO など）を初期化してください。UI を共通化したい場合は Firebase 実装（`App.firebase.tsx`）を再利用し、認証レイヤーのみ差し替える構成がおすすめです。
+
 ## 開発ガイドライン
 
 1. ブランチは `main` から作成し、GitHub Flow を採用します。
@@ -72,4 +86,3 @@ npm install
 - Gridelle を商用サービスや大規模な社内利用向けに弊サーバー上でホスティングする場合は無償提供の対象外となるため、別途ご相談ください。
 
 Issue / PR を作成する際は、変化点の背景とテスト結果を明記し、変更がユーザーに与える影響を簡潔にまとめてください。
-
