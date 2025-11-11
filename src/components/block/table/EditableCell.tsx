@@ -118,19 +118,31 @@ export default function EditableCell({
       data-selected={
         activeRange && isCellWithinRange(activeRange, rowIndex, columnIndex) ? 'true' : undefined
       }
-      onPointerDown={(event) => onPointerDown(event, rowIndex, columnIndex)}
+      onPointerDown={(event) => {
+        if (editingCell && !isEditing) {
+          const activeElement = document.activeElement
+          if (activeElement instanceof HTMLElement) {
+            activeElement.blur()
+          }
+        }
+        if (!isEditing && !editingCell) {
+          event.preventDefault()
+        }
+        onPointerDown(event, rowIndex, columnIndex)
+      }}
       onPointerEnter={() => onPointerEnter(rowIndex, columnIndex)}
       onClick={(event) => onCellClick(event, rowIndex, columnIndex)}
       onDoubleClick={() => onCellDoubleClick(rowIndex, columnIndex)}
+      onDragStart={(event) => event.preventDefault()}
       style={cellStyle}
     >
-  <div className="flex h-full items-start gap-1 px-1">
+      <div className="flex h-full select-none items-start gap-1 px-1">
         {isEditing ? (
           <textarea
             value={draftValue}
             onChange={(event) => setDraftValue(event.target.value)}
             data-testid={`cell-${rowIndex}-${column}`}
-            className="w-full flex-1 resize-y rounded border border-blue-100 bg-white px-2 py-2 text-sm leading-relaxed focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            className="w-full flex-1 select-text resize-y rounded border border-blue-100 bg-white px-2 py-2 text-sm leading-relaxed focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
             autoFocus
             rows={Math.max(1, draftValue.split('\n').length)}
             onBlur={handleEditorBlur}
@@ -139,12 +151,14 @@ export default function EditableCell({
             onClick={(event) => event.stopPropagation()}
             onDoubleClick={(event) => event.stopPropagation()}
             onPaste={(event) => event.stopPropagation()}
+            draggable={false}
             style={cellStyle}
           />
         ) : (
           <div
-            className="w-full flex-1 whitespace-pre rounded px-2 py-2 text-left text-sm"
+            className="w-full flex-1 select-none whitespace-pre rounded px-2 py-2 text-left text-sm"
             data-testid={`cell-display-${rowIndex}-${column}`}
+            draggable={false}
             style={cellStyle}
           >
             {cellValue}
