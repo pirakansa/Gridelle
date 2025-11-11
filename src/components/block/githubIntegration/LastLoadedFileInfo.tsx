@@ -2,6 +2,7 @@
 import React from 'react'
 import { integrationModeMeta } from './constants'
 import { type LoadedFileInfo } from './types'
+import { useI18n } from '../../../utils/i18n'
 
 // Function Header: Shows summary details for the most recent GitHub file load.
 type LastLoadedFileInfoProps = {
@@ -11,30 +12,33 @@ type LastLoadedFileInfoProps = {
 export default function LastLoadedFileInfo({
   lastLoadedFileInfo,
 }: LastLoadedFileInfoProps): React.ReactElement {
+  const { select } = useI18n()
+  const modeMeta = integrationModeMeta.find((meta) => meta.id === lastLoadedFileInfo.mode)
+  const modeLabel = modeMeta ? select(modeMeta.label.ja, modeMeta.label.en) : lastLoadedFileInfo.mode
   return (
     <section
       className="rounded border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-sm"
       data-testid="github-last-loaded-info"
     >
-      <p className="text-sm font-medium text-slate-700">最後に読み込んだファイル</p>
+      <p className="text-sm font-medium text-slate-700">{select('最後に読み込んだファイル', 'Last loaded file')}</p>
       <p className="mt-1">
-        パターン:{' '}
+        {select('パターン', 'Mode')}:{' '}
         <span className="font-mono text-slate-700">
-          {integrationModeMeta.find((meta) => meta.id === lastLoadedFileInfo.mode)?.label ?? lastLoadedFileInfo.mode}
+          {modeLabel}
         </span>
       </p>
       <p>
-        リポジトリ:{' '}
+        {select('リポジトリ', 'Repository')}:{' '}
         <span className="font-mono text-slate-700">
           {`${lastLoadedFileInfo.repository.owner}/${lastLoadedFileInfo.repository.repository}`}
         </span>
       </p>
       <p>
-        ブランチ / Ref:{' '}
+        {select('ブランチ / Ref', 'Branch / Ref')}:{' '}
         <span className="font-mono text-slate-700">{lastLoadedFileInfo.branch}</span>
       </p>
       <p>
-        ファイル:{' '}
+        {select('ファイル', 'File')}:{' '}
         <span className="font-mono text-slate-700">{lastLoadedFileInfo.filePath}</span>
       </p>
     </section>

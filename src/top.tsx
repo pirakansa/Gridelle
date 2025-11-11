@@ -3,10 +3,13 @@ import React from 'react'
 import * as ReactDOM from 'react-dom/client'
 import App from './pages/top/App'
 import './utils/Global.scss'
+import { LocaleProvider } from './utils/i18n'
 
 // Render the top page application inside the root container.
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <LocaleProvider>
+      <App />
+    </LocaleProvider>
   </React.StrictMode>,
 )

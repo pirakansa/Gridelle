@@ -3,6 +3,7 @@ import React from 'react'
 import type { CellFunctionConfig } from '../../../services/workbookService'
 import type { RegisteredFunctionMeta } from '../../../pages/top/utils/cellFunctionEngine'
 import type { LoadedWasmModule } from '../../../services/wasmMacroService'
+import { useI18n } from '../../../utils/i18n'
 
 type MacroSectionProps = {
   columns: string[]
@@ -16,6 +17,15 @@ type MacroSectionProps = {
 const SAMPLE_MODULE_ID = 'sample_sum'
 const SAMPLE_URL = '/macros/sample_sum.wasm'
 
+type LocalizedMessage = {
+  readonly ja: string
+  readonly en: string
+}
+
+function createMessage(ja: string, en: string): LocalizedMessage {
+  return { ja, en }
+}
+
 // Function Header: Renders controls for importing WASM modules and applying functions to selected cells.
 export default function MacroSection({
   columns,
@@ -25,14 +35,15 @@ export default function MacroSection({
   onLoadModule,
   onApplyFunction,
 }: MacroSectionProps): React.ReactElement {
+  const { select } = useI18n()
   const [moduleId, setModuleId] = React.useState<string>(SAMPLE_MODULE_ID)
   const [wasmUrl, setWasmUrl] = React.useState<string>(SAMPLE_URL)
   const [selectedFunctionId, setSelectedFunctionId] = React.useState<string>('')
   const [targetColumn, setTargetColumn] = React.useState<string>(columns[0] ?? '')
   const [rowStart, setRowStart] = React.useState<string>('')
   const [rowEnd, setRowEnd] = React.useState<string>('')
-  const [status, setStatus] = React.useState<string | null>(null)
-  const [error, setError] = React.useState<string | null>(null)
+  const [status, setStatus] = React.useState<LocalizedMessage | null>(null)
+  const [error, setError] = React.useState<LocalizedMessage | null>(null)
   const [isLoading, setLoading] = React.useState<boolean>(false)
 
   React.useEffect(() => {
@@ -59,9 +70,15 @@ export default function MacroSection({
     setLoading(true)
     try {
       await onLoadModule({ moduleId, url: wasmUrl })
-      setStatus(`WASMモジュール「${moduleId}」を読み込みました。`)
+      setStatus(
+        createMessage(
+          `WASMモジュール「${moduleId}」を読み込みました。`,
+          `Loaded WASM module "${moduleId}".`,
+        ),
+      )
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : String(loadError))
+      const fallback = loadError instanceof Error ? loadError.message : String(loadError)
+      setError(createMessage(fallback, fallback))
     } finally {
       setLoading(false)
     }
@@ -71,15 +88,15 @@ export default function MacroSection({
     setStatus(null)
     setError(null)
     if (!hasSelection) {
-      setError('関数を適用するセルを選択してください。')
+      setError(createMessage('関数を適用するセルを選択してください。', 'Select cells before applying a function.'))
       return
     }
     if (!selectedFunctionId) {
-      setError('適用する関数を選択してください。')
+      setError(createMessage('適用する関数を選択してください。', 'Choose a function to apply.'))
       return
     }
     if (!targetColumn) {
-      setError('対象となる列を選択してください。')
+      setError(createMessage('対象となる列を選択してください。', 'Select a target column.'))
       return
     }
     const args: Record<string, unknown> = { key: targetColumn }
@@ -88,7 +105,7 @@ export default function MacroSection({
     if (rowStart.trim()) {
       const parsed = Number(rowStart)
       if (!Number.isFinite(parsed)) {
-        setError('開始行には数値を入力してください。')
+        setError(createMessage('開始行には数値を入力してください。', 'Enter a numeric start row.'))
         return
       }
       rowsConfig.start = parsed
@@ -96,7 +113,7 @@ export default function MacroSection({
     if (rowEnd.trim()) {
       const parsed = Number(rowEnd)
       if (!Number.isFinite(parsed)) {
-        setError('終了行には数値を入力してください。')
+        setError(createMessage('終了行には数値を入力してください。', 'Enter a numeric end row.'))
         return
       }
       rowsConfig.end = parsed
@@ -121,31 +138,44 @@ export default function MacroSection({
 
   const renderLoadedModules = (): React.ReactElement => {
     if (!loadedModules.length) {
-      return <p className="text-sm text-slate-500">読み込まれたWASMモジュールはありません。</p>
+      return (
+        <p className="text-sm text-slate-500">
+          {select('読み込まれたWASMモジュールはありません。', 'No WASM modules have been loaded yet.')}
+        </p>
+      )
     }
     return (
       <ul className="space-y-1 text-sm text-slate-600" data-testid="loaded-wasm-list">
         {loadedModules.map((module) => (
           <li key={module.id}>
-            <span className="font-semibold text-slate-800">{module.id}</span>（{module.exports.join(', ')}）
+            <span className="font-semibold text-slate-800">{module.id}</span> ({module.exports.join(', ')})
           </li>
         ))}
       </ul>
     )
   }
 
+  const statusText = status ? select(status.ja, status.en) : null
+  const errorText = error ? select(error.ja, error.en) : null
+
   return (
-    <section aria-label="関数 / マクロ">
+    <section aria-label={select('関数 / マクロ', 'Functions / macros')}>
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="rounded-lg border border-slate-200 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">WASMモジュールを読み込む</h3>
+          <h3 className="text-sm font-semibold text-slate-900">
+            {select('WASMモジュールを読み込む', 'Load a WASM module')}
+          </h3>
           <p className="mt-2 text-sm text-slate-600">
-            外部のWASMファイルを読み込むと、エクスポートされた関数をセルマクロとして利用できます。サンプルとして
-            <code className="ml-1 font-mono text-xs text-slate-800">{SAMPLE_URL}</code> を用意しています。
+            {select(
+              '外部のWASMファイルを読み込むと、エクスポートされた関数をセルマクロとして利用できます。サンプルとして',
+              'Load an external WASM file to use its exported functions as cell macros. Sample module:',
+            )}
+            <code className="ml-1 font-mono text-xs text-slate-800">{SAMPLE_URL}</code>
+            {select(' を用意しています。', ' is available.')}
           </p>
           <div className="mt-4 space-y-3">
             <label className="block text-xs font-semibold text-slate-700">
-              モジュールID
+              {select('モジュールID', 'Module ID')}
               <input
                 type="text"
                 value={moduleId}
@@ -155,7 +185,7 @@ export default function MacroSection({
               />
             </label>
             <label className="block text-xs font-semibold text-slate-700">
-              WASMファイルURL
+              {select('WASMファイルURL', 'WASM file URL')}
               <input
                 type="text"
                 value={wasmUrl}
@@ -171,30 +201,43 @@ export default function MacroSection({
               disabled={isLoading}
               data-testid="load-wasm-button"
             >
-              {isLoading ? '読み込み中…' : 'WASMを読み込む'}
+              {isLoading
+                ? select('読み込み中…', 'Loading…')
+                : select('WASMを読み込む', 'Load WASM')}
             </button>
           </div>
           <div className="mt-4 border-t border-slate-100 pt-3">
-            <h4 className="text-xs font-semibold text-slate-700">読み込み済みモジュール</h4>
+            <h4 className="text-xs font-semibold text-slate-700">
+              {select('読み込み済みモジュール', 'Loaded modules')}
+            </h4>
             {renderLoadedModules()}
           </div>
         </div>
 
         <div className="rounded-lg border border-slate-200 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">関数を選択セルに適用</h3>
+          <h3 className="text-sm font-semibold text-slate-900">
+            {select('関数を選択セルに適用', 'Apply a function to the selection')}
+          </h3>
           <p className="mt-2 text-sm text-slate-600">
-            関数を適用するセルを先に選択してください。対象列や行範囲を指定してマクロを設定できます。
+            {select(
+              '関数を適用するセルを先に選択してください。対象列や行範囲を指定してマクロを設定できます。',
+              'Select the cells first, then configure the target column and optional row range for the macro.',
+            )}
           </p>
           <div className="mt-4 grid gap-4">
             <label className="block text-xs font-semibold text-slate-700">
-              利用可能な関数
+              {select('利用可能な関数', 'Available functions')}
               <select
                 value={selectedFunctionId}
                 onChange={(event) => setSelectedFunctionId(event.target.value)}
                 className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 data-testid="macro-function-select"
               >
-                {availableFunctions.length === 0 && <option value="">関数が登録されていません</option>}
+                {availableFunctions.length === 0 && (
+                  <option value="">
+                    {select('関数が登録されていません', 'No functions registered')}
+                  </option>
+                )}
                 {availableFunctions.map((fn) => (
                   <option key={fn.id} value={fn.id}>
                     {fn.label}
@@ -203,14 +246,14 @@ export default function MacroSection({
               </select>
             </label>
             <label className="block text-xs font-semibold text-slate-700">
-              対象列
+              {select('対象列', 'Target column')}
               <select
                 value={targetColumn}
                 onChange={(event) => setTargetColumn(event.target.value)}
                 className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 data-testid="macro-column-select"
               >
-                {columns.length === 0 && <option value="">列がありません</option>}
+                {columns.length === 0 && <option value="">{select('列がありません', 'No columns')}</option>}
                 {columns.map((column) => (
                   <option key={column} value={column}>
                     {column}
@@ -220,7 +263,7 @@ export default function MacroSection({
             </label>
             <div className="grid grid-cols-2 gap-3">
               <label className="block text-xs font-semibold text-slate-700">
-                開始行（任意）
+                {select('開始行（任意）', 'Start row (optional)')}
                 <input
                   type="number"
                   min={1}
@@ -231,7 +274,7 @@ export default function MacroSection({
                 />
               </label>
               <label className="block text-xs font-semibold text-slate-700">
-                終了行（任意）
+                {select('終了行（任意）', 'End row (optional)')}
                 <input
                   type="number"
                   min={1}
@@ -250,25 +293,25 @@ export default function MacroSection({
                 disabled={!hasSelection}
                 data-testid="apply-macro-button"
               >
-                選択セルに適用
+                {select('選択セルに適用', 'Apply to selection')}
               </button>
               <button
                 type="button"
                 className="rounded border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 onClick={handleClearFunction}
               >
-                関数をクリア
+                {select('関数をクリア', 'Clear function')}
               </button>
             </div>
           </div>
         </div>
       </div>
-      {(status || error) && (
+      {(statusText || errorText) && (
         <p
-          className={`mt-4 text-sm ${error ? 'text-red-600' : 'text-emerald-600'}`}
-          role={error ? 'alert' : 'status'}
+          className={`mt-4 text-sm ${errorText ? 'text-red-600' : 'text-emerald-600'}`}
+          role={errorText ? 'alert' : 'status'}
         >
-          {error ?? status}
+          {errorText ?? statusText}
         </p>
       )}
     </section>

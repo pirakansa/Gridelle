@@ -25,6 +25,13 @@
   gap: 8px;
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .title {
   margin: 0;
   font-size: clamp(1.8rem, 2.2vw + 1rem, 2.4rem);

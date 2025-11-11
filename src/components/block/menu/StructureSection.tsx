@@ -2,6 +2,7 @@
 import React from 'react'
 import Button from '../../atom/Button'
 import MenuSectionCard from './MenuSectionCard'
+import { useI18n } from '../../../utils/i18n'
 
 type StructureSectionProps = {
   onAddRow: () => void
@@ -39,14 +40,16 @@ export default function StructureSection({
   canMoveSelectedRowsDown,
   hasSelection,
 }: StructureSectionProps): React.ReactElement {
+  const { select } = useI18n()
+
   return (
     <MenuSectionCard>
       <div className="grid gap-4 md:grid-cols-2">
-        <section className="flex flex-col gap-3" aria-label="行の操作">
-          <h3 className="text-sm font-semibold text-slate-700">行</h3>
+        <section className="flex flex-col gap-3" aria-label={select('行の操作', 'Row actions')}>
+          <h3 className="text-sm font-semibold text-slate-700">{select('行', 'Rows')}</h3>
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" onClick={onAddRow}>
-              行を追加
+              {select('行を追加', 'Add row')}
             </Button>
             <Button
               type="button"
@@ -55,7 +58,7 @@ export default function StructureSection({
               disabled={!canMoveSelectedRowsUp}
               data-testid="move-selected-rows-up"
             >
-              選択行を上へ移動
+              {select('選択行を上へ移動', 'Move selected rows up')}
             </Button>
             <Button
               type="button"
@@ -64,7 +67,7 @@ export default function StructureSection({
               disabled={!canMoveSelectedRowsDown}
               data-testid="move-selected-rows-down"
             >
-              選択行を下へ移動
+              {select('選択行を下へ移動', 'Move selected rows down')}
             </Button>
             <Button
               type="button"
@@ -73,7 +76,7 @@ export default function StructureSection({
               disabled={!hasSelection}
               data-testid="insert-row-below-selection"
             >
-              選択行の下に行を追加
+              {select('選択行の下に行を追加', 'Insert row below selection')}
             </Button>
             <Button
               type="button"
@@ -82,15 +85,15 @@ export default function StructureSection({
               disabled={!hasSelection}
               data-testid="delete-selected-rows"
             >
-              選択行を削除
+              {select('選択行を削除', 'Delete selected rows')}
             </Button>
           </div>
         </section>
-        <section className="flex flex-col gap-3" aria-label="列の操作">
-          <h3 className="text-sm font-semibold text-slate-700">列</h3>
+        <section className="flex flex-col gap-3" aria-label={select('列の操作', 'Column actions')}>
+          <h3 className="text-sm font-semibold text-slate-700">{select('列', 'Columns')}</h3>
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="ghost" onClick={onAddColumn}>
-              列を追加
+              {select('列を追加', 'Add column')}
             </Button>
             <Button
               type="button"
@@ -99,7 +102,7 @@ export default function StructureSection({
               disabled={!hasSelection}
               data-testid="insert-column-right-of-selection"
             >
-              選択列の右に列を追加
+              {select('選択列の右に列を追加', 'Insert column to the right')}
             </Button>
             <Button
               type="button"
@@ -108,7 +111,7 @@ export default function StructureSection({
               disabled={!canMoveSelectedColumnsLeft}
               data-testid="move-selected-columns-left"
             >
-              選択列を左へ移動
+              {select('選択列を左へ移動', 'Move selected columns left')}
             </Button>
             <Button
               type="button"
@@ -117,7 +120,7 @@ export default function StructureSection({
               disabled={!canMoveSelectedColumnsRight}
               data-testid="move-selected-columns-right"
             >
-              選択列を右へ移動
+              {select('選択列を右へ移動', 'Move selected columns right')}
             </Button>
             <Button
               type="button"
@@ -126,7 +129,7 @@ export default function StructureSection({
               disabled={!hasSelection}
               data-testid="delete-selected-columns"
             >
-              選択列を削除
+              {select('選択列を削除', 'Delete selected columns')}
             </Button>
           </div>
         </section>

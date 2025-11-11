@@ -8,6 +8,11 @@ import type {
   GithubRepositoryAccessErrorCode,
 } from '../../../services/githubRepositoryAccessService'
 import { type YamlContentPayload } from './types'
+import { useI18n } from '../../../utils/i18n'
+
+type LocalizedMessage = { ja: string; en: string }
+
+const createMessage = (ja: string, en: string): LocalizedMessage => ({ ja, en })
 
 // Function Header: Renders form inputs and handles submission for blob URL loading.
 type BlobUrlIntegrationSectionProps = {
@@ -31,10 +36,15 @@ export default function BlobUrlIntegrationSection({
   onYamlContentLoaded,
   services,
 }: BlobUrlIntegrationSectionProps): React.ReactElement {
+  const { select } = useI18n()
   const [blobUrl, setBlobUrl] = React.useState<string>('')
   const [isBlobLoading, setIsBlobLoading] = React.useState<boolean>(false)
-  const [blobErrorMessage, setBlobErrorMessage] = React.useState<string | null>(null)
-  const [blobSuccessMessage, setBlobSuccessMessage] = React.useState<string | null>(null)
+  const [blobErrorMessage, setBlobErrorMessage] = React.useState<LocalizedMessage | null>(null)
+  const [blobSuccessMessage, setBlobSuccessMessage] = React.useState<LocalizedMessage | null>(null)
+  const resolveMessage = React.useCallback(
+    (message: LocalizedMessage | null) => (message ? select(message.ja, message.en) : null),
+    [select],
+  )
 
   const handleBlobSubmit = React.useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
@@ -50,7 +60,9 @@ export default function BlobUrlIntegrationSection({
 
       try {
         const result = await services.fetchFileFromBlobUrl(trimmedUrl)
-        setBlobSuccessMessage(`${result.coordinates.filePath} を読み込みました。`)
+        setBlobSuccessMessage(
+          createMessage(`${result.coordinates.filePath} を読み込みました。`, `Loaded ${result.coordinates.filePath}.`),
+        )
         onFileSelected?.(result.coordinates.filePath)
         onYamlContentLoaded?.({
           yaml: result.content,
@@ -64,9 +76,14 @@ export default function BlobUrlIntegrationSection({
         })
       } catch (error) {
         if (error instanceof services.GithubRepositoryAccessError) {
-          setBlobErrorMessage(error.message)
+          setBlobErrorMessage(createMessage(error.jaMessage, error.enMessage))
         } else {
-          setBlobErrorMessage('Blob URL からファイルを取得できませんでした。時間を置いて再度お試しください。')
+          setBlobErrorMessage(
+            createMessage(
+              'Blob URL からファイルを取得できませんでした。時間を置いて再度お試しください。',
+              'Failed to load the file from the blob URL. Please try again later.',
+            ),
+          )
         }
       } finally {
         setIsBlobLoading(false)
@@ -79,7 +96,7 @@ export default function BlobUrlIntegrationSection({
     <section className="flex flex-col gap-3">
       <form className="flex flex-col gap-3" onSubmit={handleBlobSubmit} data-testid="blob-url-form">
         <label htmlFor="blob-url" className="text-sm font-medium text-slate-800">
-          Blob URL を入力
+          {select('Blob URL を入力', 'Enter a blob URL')}
         </label>
         <TextInput
           id="blob-url"
@@ -94,18 +111,18 @@ export default function BlobUrlIntegrationSection({
         />
         <div className="flex justify-end">
           <Button type="submit" disabled={!blobUrl.trim() || isBlobLoading}>
-            {isBlobLoading ? '読み込み中…' : 'Blobを読み込む'}
+            {isBlobLoading ? select('読み込み中…', 'Loading…') : select('Blobを読み込む', 'Load blob')}
           </Button>
         </div>
       </form>
-      {blobErrorMessage && (
+      {resolveMessage(blobErrorMessage) && (
         <p className="text-sm text-red-600" role="alert" data-testid="blob-url-error">
-          {blobErrorMessage}
+          {resolveMessage(blobErrorMessage)}
         </p>
       )}
-      {blobSuccessMessage && (
+      {resolveMessage(blobSuccessMessage) && (
         <p className="text-sm text-emerald-600" role="status" data-testid="blob-url-success">
-          {blobSuccessMessage}
+          {resolveMessage(blobSuccessMessage)}
         </p>
       )}
     </section>

@@ -1,6 +1,7 @@
 // File Header: Overlay shell component used to present configuration panels.
 import React from 'react'
 import Button from '../atom/Button'
+import { useI18n } from '../../utils/i18n'
 
 type Props = {
   title: string
@@ -18,6 +19,7 @@ export default function SettingsOverlay({
   children,
   panelId,
 }: Props): React.ReactElement {
+  const { select } = useI18n()
   const headingId = `${panelId}-heading`
   const descriptionId = description ? `${panelId}-description` : undefined
 
@@ -47,8 +49,14 @@ export default function SettingsOverlay({
               </p>
             )}
           </div>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose} aria-label="閉じる">
-            × 閉じる
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            aria-label={select('閉じる', 'Close')}
+          >
+            × {select('閉じる', 'Close')}
           </Button>
         </div>
         <div className="max-h-[70vh] overflow-y-auto pr-1">{children}</div>

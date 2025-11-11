@@ -1,6 +1,7 @@
 // File Header: Tab selector controlling which ribbon section is visible.
 import React from 'react'
 import IconButton from '../../atom/IconButton'
+import { useI18n } from '../../../utils/i18n'
 
 export type MenuSectionId = 'file' | 'sheet' | 'structure' | 'selection' | 'macro' | 'user' | 'help'
 
@@ -24,22 +25,28 @@ export default function MenuTabs({
   onToggleCollapse,
   isCollapsed,
 }: MenuTabsProps): React.ReactElement {
-  const collapseLabel = isCollapsed ? 'メニューを展開' : 'メニューを折りたたむ'
+  const { select } = useI18n()
+  const collapseLabel = isCollapsed
+    ? select('メニューを展開', 'Expand menu')
+    : select('メニューを折りたたむ', 'Collapse menu')
   const chevronPath = isCollapsed ? 'M7.5 9.75L12 14.25L16.5 9.75' : 'M7.5 14.25L12 9.75L16.5 14.25'
 
   return (
-    <nav aria-label="Gridelleメニュー" className="flex flex-wrap items-center gap-2 md:gap-3">
+    <nav
+      aria-label={select('Gridelleメニュー', 'Gridelle menu')}
+      className="flex flex-wrap items-center gap-2 md:gap-3"
+    >
       <div className="flex flex-wrap items-center gap-2">
         {(
           [
-            { id: 'file' as const, label: 'ファイル' },
-            { id: 'sheet' as const, label: 'シート' },
-            { id: 'structure' as const, label: '行列' },
-            { id: 'selection' as const, label: '選択' },
-            { id: 'macro' as const, label: '関数' },
-            { id: 'user' as const, label: 'ユーザー' },
-            { id: 'help' as const, label: 'ヘルプ' },
-          ] satisfies Array<{ id: MenuSectionId; label: string }>
+            { id: 'file' as const, labelJa: 'ファイル', labelEn: 'File' },
+            { id: 'sheet' as const, labelJa: 'シート', labelEn: 'Sheets' },
+            { id: 'structure' as const, labelJa: '行列', labelEn: 'Rows & Columns' },
+            { id: 'selection' as const, labelJa: '選択', labelEn: 'Selection' },
+            { id: 'macro' as const, labelJa: '関数', labelEn: 'Functions' },
+            { id: 'user' as const, labelJa: 'ユーザー', labelEn: 'Account' },
+            { id: 'help' as const, labelJa: 'ヘルプ', labelEn: 'Help' },
+          ] satisfies Array<{ id: MenuSectionId; labelJa: string; labelEn: string }>
         ).map((tab) => {
           const isActive = activeSection === tab.id
           const buttonClass = `${menuTabButtonClass} ${isActive ? menuTabActiveClass : menuTabInactiveClass}`
@@ -52,7 +59,7 @@ export default function MenuTabs({
               aria-pressed={isActive}
               data-testid={`menu-tab-${tab.id}`}
             >
-              {tab.label}
+              {select(tab.labelJa, tab.labelEn)}
             </button>
           )
         })}

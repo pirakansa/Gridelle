@@ -115,6 +115,7 @@ import type { User } from 'firebase/auth'
 import { PROVIDER_TOKEN_STORAGE_KEY, resetAuthClient } from '../../../services/auth'
 import { redirectToTop } from '../../../utils/navigation'
 import App from '../App'
+import { LocaleProvider } from '../../../utils/i18n'
 
 const appMocks = globalThis.__firebaseAppMocks
 const authMocks = globalThis.__firebaseAuthMocks
@@ -162,8 +163,31 @@ describe('pages/login/App', () => {
     localStorage.clear()
   })
 
+  const renderWithLocale = (): void => {
+    render(
+      <LocaleProvider>
+        <App />
+      </LocaleProvider>,
+    )
+  }
+
+  it('言語切り替えボタンで英語表示に切り替えられる', async () => {
+    renderWithLocale()
+    const toggle = screen.getByRole('button', { name: 'UIを英語表示に切り替える' })
+
+    await userEvent.click(toggle)
+
+    expect(await screen.findByRole('heading', { name: 'Gridelle Login' })).toBeInTheDocument()
+    expect(
+      screen.getByText('Sign in with GitHub or continue as a guest to use Gridelle.', {
+        selector: 'p',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Switch UI to Japanese' })).toBeInTheDocument()
+  })
+
   it('未ログイン時にサインインボタンを表示する', async () => {
-    render(<App />)
+    renderWithLocale()
     emitAuthState(null)
 
     expect(await screen.findByRole('button', { name: 'GitHub でログイン' })).toBeInTheDocument()
@@ -178,7 +202,7 @@ describe('pages/login/App', () => {
   it('GitHub 認証済みユーザーでも個人情報を表示しない', async () => {
     localStorage.setItem('gridelle/githubAccessToken', 'abcd1234efgh5678')
 
-    render(<App />)
+    renderWithLocale()
     emitAuthState({
       uid: 'github-user',
       displayName: 'Octocat',
@@ -201,7 +225,7 @@ describe('pages/login/App', () => {
   })
 
   it('ゲストログイン状態を表示する', async () => {
-    render(<App />)
+    renderWithLocale()
     emitAuthState({ uid: 'guest-user', isAnonymous: true })
 
     const card = await screen.findByTestId('login-card')
@@ -214,7 +238,7 @@ describe('pages/login/App', () => {
 
   it('GitHub ログインに成功するとトークンを保存しトップへ遷移する', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    renderWithLocale()
     emitAuthState(null)
 
     await user.click(await screen.findByRole('button', { name: 'GitHub でログイン' }))
@@ -234,7 +258,7 @@ describe('pages/login/App', () => {
     authMocks.credentialFromResultMock.mockReturnValueOnce(null)
     const user = userEvent.setup()
 
-    render(<App />)
+    renderWithLocale()
     emitAuthState(null)
 
     await user.click(await screen.findByRole('button', { name: 'GitHub でログイン' }))
@@ -250,7 +274,7 @@ describe('pages/login/App', () => {
 
   it('ゲストログインに成功するとトップへ遷移する', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    renderWithLocale()
     emitAuthState(null)
 
     await user.click(await screen.findByRole('button', { name: 'ゲストでログイン' }))
@@ -269,7 +293,7 @@ describe('pages/login/App', () => {
     localStorage.setItem('gridelle:yamlBuffer', 'cached-buffer')
     sessionStorage.setItem('gridelle:sessionDraft', 'draft')
     const user = userEvent.setup()
-    render(<App />)
+    renderWithLocale()
     emitAuthState({
       uid: 'github-user',
       displayName: 'Octocat',
@@ -304,7 +328,7 @@ describe('pages/login/App', () => {
     sessionStorage.setItem('gridelle:sessionDraft', 'draft')
 
     const user = userEvent.setup()
-    render(<App />)
+    renderWithLocale()
     emitAuthState(null)
 
     await screen.findByRole('button', { name: 'GitHub でログイン' })

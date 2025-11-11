@@ -10,6 +10,7 @@ import { useSelectionController } from './useSelectionController'
 import { useBulkInput } from './internal/useBulkInput'
 import { useKeyboardShortcuts } from './internal/useKeyboardShortcuts'
 import { useSelectionNormalizer } from './internal/useSelectionNormalizer'
+import { useI18n } from '../../../utils/i18n'
 
 type UseSpreadsheetInteractionControllerParams = {
   columns: string[]
@@ -65,6 +66,7 @@ export const useSpreadsheetInteractionController = ({
   setColumnOrder,
   setNotice,
 }: UseSpreadsheetInteractionControllerParams): UseSpreadsheetInteractionController => {
+  const { select } = useI18n()
   const {
     selection,
     setSelection,
@@ -493,7 +495,10 @@ export const useSpreadsheetInteractionController = ({
   })
 
   const activeRange = fillPreview ?? selection
-  const selectionSummary = stringifySelection(activeRange)
+  const selectionSummary = stringifySelection(activeRange, {
+    empty: select('セルをクリックまたはドラッグして選択', 'Click or drag cells to select'),
+    summary: (count) => select(`${count}セル選択中`, `${count} cells selected`),
+  })
 
   const anchorCell = React.useMemo(() => {
     if (!selection) {

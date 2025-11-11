@@ -1,10 +1,12 @@
 // File Header: Placeholder content for pull request integration workflow.
 import React from 'react'
 import TextInput from '../../atom/TextInput'
+import { useI18n } from '../../../utils/i18n'
 
 // Function Header: Displays the disabled pull request integration inputs.
 export default function PullRequestIntegrationSection(): React.ReactElement {
   const [pullRequestUrl, setPullRequestUrl] = React.useState<string>('')
+  const { select } = useI18n()
 
   return (
     <section className="flex flex-col gap-3">
@@ -24,7 +26,10 @@ export default function PullRequestIntegrationSection(): React.ReactElement {
         disabled
       />
       <p className="text-xs text-slate-500">
-        PRの差分確認やファイル比較機能は現在準備中です。今後のアップデートをお待ちください。
+        {select(
+          'PRの差分確認やファイル比較機能は現在準備中です。今後のアップデートをお待ちください。',
+          'Pull request diff review and file comparison features are coming soon.',
+        )}
       </p>
     </section>
   )

@@ -5,6 +5,7 @@ import type { TableRow } from '../../services/workbookService'
 import { layoutTheme } from '../../utils/Theme'
 import TableHead from './table/TableHead'
 import TableBody from './table/TableBody'
+import { useI18n } from '../../utils/i18n'
 
 type Props = {
   rows: TableRow[]
@@ -58,6 +59,7 @@ export default function SpreadsheetTable({
   onCellEditorBlur,
   onCellEditorKeyDown,
 }: Props): React.ReactElement {
+  const { select } = useI18n()
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
   const [viewportHeight, setViewportHeight] = React.useState<number>(0)
   const [scrollTop, setScrollTop] = React.useState<number>(0)
@@ -113,7 +115,7 @@ export default function SpreadsheetTable({
       id="sheet-workspace"
       tabIndex={0}
       role="region"
-      aria-label="スプレッドシートエリア"
+      aria-label={select('スプレッドシートエリア', 'Spreadsheet workspace')}
       onPaste={onPaste}
       onScroll={handleScroll}
       onKeyDown={onTableKeyDown}
