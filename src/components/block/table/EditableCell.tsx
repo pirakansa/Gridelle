@@ -125,7 +125,7 @@ export default function EditableCell({
             activeElement.blur()
           }
         }
-        if (!isEditing) {
+        if (!isEditing && !editingCell) {
           event.preventDefault()
         }
         onPointerDown(event, rowIndex, columnIndex)
