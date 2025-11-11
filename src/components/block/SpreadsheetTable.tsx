@@ -111,7 +111,7 @@ export default function SpreadsheetTable({
 
   return (
     <div
-      className={`${layoutTheme.tableScroll} mt-6`}
+      className={layoutTheme.tableScroll}
       id="sheet-workspace"
       tabIndex={0}
       role="region"
