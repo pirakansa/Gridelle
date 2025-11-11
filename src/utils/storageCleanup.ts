@@ -1,5 +1,5 @@
 // File Header: Utility helpers for clearing client-side storage artifacts.
-import { clearStoredGithubToken, setLoginMode } from '../services/authService'
+import { clearAllStoredProviderTokens, setLoginMode } from '../services/auth'
 import { BUFFER_STORAGE_KEY, STORAGE_NAMESPACE_PREFIX, TABLE_STORAGE_KEY } from './storageKeys'
 
 const LOCAL_STORAGE_KEYS = [TABLE_STORAGE_KEY, BUFFER_STORAGE_KEY]
@@ -42,9 +42,9 @@ export function clearAppStorage(): void {
   }
 
   try {
-    clearStoredGithubToken()
+    clearAllStoredProviderTokens()
   } catch (error) {
-    console.error('GitHub トークンの削除に失敗しました', error)
+    console.error('ログイントークンの削除に失敗しました', error)
   }
 
   try {

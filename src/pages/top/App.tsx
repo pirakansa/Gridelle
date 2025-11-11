@@ -1,6 +1,5 @@
 // File Header: Page-level component orchestrating the spreadsheet playground layout.
 import React from 'react'
-import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { layoutTheme } from '../../utils/Theme'
 import { redirectToLogin } from '../../utils/navigation'
 import { clearAppStorage } from '../../utils/storageCleanup'
@@ -12,59 +11,73 @@ import SettingsOverlay from '../../components/block/SettingsOverlay'
 import GithubIntegrationPanel, {
   type GithubIntegrationLoadedFileInfo,
 } from '../../components/block/GithubIntegrationPanel'
-import { clearStoredGithubToken, deriveLoginMode, getFirebaseAuth, getLoginMode, getStoredGithubToken, setLoginMode } from '../../services/authService'
-import type { LoginMode } from '../../services/authService'
+import {
+  clearStoredProviderToken,
+  getAuthClient,
+  getLoginMode,
+  getStoredProviderToken,
+  setLoginMode,
+  type AuthUser,
+  type LoginMode,
+} from '../../services/auth'
 
 // Function Header: Composes the top page using modular sub-components wired to state hooks.
 export default function App(): React.ReactElement {
-  const auth = React.useMemo(() => getFirebaseAuth(), [])
+  const authClient = React.useMemo(() => getAuthClient(), [])
   const spreadsheet = useSpreadsheetState()
   const [isYamlInputOpen, setYamlInputOpen] = React.useState<boolean>(false)
   const [isGithubIntegrationOpen, setGithubIntegrationOpen] = React.useState<boolean>(false)
   const [githubRepositoryUrl, setGithubRepositoryUrl] = React.useState<string>('')
   const [githubLastLoadedFile, setGithubLastLoadedFile] = React.useState<GithubIntegrationLoadedFileInfo | null>(null)
   const [loginMode, setLoginModeState] = React.useState<LoginMode | null>(() => getLoginMode())
-  const [currentUser, setCurrentUser] = React.useState<User | null>(() => auth.currentUser ?? null)
+  const [currentUser, setCurrentUser] = React.useState<AuthUser | null>(null)
   const [isLoggingOut, setLoggingOut] = React.useState<boolean>(false)
   const [logoutError, setLogoutError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (nextUser) => {
-        setCurrentUser(nextUser)
+    if (!loginMode) {
+      const storedMode = getLoginMode()
+      if (storedMode) {
+        setLoginModeState(storedMode)
+      }
+    }
+  }, [loginMode])
+
+  React.useEffect(() => {
+    const unsubscribe = authClient.subscribeAuthState({
+      onAuthenticated: (session) => {
+        setCurrentUser(session.user)
         setLogoutError(null)
 
-        if (!nextUser) {
-          clearAppStorage()
-          setLoginModeState(null)
-          redirectToLogin()
-          return
-        }
-
-        const mode = deriveLoginMode(nextUser) as LoginMode
+        const mode = session.loginMode
         setLoginMode(mode)
         setLoginModeState(mode)
 
         if (mode === 'guest') {
-          clearStoredGithubToken()
+          clearStoredProviderToken('github')
           return
         }
 
-        if (!getStoredGithubToken()) {
+        if (!session.accessToken && !getStoredProviderToken('github')) {
           redirectToLogin()
         }
       },
-      (authError) => {
+      onSignedOut: () => {
+        clearAppStorage()
+        setLoginModeState(null)
+        setCurrentUser(null)
+        redirectToLogin()
+      },
+      onError: (authError) => {
         console.error('認証状態の監視でエラーが発生しました', authError)
         setLogoutError('認証状態の取得に失敗しました。再度ログインし直してください。')
       },
-    )
+    })
 
     return () => {
       unsubscribe()
     }
-  }, [auth])
+  }, [authClient])
 
   const openYamlInput = React.useCallback(() => {
     setYamlInputOpen(true)
@@ -111,7 +124,7 @@ export default function App(): React.ReactElement {
     setLogoutError(null)
 
     try {
-      await signOut(auth)
+      await authClient.logout()
       clearAppStorage()
       setLoginModeState(null)
       setCurrentUser(null)
@@ -121,7 +134,7 @@ export default function App(): React.ReactElement {
     } finally {
       setLoggingOut(false)
     }
-  }, [auth, isLoggingOut, setLoginModeState])
+  }, [authClient, isLoggingOut, setLoginModeState])
 
   return (
     <div className={layoutTheme.pageShell} data-login-mode={loginMode ?? 'none'}>

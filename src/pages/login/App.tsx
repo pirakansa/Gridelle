@@ -2,6 +2,7 @@
 import React from 'react'
 import styles from './login.module.scss'
 import { useLoginController } from './hooks/useLoginController'
+import type { AuthLoginOption } from '../../services/auth'
 
 // Function Header: Renders the login UI and binds it to the shared login controller hook.
 export default function App(): React.ReactElement {
@@ -13,13 +14,65 @@ export default function App(): React.ReactElement {
     canUseOctokit,
     isBusy,
     isLoggedIn,
-    handleGithubLogin,
-    handleGuestLogin,
+    loginOptions,
+    handleLoginOption,
     handleLogout,
     handleClearStorage,
     handleNavigateTop,
     appVersion,
   } = useLoginController()
+
+  const [tokenInputs, setTokenInputs] = React.useState<Record<string, string>>({})
+
+  const handleTokenInputChange = React.useCallback((optionId: string, value: string) => {
+    setTokenInputs((prev) => ({ ...prev, [optionId]: value }))
+  }, [])
+
+  const renderLoginOption = React.useCallback(
+    (option: AuthLoginOption, index: number) => {
+      const baseClass = `${styles.button} ${index === 0 ? styles.buttonPrimary : styles.buttonSecondary}`
+      const isTokenOption = option.type === 'token'
+
+      if (isTokenOption) {
+        const tokenValue = tokenInputs[option.id] ?? ''
+        const isDisabled = isBusy || tokenValue.trim().length === 0
+
+        return (
+          <div key={option.id} className={styles.optionRow}>
+            <input
+              type="text"
+              className={styles.tokenInput}
+              placeholder={option.description ?? `${option.label} 用のトークンを入力してください。`}
+              value={tokenValue}
+              onChange={(event) => handleTokenInputChange(option.id, event.currentTarget.value)}
+              disabled={isBusy}
+            />
+            <button
+              type="button"
+              className={baseClass}
+              onClick={() => handleLoginOption(option.id, tokenValue)}
+              disabled={isDisabled}
+            >
+              {option.label}
+            </button>
+          </div>
+        )
+      }
+
+      return (
+        <button
+          key={option.id}
+          type="button"
+          className={baseClass}
+          onClick={() => handleLoginOption(option.id)}
+          disabled={isBusy}
+        >
+          {option.label}
+        </button>
+      )
+    },
+    [handleLoginOption, handleTokenInputChange, isBusy, tokenInputs],
+  )
 
   return (
     <div className={styles.root}>
@@ -46,26 +99,7 @@ export default function App(): React.ReactElement {
           )}
         </header>
         <section className={styles.actions}>
-          {!isLoggedIn && (
-            <>
-              <button
-                type="button"
-                className={`${styles.button} ${styles.buttonPrimary}`}
-                onClick={handleGithubLogin}
-                disabled={isBusy}
-              >
-                GitHub でログイン
-              </button>
-              <button
-                type="button"
-                className={`${styles.button} ${styles.buttonSecondary}`}
-                onClick={handleGuestLogin}
-                disabled={isBusy}
-              >
-                ゲストでログイン
-              </button>
-            </>
-          )}
+          {!isLoggedIn && loginOptions.map(renderLoginOption)}
           {isLoggedIn && (
             <>
               <button

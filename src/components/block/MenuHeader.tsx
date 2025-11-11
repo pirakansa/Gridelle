@@ -1,7 +1,7 @@
 // File Header: Application menu combining global controls with spreadsheet utilities.
 import React from 'react'
 import type { Notice } from '../../pages/top/types'
-import type { LoginMode } from '../../services/authService'
+import type { LoginMode } from '../../services/auth'
 import { layoutTheme } from '../../utils/Theme'
 import MenuTabs, { type MenuSectionId } from './menu/MenuTabs'
 import SheetSection from './menu/SheetSection'

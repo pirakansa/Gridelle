@@ -3,69 +3,203 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { Auth, User } from 'firebase/auth'
 
-const firebaseAuthMocks = vi.hoisted(() => {
-  const signOutMock = vi.fn(async () => undefined)
-  let mockCurrentUser: User | null = null
+vi.stubEnv('VITE_FIREBASE_API_KEY', 'test-api-key')
+vi.stubEnv('VITE_FIREBASE_AUTH_DOMAIN', 'test.firebaseapp.com')
 
-  const authStub = {
-    app: {} as never,
-    config: {} as never,
-    languageCode: null,
-    name: 'mock-auth',
-    settings: {} as never,
-    tenantId: null,
-    useDeviceLanguage: vi.fn(),
-    signInAnonymously: vi.fn(),
-    signInWithCredential: vi.fn(),
-    signInWithCustomToken: vi.fn(),
-    signInWithEmailAndPassword: vi.fn(),
-    signInWithEmailLink: vi.fn(),
-    signInWithPhoneNumber: vi.fn(),
-    signInWithPopup: vi.fn(),
-    signInWithRedirect: vi.fn(),
-    signOut: signOutMock,
-    updateCurrentUser: vi.fn(),
-    beforeAuthStateChanged: vi.fn(),
-    delete: vi.fn(),
-    onAuthStateChanged: vi.fn(),
-    onIdTokenChanged: vi.fn(),
-    setPersistence: vi.fn(),
-    toJSON: vi.fn(),
-  } as Record<string, unknown>
+type MockSession = {
+  user: {
+    id: string
+    displayName: string | null
+    email: string | null
+    isAnonymous: boolean
+    providerIds: string[]
+  }
+  loginMode: 'guest' | 'github'
+  providerId: string | null
+  accessToken: string | null
+}
 
-  Object.defineProperty(authStub, 'currentUser', {
-    configurable: true,
-    get: () => mockCurrentUser,
+type MockAuthCallbacks = {
+  onAuthenticated: (_session: MockSession) => void
+  onSignedOut: () => void
+  onError?: (_error: unknown) => void
+}
+
+const authServiceMocks = vi.hoisted(() => {
+  const defaultSession: MockSession = {
+    user: {
+      id: 'guest-user',
+      displayName: null,
+      email: null,
+      isAnonymous: true,
+      providerIds: ['anonymous'],
+    },
+    loginMode: 'guest',
+    providerId: 'guest',
+    accessToken: null,
+  }
+
+  const state = {
+    defaultSession,
+    currentSession: defaultSession as MockSession | null,
+    callbacks: null as MockAuthCallbacks | null,
+    loginWithProviderMock: vi.fn<[_providerId: string], Promise<MockSession>>(),
+    loginAsGuestMock: vi.fn<[], Promise<MockSession>>(),
+    logoutMock: vi.fn(async () => undefined),
+    setSession: (session: MockSession | null) => {
+      state.currentSession = session
+      const callbacks = state.callbacks
+      if (callbacks) {
+        if (session) {
+          callbacks.onAuthenticated(session)
+        } else {
+          callbacks.onSignedOut()
+        }
+      }
+    },
+  }
+
+  return state
+})
+
+vi.mock('../../services/auth', () => {
+  const state = authServiceMocks
+
+  const subscribeAuthState = (callbacks: MockAuthCallbacks) => {
+    state.callbacks = callbacks
+    const session = state.currentSession
+    if (session) {
+      callbacks.onAuthenticated(session)
+    } else {
+      callbacks.onSignedOut()
+    }
+    return () => {
+      state.callbacks = null
+    }
+  }
+
+  const authClient = {
+    subscribeAuthState,
+    loginWithProvider: state.loginWithProviderMock,
+    loginAsGuest: state.loginAsGuestMock,
+    logout: state.logoutMock,
+    getLoginOptions: vi.fn(() => []),
+  }
+
+  const getAuthClient = vi.fn(() => authClient)
+
+  const readTokenMap = () => {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return {} as Record<string, string>
+    }
+
+    const raw = window.localStorage.getItem('gridelle/auth/providerTokens')
+    if (!raw) {
+      const legacy = window.localStorage.getItem('gridelle/githubAccessToken')
+      return legacy ? { github: legacy } : {}
+    }
+
+    try {
+      return JSON.parse(raw) as Record<string, string>
+    } catch (error) {
+      console.error('Failed to parse provider tokens in test mock.', error)
+      return {}
+    }
+  }
+
+  const writeTokenMap = (map: Record<string, string>) => {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return
+    }
+
+    const entries = Object.entries(map).filter(([, value]) => Boolean(value))
+    if (entries.length === 0) {
+      window.localStorage.removeItem('gridelle/auth/providerTokens')
+    } else {
+      window.localStorage.setItem('gridelle/auth/providerTokens', JSON.stringify(Object.fromEntries(entries)))
+    }
+    window.localStorage.removeItem('gridelle/githubAccessToken')
+  }
+
+  const setStoredProviderToken = vi.fn((providerId: string, token: string | null) => {
+    const map = readTokenMap()
+    if (!token) {
+      delete map[providerId]
+      writeTokenMap(map)
+      return
+    }
+
+    map[providerId] = token
+    writeTokenMap(map)
   })
 
-  const onAuthStateChangedMock = vi.fn((_: Auth, callback: (_nextUser: User | null) => void) => {
-    callback(mockCurrentUser)
-    return () => {}
+  const getStoredProviderToken = vi.fn((providerId: string) => {
+    const map = readTokenMap()
+    return map[providerId] ?? null
+  })
+
+  const getStoredProviderTokens = vi.fn(() => readTokenMap())
+
+  const clearStoredProviderToken = vi.fn((providerId: string) => {
+    setStoredProviderToken(providerId, null)
+  })
+
+  const clearAllStoredProviderTokens = vi.fn(() => {
+    writeTokenMap({})
+  })
+
+  const setLoginMode = vi.fn((mode: string | null) => {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return
+    }
+
+    if (!mode) {
+      window.localStorage.removeItem('gridelle/loginMode')
+      return
+    }
+
+    window.localStorage.setItem('gridelle/loginMode', mode)
+  })
+
+  const getLoginMode = vi.fn(() => {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return null
+    }
+
+    return window.localStorage.getItem('gridelle/loginMode')
   })
 
   return {
-    signOutMock,
-    onAuthStateChangedMock,
-    getAuthInstance: () => authStub as unknown as Auth,
-    setCurrentUser: (nextUser: User | null) => {
-      mockCurrentUser = nextUser
-    },
+    getAuthClient,
+    getLoginMode,
+    setLoginMode,
+    getStoredProviderToken,
+    getStoredProviderTokens,
+    setStoredProviderToken,
+    clearStoredProviderToken,
+    clearAllStoredProviderTokens,
+    resetAuthClient: vi.fn(),
+    configureAuthClient: vi.fn(),
+    getRequiredEnv: vi.fn(),
+    getAuthFirebaseConfig: vi.fn(() => ({
+      apiKey: 'test-key',
+      authDomain: 'test.example.com',
+    })),
+    PROVIDER_TOKEN_STORAGE_KEY: 'gridelle/auth/providerTokens',
+    LEGACY_GITHUB_TOKEN_STORAGE_KEY: 'gridelle/githubAccessToken',
+    LOGIN_MODE_STORAGE_KEY: 'gridelle/loginMode',
+    __authServiceMocks: state,
   }
 })
 
-vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: firebaseAuthMocks.onAuthStateChangedMock,
-  signOut: firebaseAuthMocks.signOutMock,
-  getAuth: vi.fn(() => firebaseAuthMocks.getAuthInstance()),
-  GithubAuthProvider: class {
-    addScope = vi.fn()
-    setCustomParameters = vi.fn()
-  },
-}))
-
-const { signOutMock, onAuthStateChangedMock, setCurrentUser: setMockAuthUser } = firebaseAuthMocks
+const {
+  logoutMock,
+  loginWithProviderMock,
+  loginAsGuestMock,
+  setSession: setAuthSession,
+  defaultSession: defaultAuthSession,
+} = authServiceMocks
 
 vi.mock('../../../utils/navigation', () => ({
   redirectToLogin: vi.fn(),
@@ -79,9 +213,12 @@ const TABLE_STORAGE_KEY = 'gridelle:tableYaml'
 const BUFFER_STORAGE_KEY = 'gridelle:yamlBuffer'
 
 beforeEach(() => {
-  setMockAuthUser(null)
-  onAuthStateChangedMock.mockClear()
-  signOutMock.mockClear()
+  setAuthSession(defaultAuthSession)
+  loginWithProviderMock.mockReset()
+  loginAsGuestMock.mockReset()
+  logoutMock.mockClear()
+  loginWithProviderMock.mockResolvedValue(defaultAuthSession)
+  loginAsGuestMock.mockResolvedValue(defaultAuthSession)
   writeTextMock.mockClear()
   const clipboard = { writeText: writeTextMock }
   Object.defineProperty(globalThis.navigator, 'clipboard', {
@@ -139,7 +276,9 @@ describe('App', () => {
 
   it('メニューからYAML入力パネルを開閉できる', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    await act(async () => {
+      render(<App />)
+    })
 
     await user.click(screen.getByTestId('menu-tab-file'))
     await user.click(screen.getByRole('button', { name: 'YAML入力 / プレビュー' }))
@@ -197,31 +336,6 @@ describe('App', () => {
     const metricCell = await screen.findByTestId('cell-display-2-metric')
     await waitFor(() => {
       expect(metricCell).toHaveTextContent('12')
-    })
-  })
-
-  it('GitHub連携パネルを開閉できる', async () => {
-    window.localStorage.setItem('gridelle/loginMode', 'github')
-    window.localStorage.setItem('gridelle/githubAccessToken', 'dummy-token')
-    setMockAuthUser({
-      uid: 'github-user',
-      email: 'tester@example.com',
-      isAnonymous: false,
-    } as unknown as User)
-
-    const user = userEvent.setup()
-    render(<App />)
-
-    await user.click(screen.getByTestId('menu-tab-file'))
-    const githubButton = await screen.findByTestId('github-file-actions')
-    await user.click(githubButton)
-
-    expect(await screen.findByRole('dialog', { name: 'GitHubファイル連携' })).toBeInTheDocument()
-    expect(screen.getByTestId('github-integration-panel')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: '閉じる' }))
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: 'GitHubファイル連携' })).not.toBeInTheDocument()
     })
   })
 

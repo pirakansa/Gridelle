@@ -1,24 +1,19 @@
-// File Header: Encapsulates login page behavior and Firebase authentication flows for reuse.
+// File Header: Encapsulates login page behavior and authentication flows for reuse.
 import React from 'react'
 import {
-  GithubAuthProvider,
-  onAuthStateChanged,
-  signInAnonymously,
-  signInWithPopup,
-  signOut,
-  type User,
-} from 'firebase/auth'
-import {
-  clearStoredGithubToken,
-  deriveLoginMode,
-  getFirebaseAuth,
-  getGithubAuthProvider,
+  clearAllStoredProviderTokens,
+  clearStoredProviderToken,
+  getAuthClient,
   getLoginMode,
-  getStoredGithubToken,
+  getStoredProviderToken,
+  getStoredProviderTokens,
   setLoginMode,
-  setStoredGithubToken,
+  setStoredProviderToken,
+  type AuthLoginOption,
+  type AuthSession,
+  type AuthUser,
   type LoginMode,
-} from '../../../services/authService'
+} from '../../../services/auth'
 import { redirectToTop } from '../../../utils/navigation'
 import { clearAppStorage } from '../../../utils/storageCleanup'
 
@@ -26,16 +21,18 @@ const UNAUTHENTICATED_STATUS = '未ログインです。GitHub またはゲス�
 const GUEST_STATUS = 'ゲストユーザーとしてログインしています。利用できない機能がある場合があります。'
 const AUTH_ERROR_STATUS = '認証状態の取得で問題が発生しました。'
 const AUTH_ERROR_MESSAGE = '認証状態の確認に失敗しました。ページを再読み込みしてください。'
-const LOGIN_FAILURE_MESSAGE = 'ログインに失敗しました。時間を置いて再度お試しください。'
+const OAUTH_FAILURE_MESSAGE = 'ログインに失敗しました。時間を置いて再度お試しください。'
 const GUEST_FAILURE_MESSAGE = 'ゲストログインに失敗しました。時間を置いて再度お試しください。'
+const TOKEN_FAILURE_MESSAGE = 'トークンでのログインに失敗しました。入力内容を確認してください。'
 const LOGOUT_FAILURE_MESSAGE = 'ログアウトに失敗しました。ブラウザを再読み込みしてください。'
 const LOGOUT_SUCCESS_STATUS = 'ログアウトしました。GitHub またはゲストでログインしてください。'
 const CLEAR_STORAGE_STATUS = '保存済みのセッションとキャッシュを削除しました。'
 
 interface LoginDetailsState {
-  readonly user: User | null
+  readonly user: AuthUser | null
   readonly loginMode: LoginMode | null
-  readonly accessToken: string | null
+  readonly providerId: string | null
+  readonly accessTokens: Record<string, string | null>
 }
 
 interface LoginControllerState {
@@ -46,22 +43,49 @@ interface LoginControllerState {
   readonly canUseOctokit: boolean
   readonly isBusy: boolean
   readonly isLoggedIn: boolean
-  readonly handleGithubLogin: () => Promise<void>
-  readonly handleGuestLogin: () => Promise<void>
+  readonly loginOptions: readonly AuthLoginOption[]
+  readonly handleLoginOption: (_optionId: string, _tokenOverride?: string) => Promise<void>
   readonly handleLogout: () => Promise<void>
   readonly handleClearStorage: () => void
   readonly handleNavigateTop: () => void
   readonly appVersion: string
 }
 
+function getSuccessStatus(option: AuthLoginOption): string {
+  if (option.mode === 'guest') {
+    return 'ゲストログインに成功しました。トップページへ遷移します。'
+  }
+
+  if (option.mode === 'github') {
+    return 'GitHub ログインに成功しました。トップページへ遷移します。'
+  }
+
+  return `${option.label} に成功しました。トップページへ遷移します。`
+}
+
+function getFailureMessage(option: AuthLoginOption): string {
+  if (option.type === 'guest') {
+    return GUEST_FAILURE_MESSAGE
+  }
+
+  if (option.type === 'token') {
+    return TOKEN_FAILURE_MESSAGE
+  }
+
+  return OAUTH_FAILURE_MESSAGE
+}
+
 /**
- * React hook that orchestrates Firebase authentication flows for the login page UI.
+ * Function Header: React hook that orchestrates authentication flows for the login page UI.
  * @returns {LoginControllerState} Aggregated controller state and event handlers.
  */
 export function useLoginController(): LoginControllerState {
-  const auth = React.useMemo(() => getFirebaseAuth(), [])
-  const providerRef = React.useMemo<GithubAuthProvider>(() => getGithubAuthProvider(), [])
+  const authClient = React.useMemo(() => getAuthClient(), [])
   const appVersion = React.useMemo<string>(() => import.meta.env.VITE_APP_VERSION ?? '0.0.0', [])
+  const loginOptions = React.useMemo<readonly AuthLoginOption[]>(() => {
+    const options = authClient.getLoginOptions()
+    return [...options].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
+  }, [authClient])
 
   const [statusMessage, setStatusMessage] = React.useState<string>(UNAUTHENTICATED_STATUS)
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
@@ -69,109 +93,168 @@ export function useLoginController(): LoginControllerState {
   const [details, setDetails] = React.useState<LoginDetailsState>(() => ({
     user: null,
     loginMode: getLoginMode(),
-    accessToken: getStoredGithubToken(),
+    providerId: null,
+    accessTokens: getStoredProviderTokens(),
   }))
+
+  const updateFromSession = React.useCallback((session: AuthSession) => {
+    const providerKey = session.providerId ?? session.loginMode ?? null
+    const persistedToken = providerKey
+      ? session.accessToken ?? getStoredProviderToken(providerKey)
+      : null
+
+    setLoginMode(session.loginMode)
+
+    if (session.loginMode === 'guest') {
+      clearAllStoredProviderTokens()
+      setDetails({
+        user: session.user,
+        loginMode: session.loginMode,
+        providerId: session.providerId,
+        accessTokens: {},
+      })
+      return
+    }
+
+    if (providerKey) {
+      if (persistedToken) {
+        setStoredProviderToken(providerKey, persistedToken)
+      } else {
+        clearStoredProviderToken(providerKey)
+      }
+    }
+
+    setDetails((prev) => {
+      if (!providerKey) {
+        return {
+          user: session.user,
+          loginMode: session.loginMode,
+          providerId: session.providerId,
+          accessTokens: prev.accessTokens,
+        }
+      }
+
+      const nextTokens = { ...prev.accessTokens }
+      if (persistedToken) {
+        nextTokens[providerKey] = persistedToken
+      } else {
+        delete nextTokens[providerKey]
+      }
+
+      return {
+        user: session.user,
+        loginMode: session.loginMode,
+        providerId: session.providerId,
+        accessTokens: nextTokens,
+      }
+    })
+  }, [])
 
   const resetToLoggedOut = React.useCallback(() => {
     clearAppStorage()
-    setDetails({ user: null, loginMode: null, accessToken: null })
+    setDetails({ user: null, loginMode: null, providerId: null, accessTokens: {} })
     setStatusMessage(UNAUTHENTICATED_STATUS)
   }, [])
 
   React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (currentUser) => {
+    const unsubscribe = authClient.subscribeAuthState({
+      onAuthenticated: (session) => {
         setIsBusy(false)
         setErrorMessage(null)
+        updateFromSession(session)
 
-        if (!currentUser) {
-          resetToLoggedOut()
-          return
-        }
-
-        const mode = deriveLoginMode(currentUser)
-        setLoginMode(mode)
-
-        if (mode === 'guest') {
-          clearStoredGithubToken()
-          setDetails({ user: currentUser, loginMode: 'guest', accessToken: null })
+        if (session.loginMode === 'guest') {
           setStatusMessage(GUEST_STATUS)
           return
         }
 
-        const storedToken = getStoredGithubToken()
-        setDetails({ user: currentUser, loginMode: 'github', accessToken: storedToken })
-        setStatusMessage(`${currentUser.displayName ?? 'GitHub ユーザー'} としてログインしています。`)
+        setStatusMessage(`${session.user.displayName ?? 'GitHub ユーザー'} してログインしています。`)
       },
-      (listenerError) => {
+      onSignedOut: () => {
+        resetToLoggedOut()
+      },
+      onError: (listenerError) => {
         console.error('認証状態の監視でエラーが発生しました', listenerError)
         setStatusMessage(AUTH_ERROR_STATUS)
         setErrorMessage(AUTH_ERROR_MESSAGE)
         setIsBusy(false)
       },
-    )
+    })
 
     return () => {
       unsubscribe()
     }
-  }, [auth, resetToLoggedOut])
+  }, [authClient, resetToLoggedOut, updateFromSession])
 
-  const handleGithubLogin = React.useCallback(async () => {
-    setIsBusy(true)
-    setErrorMessage(null)
-
-    try {
-      const result = await signInWithPopup(auth, providerRef)
-      const credential = GithubAuthProvider.credentialFromResult(result)
-      const token = credential?.accessToken ?? null
-
-      if (!token) {
-        throw new Error('GitHub access token is undefined.')
+  const handleLoginOption = React.useCallback(
+    async (optionId: string, tokenOverride?: string) => {
+      const option = loginOptions.find((item) => item.id === optionId)
+      if (!option) {
+        throw new Error(`Unknown login option: ${optionId}`)
       }
 
-      setStoredGithubToken(token)
-      setLoginMode('github')
-      setDetails({
-        user: result.user,
-        loginMode: 'github',
-        accessToken: token,
-      })
-      setStatusMessage('GitHub ログインに成功しました。トップページへ遷移します。')
-      redirectToTop()
-    } catch (error) {
-      console.error('GitHub ログインに失敗しました', error)
-      setErrorMessage(LOGIN_FAILURE_MESSAGE)
-    } finally {
-      setIsBusy(false)
-    }
-  }, [auth, providerRef])
+      setIsBusy(true)
+      setErrorMessage(null)
 
-  const handleGuestLogin = React.useCallback(async () => {
-    setIsBusy(true)
-    setErrorMessage(null)
+      try {
+        if (option.type === 'guest') {
+          const session = await authClient.loginAsGuest()
+          clearAllStoredProviderTokens()
+          updateFromSession({ ...session, accessToken: null })
+          setStatusMessage(getSuccessStatus(option))
+          redirectToTop()
+          return
+        }
 
-    try {
-      const result = await signInAnonymously(auth)
-      clearStoredGithubToken()
-      setLoginMode('guest')
-      setDetails({ user: result.user ?? null, loginMode: 'guest', accessToken: null })
-      setStatusMessage('ゲストログインに成功しました。トップページへ遷移します。')
-      redirectToTop()
-    } catch (error) {
-      console.error('ゲストログインに失敗しました', error)
-      setErrorMessage(GUEST_FAILURE_MESSAGE)
-    } finally {
-      setIsBusy(false)
-    }
-  }, [auth])
+        if (option.type === 'token') {
+          const providerKey = option.providerId ?? option.mode
+          const token = tokenOverride ?? ''
+          if (!authClient.loginWithToken) {
+            throw new Error('Token based login is not supported by the active auth client.')
+          }
+          if (!providerKey) {
+            throw new Error('Token login requires a provider identifier.')
+          }
+          if (!token) {
+            throw new Error('Token login requires a token value.')
+          }
+
+          const session = await authClient.loginWithToken(providerKey, token)
+          updateFromSession({ ...session, accessToken: token })
+          setStatusMessage(getSuccessStatus(option))
+          redirectToTop()
+          return
+        }
+
+        const providerKey = option.providerId ?? option.mode
+        if (!providerKey) {
+          throw new Error('Provider login requires a provider identifier.')
+        }
+
+        const session = await authClient.loginWithProvider(providerKey)
+        if (option.requiresToken && !session.accessToken) {
+          throw new Error('Provider login did not return the required access token.')
+        }
+
+        updateFromSession(session)
+        setStatusMessage(getSuccessStatus(option))
+        redirectToTop()
+      } catch (error) {
+        console.error('ログイン処理でエラーが発生しました', error)
+        setErrorMessage(getFailureMessage(option))
+      } finally {
+        setIsBusy(false)
+      }
+    },
+    [authClient, loginOptions, updateFromSession],
+  )
 
   const handleLogout = React.useCallback(async () => {
     setIsBusy(true)
     setErrorMessage(null)
 
     try {
-      await signOut(auth)
+      await authClient.logout()
       resetToLoggedOut()
       setStatusMessage(LOGOUT_SUCCESS_STATUS)
     } catch (error) {
@@ -180,14 +263,15 @@ export function useLoginController(): LoginControllerState {
     } finally {
       setIsBusy(false)
     }
-  }, [auth, resetToLoggedOut])
+  }, [authClient, resetToLoggedOut])
 
   const handleClearStorage = React.useCallback(() => {
     clearAppStorage()
     setDetails((prev) => ({
       user: prev.user,
       loginMode: prev.loginMode,
-      accessToken: null,
+      providerId: prev.providerId,
+      accessTokens: {},
     }))
     setStatusMessage(CLEAR_STORAGE_STATUS)
     setErrorMessage(null)
@@ -197,8 +281,10 @@ export function useLoginController(): LoginControllerState {
     redirectToTop()
   }, [])
 
-  const loginModeLabel = details.loginMode === 'github' ? 'GitHub OAuth' : details.loginMode === 'guest' ? 'ゲスト' : '未設定'
-  const canUseOctokit = details.loginMode === 'github' && Boolean(details.accessToken)
+  const loginModeLabel =
+    details.loginMode === 'github' ? 'GitHub OAuth' : details.loginMode === 'guest' ? 'ゲスト' : '未設定'
+  const githubToken = details.accessTokens.github ?? null
+  const canUseOctokit = details.loginMode === 'github' && Boolean(githubToken)
   const isLoggedIn = details.loginMode !== null
 
   return {
@@ -209,8 +295,8 @@ export function useLoginController(): LoginControllerState {
     canUseOctokit,
     isBusy,
     isLoggedIn,
-    handleGithubLogin,
-    handleGuestLogin,
+    loginOptions,
+    handleLoginOption,
     handleLogout,
     handleClearStorage,
     handleNavigateTop,
