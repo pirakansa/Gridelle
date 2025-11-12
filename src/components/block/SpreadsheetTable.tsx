@@ -36,7 +36,6 @@ type Props = {
   onCellEditorBlur: () => void
   onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
   availableHeight?: number
-  availableWidth?: number
 }
 
 // Function Header: Renders the spreadsheet grid complete with selection/fill affordances.
@@ -61,7 +60,6 @@ export default function SpreadsheetTable({
   onCellEditorBlur,
   onCellEditorKeyDown,
   availableHeight,
-  availableWidth,
 }: Props): React.ReactElement {
   const { select } = useI18n()
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
@@ -69,18 +67,11 @@ export default function SpreadsheetTable({
   const [scrollTop, setScrollTop] = React.useState<number>(0)
   const wasEditingRef = React.useRef<boolean>(false)
   const tableContainerStyle = React.useMemo<React.CSSProperties | undefined>(() => {
-    if (typeof availableHeight !== 'number' && typeof availableWidth !== 'number') {
+    if (typeof availableHeight !== 'number') {
       return undefined
     }
-    const style: React.CSSProperties = {}
-    if (typeof availableHeight === 'number') {
-      style.height = availableHeight
-    }
-    if (typeof availableWidth === 'number') {
-      style.width = availableWidth
-    }
-    return style
-  }, [availableHeight, availableWidth])
+    return { height: availableHeight }
+  }, [availableHeight])
 
   React.useLayoutEffect(() => {
     const container = scrollContainerRef.current

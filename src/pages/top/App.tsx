@@ -34,16 +34,12 @@ export default function App(): React.ReactElement {
   const [isLoggingOut, setLoggingOut] = React.useState<boolean>(false)
   const [logoutError, setLogoutError] = React.useState<string | null>(null)
   const [menuHeaderHeight, setMenuHeaderHeight] = React.useState<number>(0)
-  const getWindowMetrics = React.useCallback(() => {
+  const [windowHeight, setWindowHeight] = React.useState<number>(() => {
     if (typeof window === 'undefined') {
-      return { width: 0, height: 0 }
+      return 0
     }
-    return { width: window.innerWidth, height: window.innerHeight }
-  }, [])
-  const [{ width: windowWidth, height: windowHeight }, setWindowMetrics] = React.useState<{
-    width: number
-    height: number
-  }>(() => getWindowMetrics())
+    return window.innerHeight
+  })
 
   React.useEffect(() => {
     if (!loginMode) {
@@ -152,14 +148,14 @@ export default function App(): React.ReactElement {
       return
     }
     const handleResize = () => {
-      setWindowMetrics(getWindowMetrics())
+      setWindowHeight(window.innerHeight)
     }
     handleResize()
     window.addEventListener('resize', handleResize)
     return () => {
       window.removeEventListener('resize', handleResize)
     }
-  }, [getWindowMetrics])
+  }, [])
 
   const tableHeight = React.useMemo(() => {
     if (windowHeight === 0 || menuHeaderHeight === 0) {
@@ -167,13 +163,6 @@ export default function App(): React.ReactElement {
     }
     return Math.max(windowHeight - menuHeaderHeight, 0)
   }, [menuHeaderHeight, windowHeight])
-  const tableWidth = React.useMemo(() => {
-    if (windowWidth === 0) {
-      return null
-    }
-    return windowWidth
-  }, [windowWidth])
-
   return (
     <div className={layoutTheme.pageShell} data-login-mode={loginMode ?? 'none'}>
       <MenuHeader
@@ -228,7 +217,6 @@ export default function App(): React.ReactElement {
       <main className={layoutTheme.contentWrapper}>
         <SpreadsheetTable
           availableHeight={tableHeight ?? undefined}
-          availableWidth={tableWidth ?? undefined}
           rows={spreadsheet.rows}
           columns={spreadsheet.columns}
           activeRange={spreadsheet.activeRange}
