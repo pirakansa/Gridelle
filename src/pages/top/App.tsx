@@ -143,6 +143,18 @@ export default function App(): React.ReactElement {
     }
   }, [authClient, isLoggingOut, setLoginModeState])
 
+  const handleCreateNewYaml = React.useCallback(() => {
+    const template = [
+      '- name: "Sheet 1"',
+      '  rows:',
+      '    - feature: ""',
+      '      owner: ""',
+      '      status: ""',
+      '      effort: ""',
+    ].join('\n')
+    spreadsheet.setYamlBuffer(`${template}\n`)
+  }, [spreadsheet])
+
   React.useEffect(() => {
     if (typeof window === 'undefined') {
       return
@@ -253,6 +265,7 @@ export default function App(): React.ReactElement {
             onFileUpload={spreadsheet.handleFileUpload}
             onDownload={spreadsheet.handleDownloadYaml}
             onCopy={spreadsheet.handleCopyYaml}
+            onCreateNew={handleCreateNewYaml}
           />
         </SettingsOverlay>
       )}

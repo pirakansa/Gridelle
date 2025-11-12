@@ -13,6 +13,7 @@ type Props = {
   onFileUpload: (_event: React.ChangeEvent<HTMLInputElement>) => void
   onDownload: () => void
   onCopy: () => Promise<void>
+  onCreateNew: () => void
 }
 
 // Function Header: Renders YAML editor textarea and import/export buttons.
@@ -24,6 +25,7 @@ export default function YamlPanel({
   onFileUpload,
   onDownload,
   onCopy,
+  onCreateNew,
 }: Props): React.ReactElement {
   const { select } = useI18n()
 
@@ -54,6 +56,9 @@ export default function YamlPanel({
         <div className="flex flex-wrap gap-3">
           <Button type="button" onClick={onApply} disabled={!yamlBuffer.trim()}>
             {select('YAMLを反映', 'Apply YAML')}
+          </Button>
+          <Button type="button" variant="ghost" onClick={onCreateNew} data-testid="yaml-create-new">
+            {select('新規YAMLを作成', 'Create new YAML')}
           </Button>
           <label className={`${buildButtonClassName({ variant: 'ghost', size: 'md' })} cursor-pointer`}>
             {select('YAMLファイルを読み込む', 'Import a YAML file')}

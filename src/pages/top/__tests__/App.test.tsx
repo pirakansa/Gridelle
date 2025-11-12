@@ -314,7 +314,25 @@ describe('App', () => {
 
     expect(await screen.findByTestId('cell-display-0-feature')).toHaveTextContent('新規カード')
   expect(screen.getByTestId('cell-display-0-owner')).toHaveTextContent('Carol')
-  expect(await screen.findByTestId('sheet-tab-0')).toHaveTextContent('新シート')
+    expect(await screen.findByTestId('sheet-tab-0')).toHaveTextContent('新シート')
+  })
+
+  it('YAMLを新規作成ボタンでテンプレートを挿入できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-file'))
+    await user.click(screen.getByRole('button', { name: 'YAML入力 / プレビュー' }))
+
+    const textarea = (await screen.findByTestId('yaml-textarea')) as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: 'dummy' } })
+
+    await user.click(screen.getByTestId('yaml-create-new'))
+
+    await waitFor(() => {
+      expect(textarea.value).toContain('name: "Sheet 1"')
+      expect(textarea.value).toContain('rows:')
+    })
   })
 
   it('YAMLの func sum を評価して列を集計する', async () => {
