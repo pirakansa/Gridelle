@@ -1,13 +1,11 @@
 // File Header: Client helper for delegating YAML parsing to a background worker.
 import { parseWorkbook, type TableSheet } from './workbookService'
 
-const workerScriptUrl = new URL('./yamlParserWorker.ts', import.meta.url)
-
 type WorkerFactory = () => Worker
 
 // Function Header: Creates a new YAML parser worker instance using module scripts.
 function defaultWorkerFactory(): Worker {
-  return new Worker(workerScriptUrl, { type: 'module' })
+  return new Worker(new URL('./yamlParserWorker.ts', import.meta.url), { type: 'module' })
 }
 
 // Function Header: Detects whether the current environment supports Web Workers.
