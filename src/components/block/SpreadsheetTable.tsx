@@ -116,6 +116,13 @@ export default function SpreadsheetTable({
   const handleScroll = React.useCallback((event: React.UIEvent<HTMLDivElement>) => {
     setScrollTop(event.currentTarget.scrollTop)
   }, [])
+
+  const focusTableShell = React.useCallback(() => {
+    const container = scrollContainerRef.current
+    if (container && document.activeElement !== container) {
+      container.focus({ preventScroll: true })
+    }
+  }, [])
   const shouldIgnoreGlobalHotkey = React.useCallback(
     (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
@@ -142,7 +149,7 @@ export default function SpreadsheetTable({
     if (!selection || editingCell) {
       return undefined
     }
-    const handleWindowKeyDown = (event: KeyboardEvent) => {
+  const handleWindowKeyDown = (event: KeyboardEvent) => {
       if (shouldIgnoreGlobalHotkey(event)) {
         return
       }
@@ -153,6 +160,18 @@ export default function SpreadsheetTable({
       window.removeEventListener('keydown', handleWindowKeyDown)
     }
   }, [selection, editingCell, onTableKeyDown, shouldIgnoreGlobalHotkey])
+
+  const handleCellPointerDownWithFocus = React.useCallback(
+    (
+      event: React.PointerEvent<HTMLTableCellElement>,
+      rowIndex: number,
+      columnIndex: number,
+    ): void => {
+      focusTableShell()
+      onPointerDown(event, rowIndex, columnIndex)
+    },
+    [focusTableShell, onPointerDown],
+  )
 
   return (
     <div
@@ -169,7 +188,13 @@ export default function SpreadsheetTable({
       ref={scrollContainerRef}
     >
       <table className="spreadsheet-table">
-        <TableHead columns={columns} onColumnHeaderClick={onColumnHeaderClick} />
+        <TableHead
+          columns={columns}
+          onColumnHeaderClick={(columnIndex, extend) => {
+            focusTableShell()
+            onColumnHeaderClick(columnIndex, extend)
+          }}
+        />
         <TableBody
           rows={rows}
           columns={columns}
@@ -178,8 +203,11 @@ export default function SpreadsheetTable({
           fillPreview={fillPreview}
           isFillDragActive={isFillDragActive}
           editingCell={editingCell}
-          onRowNumberClick={onRowNumberClick}
-          onPointerDown={onPointerDown}
+          onRowNumberClick={(rowIndex, extend) => {
+            focusTableShell()
+            onRowNumberClick(rowIndex, extend)
+          }}
+          onPointerDown={handleCellPointerDownWithFocus}
           onPointerEnter={onPointerEnter}
           onCellClick={onCellClick}
           onCellDoubleClick={onCellDoubleClick}

@@ -720,6 +720,51 @@ describe('App', () => {
     })
   })
 
+  it('複数行セルを複数選択してコピー・ペーストできる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const cellA = screen.getByTestId('cell-box-0-feature')
+    fireEvent.doubleClick(cellA)
+    const editorA = (await screen.findByTestId('cell-0-feature')) as HTMLTextAreaElement
+    fireEvent.change(editorA, { target: { value: 'Line1\nLine2' } })
+    fireEvent.blur(editorA)
+
+    const cellB = screen.getByTestId('cell-box-0-owner')
+    fireEvent.doubleClick(cellB)
+    const editorB = (await screen.findByTestId('cell-0-owner')) as HTMLTextAreaElement
+    fireEvent.change(editorB, { target: { value: 'Owner1\nOwner2' } })
+    fireEvent.blur(editorB)
+
+    fireEvent.click(cellA)
+    fireEvent.click(screen.getByTestId('cell-box-0-owner'), { shiftKey: true })
+
+    const shell = screen.getByTestId('interactive-table-shell')
+    shell.focus()
+    await user.keyboard('{Control>}c{/Control}')
+    await screen.findByText('セルの値をコピーしました。')
+
+    const copiedText = '"Line1\nLine2"\t"Owner1\nOwner2"'
+
+    fireEvent.click(screen.getByTestId('cell-box-1-feature'))
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent
+    const clipboardData = {
+      getData: vi.fn().mockReturnValue(copiedText),
+    }
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: clipboardData,
+    })
+    Object.defineProperty(pasteEvent, 'preventDefault', {
+      value: vi.fn(),
+    })
+    fireEvent(shell, pasteEvent)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-1-feature').textContent).toBe('Line1\nLine2')
+      expect(screen.getByTestId('cell-display-1-owner').textContent).toBe('Owner1\nOwner2')
+    })
+  })
+
   it('セル編集中に複数行をペーストしても範囲展開されない', async () => {
     render(<App />)
 
