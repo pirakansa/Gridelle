@@ -6,6 +6,7 @@ import {
   fetchRepositoryFileContent,
   fetchRepositoryTree,
   listRepositoryBranches,
+  fetchPullRequestDetails,
   verifyRepositoryCollaborator,
   type CollaboratorVerificationResult,
 } from '../../services/githubRepositoryAccessService'
@@ -109,7 +110,17 @@ export default function GithubIntegrationPanel({
         />
       )}
 
-      {integrationMode === 'pull-request' && <PullRequestIntegrationSection />}
+      {integrationMode === 'pull-request' && (
+        <PullRequestIntegrationSection
+          onFileSelected={onFileSelected}
+          onYamlContentLoaded={onYamlContentLoaded}
+          services={{
+            GithubRepositoryAccessError,
+            fetchPullRequestDetails,
+            fetchRepositoryFileContent,
+          }}
+        />
+      )}
     </div>
   )
 }

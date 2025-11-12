@@ -9,21 +9,23 @@ import {
   fetchRepositoryTree,
   fetchRepositoryFileContent,
   fetchFileFromBlobUrl,
+  fetchPullRequestDetails,
 } from '../../../services/githubRepositoryAccessService'
 
-  vi.mock('../../../services/githubRepositoryAccessService', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('../../../services/githubRepositoryAccessService')>()
-    return {
-      ...actual,
-      verifyRepositoryCollaborator: vi.fn(),
-      listRepositoryBranches: vi.fn(),
-      fetchRepositoryTree: vi.fn(),
-      fetchRepositoryFileContent: vi.fn(),
-      fetchFileFromBlobUrl: vi.fn(),
-    }
-  })
+vi.mock('../../../services/githubRepositoryAccessService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../services/githubRepositoryAccessService')>()
+  return {
+    ...actual,
+    verifyRepositoryCollaborator: vi.fn(),
+    listRepositoryBranches: vi.fn(),
+    fetchRepositoryTree: vi.fn(),
+    fetchRepositoryFileContent: vi.fn(),
+    fetchFileFromBlobUrl: vi.fn(),
+    fetchPullRequestDetails: vi.fn(),
+  }
+})
 
-  describe('GithubIntegrationPanel', () => {
+describe('GithubIntegrationPanel', () => {
     beforeEach(() => {
       vi.clearAllMocks()
     })
@@ -277,5 +279,60 @@ import {
       expect(handleSave).toHaveBeenCalledTimes(1)
       const feedback = screen.getByTestId('github-last-loaded-save-message')
       expect(feedback).toHaveTextContent('保存しました。')
+    })
+
+    it('loads yaml content via pull request workflow', async () => {
+      const handleFileSelected = vi.fn()
+      const handleYamlContentLoaded = vi.fn()
+      const fetchPullRequestMock = vi.mocked(fetchPullRequestDetails)
+      const fetchFileMock = vi.mocked(fetchRepositoryFileContent)
+
+      fetchPullRequestMock.mockResolvedValue({
+        coordinates: { owner: 'example', repository: 'repo', pullNumber: 15 },
+        head: {
+          repository: { owner: 'fork', repository: 'repo' },
+          ref: 'feature/pr',
+        },
+        files: [
+          { path: 'configs/pr.yaml', sha: 'sha-pr', status: 'modified' },
+          { path: 'README.md', sha: 'sha-readme', status: 'modified' },
+        ],
+      })
+      fetchFileMock.mockResolvedValue('env: pr\n')
+
+      render(
+        <GithubIntegrationPanel
+          onFileSelected={handleFileSelected}
+          onYamlContentLoaded={handleYamlContentLoaded}
+        />,
+      )
+
+      const pullRequestMode = screen.getByTestId('github-integration-mode-pull-request')
+      fireEvent.click(pullRequestMode)
+
+      fireEvent.change(screen.getByTestId('pull-request-url-input'), {
+        target: { value: 'https://github.com/example/repo/pull/15' },
+      })
+
+      fireEvent.submit(screen.getByTestId('pull-request-url-form'))
+
+      expect(fetchPullRequestMock).toHaveBeenCalledWith('https://github.com/example/repo/pull/15')
+      await screen.findByTestId('pull-request-url-success')
+
+      const fileButton = await screen.findByTestId('pull-request-file-button')
+      fireEvent.click(fileButton)
+
+      await waitFor(() => {
+        expect(fetchFileMock).toHaveBeenCalledWith({ owner: 'fork', repository: 'repo' }, 'feature/pr', 'configs/pr.yaml')
+      })
+      expect(handleFileSelected).toHaveBeenCalledWith('configs/pr.yaml')
+      expect(handleYamlContentLoaded).toHaveBeenCalledWith({
+        yaml: 'env: pr\n',
+        repository: { owner: 'fork', repository: 'repo' },
+        branch: 'feature/pr',
+        filePath: 'configs/pr.yaml',
+        mode: 'pull-request',
+      })
+      expect(screen.getByTestId('pull-request-file-success')).toHaveTextContent('configs/pr.yaml を読み込みました。')
     })
   })
