@@ -116,6 +116,43 @@ export default function SpreadsheetTable({
   const handleScroll = React.useCallback((event: React.UIEvent<HTMLDivElement>) => {
     setScrollTop(event.currentTarget.scrollTop)
   }, [])
+  const shouldIgnoreGlobalHotkey = React.useCallback(
+    (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (!target) {
+        return false
+      }
+      const tagName = target.tagName.toLowerCase()
+      if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
+        return true
+      }
+      if (target.isContentEditable) {
+        return true
+      }
+      const container = scrollContainerRef.current
+      if (container && container.contains(target)) {
+        return true
+      }
+      return false
+    },
+    [],
+  )
+
+  React.useEffect(() => {
+    if (!selection || editingCell) {
+      return undefined
+    }
+    const handleWindowKeyDown = (event: KeyboardEvent) => {
+      if (shouldIgnoreGlobalHotkey(event)) {
+        return
+      }
+      onTableKeyDown(event as unknown as React.KeyboardEvent<HTMLDivElement>)
+    }
+    window.addEventListener('keydown', handleWindowKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleWindowKeyDown)
+    }
+  }, [selection, editingCell, onTableKeyDown, shouldIgnoreGlobalHotkey])
 
   return (
     <div
