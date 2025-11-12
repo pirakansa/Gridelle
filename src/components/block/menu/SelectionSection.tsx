@@ -38,6 +38,16 @@ export default function SelectionSection({
   const [textColorDraft, setTextColorDraft] = React.useState<string>(selectionTextColor)
   const [backgroundColorDraft, setBackgroundColorDraft] = React.useState<string>(selectionBackgroundColor)
 
+  const focusWorkspace = React.useCallback((): void => {
+    if (typeof document === 'undefined') {
+      return
+    }
+    const workspace = document.getElementById('sheet-workspace')
+    if (workspace instanceof HTMLElement) {
+      workspace.focus({ preventScroll: true })
+    }
+  }, [])
+
   React.useEffect(() => {
     setTextColorDraft(selectionTextColor)
   }, [selectionTextColor])
@@ -46,23 +56,36 @@ export default function SelectionSection({
     setBackgroundColorDraft(selectionBackgroundColor)
   }, [selectionBackgroundColor])
 
+  const handleClearSelection = React.useCallback(() => {
+    onClearSelection()
+    focusWorkspace()
+  }, [focusWorkspace, onClearSelection])
+
   const handleApplyTextColor = React.useCallback(() => {
     const trimmed = textColorDraft.trim()
     onApplyTextColor(trimmed ? trimmed : null)
     setTextColorDraft(trimmed)
-  }, [onApplyTextColor, textColorDraft])
+    focusWorkspace()
+  }, [focusWorkspace, onApplyTextColor, textColorDraft])
 
   const handleApplyBackgroundColor = React.useCallback(() => {
     const trimmed = backgroundColorDraft.trim()
     onApplyBackgroundColor(trimmed ? trimmed : null)
     setBackgroundColorDraft(trimmed)
-  }, [backgroundColorDraft, onApplyBackgroundColor])
+    focusWorkspace()
+  }, [backgroundColorDraft, focusWorkspace, onApplyBackgroundColor])
+
+  const handleBulkApply = React.useCallback(() => {
+    onBulkApply()
+    focusWorkspace()
+  }, [focusWorkspace, onBulkApply])
 
   const handleClearStyles = React.useCallback(() => {
     onClearSelectionStyles()
     setTextColorDraft('')
     setBackgroundColorDraft('')
-  }, [onClearSelectionStyles])
+    focusWorkspace()
+  }, [focusWorkspace, onClearSelectionStyles])
 
   return (
     <MenuSectionCard>
@@ -73,7 +96,7 @@ export default function SelectionSection({
           </p>
           <div className="flex items-center gap-3 text-xs text-slate-500">
             <span>{select('⌘/Ctrl+V で貼り付け / Escape で選択解除', '⌘/Ctrl+V to paste / Escape to clear selection')}</span>
-            <Button type="button" variant="subtle" onClick={onClearSelection} disabled={!hasSelection}>
+            <Button type="button" variant="subtle" onClick={handleClearSelection} disabled={!hasSelection}>
               {select('選択をクリア', 'Clear selection')}
             </Button>
           </div>
@@ -90,7 +113,7 @@ export default function SelectionSection({
             <Button
               type="button"
               variant="ghost"
-              onClick={onBulkApply}
+              onClick={handleBulkApply}
               disabled={!hasSelection}
               data-testid="bulk-apply"
             >
