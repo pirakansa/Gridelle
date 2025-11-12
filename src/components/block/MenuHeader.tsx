@@ -64,6 +64,7 @@ type Props = {
   onLogout: () => Promise<void>
   isLoggingOut: boolean
   logoutError: string | null
+  onHeightChange?: (_height: number) => void
 }
 
 // Function Header: Renders the sticky menu along with spreadsheet utility commands and collapse toggle.
@@ -114,6 +115,7 @@ export default function MenuHeader({
   onLogout,
   isLoggingOut,
   logoutError,
+  onHeightChange,
 }: Props): React.ReactElement {
   const { select } = useI18n()
   const menuPanelId = React.useId()
@@ -121,6 +123,7 @@ export default function MenuHeader({
   const [activeMenuSection, setActiveMenuSection] = React.useState<MenuSectionId>('sheet')
   const [sheetNameDraft, setSheetNameDraft] = React.useState<string>(currentSheetName)
   const [renamingSheetIndex, setRenamingSheetIndex] = React.useState<number | null>(null)
+  const headerRef = React.useRef<HTMLElement | null>(null)
 
   React.useEffect(() => {
     if (renamingSheetIndex === null) {
@@ -183,8 +186,43 @@ export default function MenuHeader({
     setMenuCollapsed((prev) => !prev)
   }, [])
 
+  React.useLayoutEffect(() => {
+    if (!onHeightChange) {
+      return undefined
+    }
+
+    const notifyHeight = () => {
+      const headerElement = headerRef.current
+      if (!headerElement) {
+        return
+      }
+      onHeightChange(headerElement.getBoundingClientRect().height)
+    }
+
+    notifyHeight()
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(() => notifyHeight())
+      if (headerRef.current) {
+        observer.observe(headerRef.current)
+      }
+      return () => {
+        observer.disconnect()
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', notifyHeight)
+      return () => {
+        window.removeEventListener('resize', notifyHeight)
+      }
+    }
+
+    return undefined
+  }, [onHeightChange])
+
   return (
-    <header className="sticky top-0 z-20 w-full border-b border-slate-200 bg-white/90 backdrop-blur">
+    <header ref={headerRef} className="sticky top-0 z-20 w-full border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="flex w-full flex-col gap-4 px-6 py-4 md:px-10">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">

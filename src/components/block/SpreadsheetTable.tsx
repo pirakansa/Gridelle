@@ -35,6 +35,8 @@ type Props = {
   onPaste: (_event: React.ClipboardEvent<HTMLDivElement>) => void
   onCellEditorBlur: () => void
   onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
+  availableHeight?: number
+  availableWidth?: number
 }
 
 // Function Header: Renders the spreadsheet grid complete with selection/fill affordances.
@@ -58,12 +60,27 @@ export default function SpreadsheetTable({
   onPaste,
   onCellEditorBlur,
   onCellEditorKeyDown,
+  availableHeight,
+  availableWidth,
 }: Props): React.ReactElement {
   const { select } = useI18n()
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
   const [viewportHeight, setViewportHeight] = React.useState<number>(0)
   const [scrollTop, setScrollTop] = React.useState<number>(0)
   const wasEditingRef = React.useRef<boolean>(false)
+  const tableContainerStyle = React.useMemo<React.CSSProperties | undefined>(() => {
+    if (typeof availableHeight !== 'number' && typeof availableWidth !== 'number') {
+      return undefined
+    }
+    const style: React.CSSProperties = {}
+    if (typeof availableHeight === 'number') {
+      style.height = availableHeight
+    }
+    if (typeof availableWidth === 'number') {
+      style.width = availableWidth
+    }
+    return style
+  }, [availableHeight, availableWidth])
 
   React.useLayoutEffect(() => {
     const container = scrollContainerRef.current
@@ -111,7 +128,8 @@ export default function SpreadsheetTable({
 
   return (
     <div
-      className={`${layoutTheme.tableScroll} mt-6`}
+      className={layoutTheme.tableScroll}
+      style={tableContainerStyle}
       id="sheet-workspace"
       tabIndex={0}
       role="region"
