@@ -4,7 +4,7 @@
 export const layoutTheme = {
   centeredContainer: 'centered-layout',
   pageShell: 'min-h-screen bg-slate-50 text-slate-900 flex flex-col',
-  contentWrapper: 'flex-1 min-h-0 flex flex-col py-4 md:py-6',
+  contentWrapper: 'flex-1 min-h-0 flex flex-col',
   card: 'rounded-2xl border border-slate-200 bg-white p-6 shadow-sm',
   ribbonShell: 'rounded-2xl border border-slate-200 bg-white shadow-sm',
   sectionTitle: 'text-lg font-semibold text-slate-900',
