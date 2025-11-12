@@ -222,7 +222,10 @@ export default function MenuHeader({
   }, [onHeightChange])
 
   return (
-    <header ref={headerRef} className="sticky top-0 z-20 w-full border-b border-slate-200 bg-white/90 backdrop-blur">
+    <header
+      ref={headerRef}
+      className="sticky top-4 z-20 w-full rounded-2xl border border-slate-200 bg-white/90 shadow-sm backdrop-blur"
+    >
       <div className="flex w-full flex-col gap-4 px-6 py-4 md:px-10">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
