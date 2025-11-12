@@ -37,6 +37,14 @@ export default function SelectionSection({
   const { select } = useI18n()
   const [textColorDraft, setTextColorDraft] = React.useState<string>(selectionTextColor)
   const [backgroundColorDraft, setBackgroundColorDraft] = React.useState<string>(selectionBackgroundColor)
+  const textColorPresets = React.useMemo(
+    () => ['#0f172a', '#1d4ed8', '#dc2626', '#16a34a', '#7c3aed', '#f97316'],
+    [],
+  )
+  const backgroundColorPresets = React.useMemo(
+    () => ['#e2e8f0', '#dbeafe', '#fee2e2', '#dcfce7', '#fef3c7', '#ede9fe'],
+    [],
+  )
 
   React.useEffect(() => {
     setTextColorDraft(selectionTextColor)
@@ -63,6 +71,22 @@ export default function SelectionSection({
     setTextColorDraft('')
     setBackgroundColorDraft('')
   }, [onClearSelectionStyles])
+
+  const handleSelectPresetTextColor = React.useCallback(
+    (color: string) => {
+      setTextColorDraft(color)
+      onApplyTextColor(color)
+    },
+    [onApplyTextColor],
+  )
+
+  const handleSelectPresetBackgroundColor = React.useCallback(
+    (color: string) => {
+      setBackgroundColorDraft(color)
+      onApplyBackgroundColor(color)
+    },
+    [onApplyBackgroundColor],
+  )
 
   return (
     <MenuSectionCard>
@@ -126,6 +150,27 @@ export default function SelectionSection({
                 {select('文字色を適用', 'Apply text color')}
               </Button>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[0.7rem] font-medium uppercase tracking-wide text-slate-500">
+                {select('プリセット', 'Presets')}
+              </span>
+              <div className="flex items-center gap-2">
+                {textColorPresets.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`h-7 w-7 rounded-full border border-slate-200 transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-400 ${
+                      !hasSelection ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => hasSelection && handleSelectPresetTextColor(color)}
+                    aria-label={select('文字色プリセット', 'Text color preset') + ` ${color}`}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    disabled={!hasSelection}
+                  />
+                ))}
+              </div>
+            </div>
             <div className="flex flex-wrap items-center gap-2 md:gap-3">
               <label htmlFor="selection-background-color" className="text-xs font-semibold text-slate-600">
                 {select('背景色', 'Background color')}
@@ -146,6 +191,27 @@ export default function SelectionSection({
               <Button type="button" variant="ghost" onClick={handleApplyBackgroundColor} disabled={!hasSelection}>
                 {select('背景色を適用', 'Apply background color')}
               </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[0.7rem] font-medium uppercase tracking-wide text-slate-500">
+                {select('プリセット', 'Presets')}
+              </span>
+              <div className="flex items-center gap-2">
+                {backgroundColorPresets.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`h-7 w-7 rounded border border-slate-200 transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-400 ${
+                      !hasSelection ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => hasSelection && handleSelectPresetBackgroundColor(color)}
+                    aria-label={select('背景色プリセット', 'Background color preset') + ` ${color}`}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    disabled={!hasSelection}
+                  />
+                ))}
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
