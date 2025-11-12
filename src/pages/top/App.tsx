@@ -10,6 +10,7 @@ import YamlPanel from '../../components/block/YamlPanel'
 import SettingsOverlay from '../../components/block/SettingsOverlay'
 import GithubIntegrationPanel, {
   type GithubIntegrationLoadedFileInfo,
+  type GithubIntegrationSaveNotice,
 } from '../../components/block/GithubIntegrationPanel'
 import {
   clearStoredProviderToken,
@@ -20,6 +21,12 @@ import {
   type AuthUser,
   type LoginMode,
 } from '../../services/auth'
+import {
+  GithubRepositoryAccessError,
+  commitRepositoryFileUpdate,
+} from '../../services/githubRepositoryAccessService'
+
+const DEFAULT_GITHUB_COMMIT_MESSAGE = 'Update'
 
 // Function Header: Composes the top page using modular sub-components wired to state hooks.
 export default function App(): React.ReactElement {
@@ -29,6 +36,8 @@ export default function App(): React.ReactElement {
   const [isGithubIntegrationOpen, setGithubIntegrationOpen] = React.useState<boolean>(false)
   const [githubRepositoryUrl, setGithubRepositoryUrl] = React.useState<string>('')
   const [githubLastLoadedFile, setGithubLastLoadedFile] = React.useState<GithubIntegrationLoadedFileInfo | null>(null)
+  const [isGithubSaveInProgress, setGithubSaveInProgress] = React.useState<boolean>(false)
+  const [githubSaveNotice, setGithubSaveNotice] = React.useState<GithubIntegrationSaveNotice | null>(null)
   const [loginMode, setLoginModeState] = React.useState<LoginMode | null>(() => getLoginMode())
   const [currentUser, setCurrentUser] = React.useState<AuthUser | null>(null)
   const [isLoggingOut, setLoggingOut] = React.useState<boolean>(false)
@@ -114,6 +123,7 @@ export default function App(): React.ReactElement {
           errorNoticePrefix: 'GitHubファイルの解析に失敗しました',
         })
         setGithubLastLoadedFile(info)
+        setGithubSaveNotice(null)
         closeGithubIntegration()
       } catch (error) {
         console.error('GitHubファイルの取り込みでエラーが発生しました', error)
@@ -121,6 +131,52 @@ export default function App(): React.ReactElement {
     },
     [closeGithubIntegration, setGithubLastLoadedFile, spreadsheet],
   )
+
+  const handleGithubFileSave = React.useCallback(async () => {
+    if (!githubLastLoadedFile || githubLastLoadedFile.mode !== 'repository') {
+      return
+    }
+
+    setGithubSaveNotice(null)
+    setGithubSaveInProgress(true)
+
+    try {
+      await commitRepositoryFileUpdate({
+        repository: githubLastLoadedFile.repository,
+        branch: githubLastLoadedFile.branch,
+        filePath: githubLastLoadedFile.filePath,
+        content: spreadsheet.tableYaml,
+        commitMessage: DEFAULT_GITHUB_COMMIT_MESSAGE,
+      })
+      setGithubSaveNotice({
+        tone: 'success',
+        message: {
+          ja: 'GitHubにUpdateコミットを作成しました。',
+          en: 'Created an Update commit on GitHub.',
+        },
+      })
+    } catch (error) {
+      if (error instanceof GithubRepositoryAccessError) {
+        setGithubSaveNotice({
+          tone: 'error',
+          message: {
+            ja: error.jaMessage,
+            en: error.enMessage,
+          },
+        })
+      } else {
+        setGithubSaveNotice({
+          tone: 'error',
+          message: {
+            ja: 'GitHubへの保存に失敗しました。時間を置いて再度お試しください。',
+            en: 'Failed to save to GitHub. Please try again later.',
+          },
+        })
+      }
+    } finally {
+      setGithubSaveInProgress(false)
+    }
+  }, [githubLastLoadedFile, spreadsheet.tableYaml])
 
   const handleLogout = React.useCallback(async () => {
     if (isLoggingOut) {
@@ -281,6 +337,9 @@ export default function App(): React.ReactElement {
             onRepositoryUrlSubmit={handleRepositoryUrlSubmit}
             onYamlContentLoaded={handleGithubYamlLoaded}
             lastLoadedFileInfo={githubLastLoadedFile}
+            onSaveLastLoadedFile={handleGithubFileSave}
+            isSavingLastLoadedFile={isGithubSaveInProgress}
+            lastLoadedFileSaveNotice={githubSaveNotice}
           />
         </SettingsOverlay>
       )}

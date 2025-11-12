@@ -8,6 +8,7 @@ import {
   fetchRepositoryTree,
   fetchRepositoryFileContent,
   fetchFileFromBlobUrl,
+  commitRepositoryFileUpdate,
 } from '../githubRepositoryAccessService'
 import { createOctokitClient } from '../octokitService'
 
@@ -323,5 +324,77 @@ describe('githubRepositoryAccessService', () => {
         filePath: 'docs/table.yaml',
       },
     })
+  })
+
+  it('commits repository file updates with base64 content', async () => {
+    const octokit = {
+      rest: {
+        repos: {
+          getContent: vi.fn().mockResolvedValue({
+            data: {
+              type: 'file',
+              sha: 'sha-old',
+            },
+          }),
+          createOrUpdateFileContents: vi.fn().mockResolvedValue({ status: 201 }),
+        },
+      },
+    }
+
+    vi.mocked(createOctokitClient).mockReturnValue(octokit as never)
+
+    await expect(
+      commitRepositoryFileUpdate({
+        repository: { owner: 'gridelle', repository: 'app' },
+        branch: 'main',
+        filePath: 'table.yaml',
+        content: 'key: value\n',
+        commitMessage: 'Update',
+      }),
+    ).resolves.toBeUndefined()
+
+    expect(octokit.rest.repos.getContent).toHaveBeenCalledWith({
+      owner: 'gridelle',
+      repo: 'app',
+      path: 'table.yaml',
+      ref: 'main',
+    })
+    expect(octokit.rest.repos.createOrUpdateFileContents).toHaveBeenCalledWith({
+      owner: 'gridelle',
+      repo: 'app',
+      path: 'table.yaml',
+      branch: 'main',
+      message: 'Update',
+      content: Buffer.from('key: value\n', 'utf-8').toString('base64'),
+      sha: 'sha-old',
+    })
+  })
+
+  it('throws when file update fails with unauthorized error', async () => {
+    const octokit = {
+      rest: {
+        repos: {
+          getContent: vi.fn().mockResolvedValue({
+            data: {
+              type: 'file',
+              sha: 'sha-old',
+            },
+          }),
+          createOrUpdateFileContents: vi.fn().mockRejectedValue({ status: 401 }),
+        },
+      },
+    }
+
+    vi.mocked(createOctokitClient).mockReturnValue(octokit as never)
+
+    await expect(
+      commitRepositoryFileUpdate({
+        repository: { owner: 'gridelle', repository: 'app' },
+        branch: 'main',
+        filePath: 'table.yaml',
+        content: 'key: value\n',
+        commitMessage: 'Update',
+      }),
+    ).rejects.toMatchObject({ code: 'unauthorized' })
   })
 })

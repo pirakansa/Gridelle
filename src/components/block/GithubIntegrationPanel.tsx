@@ -16,6 +16,7 @@ import RepositoryIntegrationSection from './githubIntegration/RepositoryIntegrat
 import PullRequestIntegrationSection from './githubIntegration/PullRequestIntegrationSection'
 import {
   type GithubIntegrationLoadedFileInfo,
+  type GithubIntegrationSaveNotice,
   type IntegrationMode,
   type YamlContentPayload,
 } from './githubIntegration/types'
@@ -29,9 +30,16 @@ type GithubIntegrationPanelProps = {
   onFileSelected?: (_filePath: string) => void
   onYamlContentLoaded?: (_payload: YamlContentPayload) => void
   lastLoadedFileInfo?: GithubIntegrationLoadedFileInfo | null
+  onSaveLastLoadedFile?: () => void
+  isSavingLastLoadedFile?: boolean
+  lastLoadedFileSaveNotice?: GithubIntegrationSaveNotice | null
 }
 
-export type { GithubIntegrationMode, GithubIntegrationLoadedFileInfo } from './githubIntegration/types'
+export type {
+  GithubIntegrationMode,
+  GithubIntegrationLoadedFileInfo,
+  GithubIntegrationSaveNotice,
+} from './githubIntegration/types'
 
 export default function GithubIntegrationPanel({
   initialRepositoryUrl = '',
@@ -41,6 +49,9 @@ export default function GithubIntegrationPanel({
   onFileSelected,
   onYamlContentLoaded,
   lastLoadedFileInfo = null,
+  onSaveLastLoadedFile,
+  isSavingLastLoadedFile = false,
+  lastLoadedFileSaveNotice = null,
 }: GithubIntegrationPanelProps): React.ReactElement {
   const [integrationMode, setIntegrationMode] = React.useState<IntegrationMode>(
     lastLoadedFileInfo?.mode ?? 'repository',
@@ -59,7 +70,14 @@ export default function GithubIntegrationPanel({
     <div className="flex flex-col gap-6 text-sm text-slate-700" data-testid="github-integration-panel">
       <IntegrationModeSelector currentMode={integrationMode} onModeChange={handleChangeMode} />
 
-      {lastLoadedFileInfo && <LastLoadedFileInfo lastLoadedFileInfo={lastLoadedFileInfo} />}
+      {lastLoadedFileInfo && (
+        <LastLoadedFileInfo
+          lastLoadedFileInfo={lastLoadedFileInfo}
+          onSave={onSaveLastLoadedFile}
+          isSaving={isSavingLastLoadedFile}
+          saveNotice={lastLoadedFileSaveNotice}
+        />
+      )}
 
       {integrationMode === 'blob-url' && (
         <BlobUrlIntegrationSection

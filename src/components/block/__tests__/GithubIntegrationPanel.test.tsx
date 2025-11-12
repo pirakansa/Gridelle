@@ -253,4 +253,29 @@ import {
       expect(lastInfo).toHaveTextContent('ブランチ / Ref: feature/refactor')
       expect(lastInfo).toHaveTextContent('ファイル: configs/app.yaml')
     })
+
+    it('renders save button for repository mode and fires handler', () => {
+      const handleSave = vi.fn()
+      render(
+        <GithubIntegrationPanel
+          lastLoadedFileInfo={{
+            repository: { owner: 'team', repository: 'project' },
+            branch: 'main',
+            filePath: 'configs/app.yaml',
+            mode: 'repository',
+          }}
+          onSaveLastLoadedFile={handleSave}
+          lastLoadedFileSaveNotice={{
+            tone: 'success',
+            message: { ja: '保存しました。', en: 'Saved.' },
+          }}
+        />,
+      )
+
+      const saveButton = screen.getByTestId('github-last-loaded-save-button')
+      fireEvent.click(saveButton)
+      expect(handleSave).toHaveBeenCalledTimes(1)
+      const feedback = screen.getByTestId('github-last-loaded-save-message')
+      expect(feedback).toHaveTextContent('保存しました。')
+    })
   })
