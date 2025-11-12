@@ -6,7 +6,7 @@ const vitePwaConfig: Partial<VitePWAOptions> = {
   includeAssets: [
     '/images/favicon.png',
     '/images/apple-touch-icon.png',
-    '/assets/logo-*.jpeg'
+    '/assets/logo-*.jpg'
   ],
   manifest: {
     name: 'Gridelle',
