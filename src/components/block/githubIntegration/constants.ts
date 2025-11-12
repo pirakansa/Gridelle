@@ -26,8 +26,8 @@ export const integrationModeMeta: Array<{
     id: 'pull-request',
     label: { ja: 'Pull Request', en: 'Pull Request' },
     helper: {
-      ja: 'PR で更新されたファイルを確認する機能を準備中です。',
-      en: 'Preview files changed in a pull request (coming soon).',
+      ja: 'Pull Request で変更された YAML ファイルを選んで読み込みます。',
+      en: 'Pick YAML files changed in a pull request and load them.',
     },
   },
 ]

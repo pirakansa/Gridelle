@@ -1,6 +1,6 @@
 // File Header: Hook encapsulating selection, fill, clipboard, and editing interactions.
 import React from 'react'
-import { cloneCell, type TableCell, type TableRow, type CellFunctionConfig } from '../../../services/workbookService'
+import { type TableRow, type CellFunctionConfig } from '../../../services/workbookService'
 import type { CellPosition, Notice, SelectionRange, UpdateRows } from '../types'
 import { stringifySelection } from '../utils/spreadsheetTableUtils'
 import { useClipboardHandlers } from './useClipboardHandlers'
@@ -10,6 +10,8 @@ import { useSelectionController } from './useSelectionController'
 import { useBulkInput } from './internal/useBulkInput'
 import { useKeyboardShortcuts } from './internal/useKeyboardShortcuts'
 import { useSelectionNormalizer } from './internal/useSelectionNormalizer'
+import { useSelectionStyling } from './internal/useSelectionStyling'
+import { useHeaderSelectionHandlers } from './internal/useHeaderSelectionHandlers'
 import { useI18n } from '../../../utils/i18n'
 
 type UseSpreadsheetInteractionControllerParams = {
@@ -113,176 +115,18 @@ export const useSpreadsheetInteractionController = ({
     updateRows,
     setNotice,
   })
-
-  const updateSelectionCells = React.useCallback(
-    (mutator: (_cell: TableCell) => { cell: TableCell; changed: boolean }): boolean => {
-      if (!selection) {
-        setNotice({ text: 'セルを選択してください。', tone: 'error' })
-        return false
-      }
-      if (!columns.length || !rows.length) {
-        setNotice({ text: 'セルを選択してください。', tone: 'error' })
-        return false
-      }
-
-      let didChange = false
-      const nextRows = rows.map((row, rowIndex) => {
-        if (rowIndex < selection.startRow || rowIndex > selection.endRow) {
-          return row
-        }
-
-        let rowClone: TableRow | null = null
-        for (let columnIndex = selection.startCol; columnIndex <= selection.endCol; columnIndex += 1) {
-          const columnKey = columns[columnIndex]
-          if (!columnKey) {
-            continue
-          }
-          const clonedCell = cloneCell(row[columnKey])
-          const { cell: nextCell, changed } = mutator(clonedCell)
-          if (!changed) {
-            continue
-          }
-          if (!rowClone) {
-            rowClone = { ...row }
-          }
-          rowClone[columnKey] = nextCell
-          didChange = true
-        }
-
-        return rowClone ?? row
-      })
-
-      if (didChange) {
-        updateRows(nextRows)
-      }
-
-      return didChange
-    },
-    [columns, rows, selection, setNotice, updateRows],
-  )
-
-  const applySelectionTextColor = React.useCallback(
-    (color: string | null): void => {
-      const trimmed = (color ?? '').trim()
-      const normalized = trimmed.length > 0 ? trimmed : ''
-
-      const changed = updateSelectionCells((cell) => {
-        if (!normalized) {
-          if (cell.color) {
-            const nextCell = { ...cell }
-            delete nextCell.color
-            return { cell: nextCell, changed: true }
-          }
-          return { cell, changed: false }
-        }
-
-        if (cell.color === normalized) {
-          return { cell, changed: false }
-        }
-
-        return { cell: { ...cell, color: normalized }, changed: true }
-      })
-
-      if (changed) {
-        setNotice({
-          text: normalized ? '選択セルの文字色を更新しました。' : '選択セルの文字色をクリアしました。',
-          tone: 'success',
-        })
-      }
-    },
-    [setNotice, updateSelectionCells],
-  )
-
-  const applySelectionBackgroundColor = React.useCallback(
-    (color: string | null): void => {
-      const trimmed = (color ?? '').trim()
-      const normalized = trimmed.length > 0 ? trimmed : ''
-
-      const changed = updateSelectionCells((cell) => {
-        if (!normalized) {
-          if (cell.bgColor) {
-            const nextCell = { ...cell }
-            delete nextCell.bgColor
-            return { cell: nextCell, changed: true }
-          }
-          return { cell, changed: false }
-        }
-
-        if (cell.bgColor === normalized) {
-          return { cell, changed: false }
-        }
-
-        return { cell: { ...cell, bgColor: normalized }, changed: true }
-      })
-
-      if (changed) {
-        setNotice({
-          text: normalized ? '選択セルの背景色を更新しました。' : '選択セルの背景色をクリアしました。',
-          tone: 'success',
-        })
-      }
-    },
-    [setNotice, updateSelectionCells],
-  )
-
-  const clearSelectionStyles = React.useCallback((): void => {
-    const changed = updateSelectionCells((cell) => {
-      if (!cell.color && !cell.bgColor) {
-        return { cell, changed: false }
-      }
-      const nextCell = { ...cell }
-      delete nextCell.color
-      delete nextCell.bgColor
-      return { cell: nextCell, changed: true }
-    })
-
-    if (changed) {
-      setNotice({ text: '選択セルのスタイルをクリアしました。', tone: 'success' })
-    }
-  }, [setNotice, updateSelectionCells])
-
-  const applySelectionFunction = React.useCallback(
-    (config: CellFunctionConfig | null): void => {
-      const changed = updateSelectionCells((cell) => {
-        if (!config) {
-          if (!cell.func) {
-            return { cell, changed: false }
-          }
-          const nextCell = { ...cell }
-          delete nextCell.func
-          return { cell: nextCell, changed: true }
-        }
-        const nextFunc = {
-          name: config.name,
-          ...(config.args ? { args: { ...config.args } } : {}),
-        }
-        if (cell.func && cell.func.name === nextFunc.name) {
-          const currentArgs = JSON.stringify(cell.func.args ?? {})
-          const incomingArgs = JSON.stringify(nextFunc.args ?? {})
-          if (currentArgs === incomingArgs) {
-            return { cell, changed: false }
-          }
-        }
-        return {
-          cell: {
-            ...cell,
-            func: nextFunc,
-          },
-          changed: true,
-        }
-      })
-
-      if (!changed) {
-        setNotice({ text: '関数を適用できるセルを選択してください。', tone: 'error' })
-        return
-      }
-      setNotice({
-        text: config ? '選択セルに関数を設定しました。' : '選択セルの関数をクリアしました。',
-        tone: 'success',
-      })
-    },
-    [setNotice, updateSelectionCells],
-  )
+  const {
+    applySelectionTextColor,
+    applySelectionBackgroundColor,
+    clearSelectionStyles,
+    applySelectionFunction,
+  } = useSelectionStyling({
+    selection,
+    columns,
+    rows,
+    updateRows,
+    setNotice,
+  })
 
   useSelectionNormalizer({
     selection,
@@ -290,6 +134,16 @@ export const useSpreadsheetInteractionController = ({
     columnsLength: columns.length,
     setSelection,
     clearSelection,
+  })
+
+  const { handleRowNumberClick, handleColumnHeaderClick } = useHeaderSelectionHandlers({
+    columns,
+    rows,
+    resetFillState,
+    setSelection,
+    setAnchorCell,
+    setIsSelecting,
+    setEditingCell,
   })
 
   const handleCellPointerDown = React.useCallback(
@@ -309,110 +163,6 @@ export const useSpreadsheetInteractionController = ({
       beginSelectionWithReset(cellPosition)
     },
     [beginSelectionWithReset, isFillDragActive],
-  )
-
-  const handleRowNumberClick = React.useCallback(
-    (rowIndex: number, extend: boolean): void => {
-      if (!columns.length) {
-        return
-      }
-      resetFillState()
-      const lastColumnIndex = columns.length - 1
-      if (extend) {
-        let computedSelection: SelectionRange | null = null
-        setSelection((previous) => {
-          const base =
-            previous ?? {
-              startRow: rowIndex,
-              endRow: rowIndex,
-              startCol: 0,
-              endCol: lastColumnIndex,
-            }
-          const nextSelection: SelectionRange = {
-            startRow: Math.min(base.startRow, rowIndex),
-            endRow: Math.max(base.endRow, rowIndex),
-            startCol: 0,
-            endCol: lastColumnIndex,
-          }
-          computedSelection = nextSelection
-          return nextSelection
-        })
-        setAnchorCell((previous) => {
-          if (previous) {
-            return { rowIndex: Math.min(previous.rowIndex, rowIndex), columnIndex: 0 }
-          }
-          if (computedSelection) {
-            return { rowIndex: computedSelection.startRow, columnIndex: 0 }
-          }
-          return { rowIndex, columnIndex: 0 }
-        })
-      } else {
-        const nextSelection: SelectionRange = {
-          startRow: rowIndex,
-          endRow: rowIndex,
-          startCol: 0,
-          endCol: lastColumnIndex,
-        }
-        setSelection(() => nextSelection)
-        setAnchorCell({ rowIndex, columnIndex: 0 })
-      }
-      setIsSelecting(false)
-      setEditingCell(null)
-    },
-    [columns.length, resetFillState, setSelection, setAnchorCell, setIsSelecting, setEditingCell],
-  )
-
-  const handleColumnHeaderClick = React.useCallback(
-    (columnIndex: number, extend: boolean): void => {
-      if (!columns.length) {
-        return
-      }
-      resetFillState()
-      const hasRows = rows.length > 0
-      const startRow = 0
-      const endRow = hasRows ? rows.length - 1 : 0
-      if (extend) {
-        let computedSelection: SelectionRange | null = null
-        setSelection((previous) => {
-          const base =
-            previous ?? {
-              startRow,
-              endRow,
-              startCol: columnIndex,
-              endCol: columnIndex,
-            }
-          const nextSelection: SelectionRange = {
-            startRow,
-            endRow,
-            startCol: Math.min(base.startCol, columnIndex),
-            endCol: Math.max(base.endCol, columnIndex),
-          }
-          computedSelection = nextSelection
-          return nextSelection
-        })
-        setAnchorCell((previous) => {
-          if (previous) {
-            return { rowIndex: startRow, columnIndex: Math.min(previous.columnIndex, columnIndex) }
-          }
-          if (computedSelection) {
-            return { rowIndex: startRow, columnIndex: computedSelection.startCol }
-          }
-          return { rowIndex: startRow, columnIndex }
-        })
-      } else {
-        const nextSelection: SelectionRange = {
-          startRow,
-          endRow,
-          startCol: columnIndex,
-          endCol: columnIndex,
-        }
-        setSelection(() => nextSelection)
-        setAnchorCell({ rowIndex: startRow, columnIndex })
-      }
-      setIsSelecting(false)
-      setEditingCell(null)
-    },
-    [columns.length, rows.length, resetFillState, setSelection, setAnchorCell, setIsSelecting, setEditingCell],
   )
 
   const handleCellPointerEnter = React.useCallback(

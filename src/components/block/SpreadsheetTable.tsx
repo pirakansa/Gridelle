@@ -35,6 +35,7 @@ type Props = {
   onPaste: (_event: React.ClipboardEvent<HTMLDivElement>) => void
   onCellEditorBlur: () => void
   onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
+  availableHeight?: number
 }
 
 // Function Header: Renders the spreadsheet grid complete with selection/fill affordances.
@@ -58,12 +59,19 @@ export default function SpreadsheetTable({
   onPaste,
   onCellEditorBlur,
   onCellEditorKeyDown,
+  availableHeight,
 }: Props): React.ReactElement {
   const { select } = useI18n()
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
   const [viewportHeight, setViewportHeight] = React.useState<number>(0)
   const [scrollTop, setScrollTop] = React.useState<number>(0)
   const wasEditingRef = React.useRef<boolean>(false)
+  const tableContainerStyle = React.useMemo<React.CSSProperties | undefined>(() => {
+    if (typeof availableHeight !== 'number') {
+      return undefined
+    }
+    return { height: availableHeight }
+  }, [availableHeight])
 
   React.useLayoutEffect(() => {
     const container = scrollContainerRef.current
@@ -109,9 +117,66 @@ export default function SpreadsheetTable({
     setScrollTop(event.currentTarget.scrollTop)
   }, [])
 
+  const focusTableShell = React.useCallback(() => {
+    const container = scrollContainerRef.current
+    if (container && document.activeElement !== container) {
+      container.focus({ preventScroll: true })
+    }
+  }, [])
+  const shouldIgnoreGlobalHotkey = React.useCallback(
+    (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (!target) {
+        return false
+      }
+      const tagName = target.tagName.toLowerCase()
+      if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
+        return true
+      }
+      if (target.isContentEditable) {
+        return true
+      }
+      const container = scrollContainerRef.current
+      if (container && container.contains(target)) {
+        return true
+      }
+      return false
+    },
+    [],
+  )
+
+  React.useEffect(() => {
+    if (!selection || editingCell) {
+      return undefined
+    }
+  const handleWindowKeyDown = (event: KeyboardEvent) => {
+      if (shouldIgnoreGlobalHotkey(event)) {
+        return
+      }
+      onTableKeyDown(event as unknown as React.KeyboardEvent<HTMLDivElement>)
+    }
+    window.addEventListener('keydown', handleWindowKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleWindowKeyDown)
+    }
+  }, [selection, editingCell, onTableKeyDown, shouldIgnoreGlobalHotkey])
+
+  const handleCellPointerDownWithFocus = React.useCallback(
+    (
+      event: React.PointerEvent<HTMLTableCellElement>,
+      rowIndex: number,
+      columnIndex: number,
+    ): void => {
+      focusTableShell()
+      onPointerDown(event, rowIndex, columnIndex)
+    },
+    [focusTableShell, onPointerDown],
+  )
+
   return (
     <div
-      className={`${layoutTheme.tableScroll} mt-6`}
+      className={layoutTheme.tableScroll}
+      style={tableContainerStyle}
       id="sheet-workspace"
       tabIndex={0}
       role="region"
@@ -123,7 +188,13 @@ export default function SpreadsheetTable({
       ref={scrollContainerRef}
     >
       <table className="spreadsheet-table">
-        <TableHead columns={columns} onColumnHeaderClick={onColumnHeaderClick} />
+        <TableHead
+          columns={columns}
+          onColumnHeaderClick={(columnIndex, extend) => {
+            focusTableShell()
+            onColumnHeaderClick(columnIndex, extend)
+          }}
+        />
         <TableBody
           rows={rows}
           columns={columns}
@@ -132,8 +203,11 @@ export default function SpreadsheetTable({
           fillPreview={fillPreview}
           isFillDragActive={isFillDragActive}
           editingCell={editingCell}
-          onRowNumberClick={onRowNumberClick}
-          onPointerDown={onPointerDown}
+          onRowNumberClick={(rowIndex, extend) => {
+            focusTableShell()
+            onRowNumberClick(rowIndex, extend)
+          }}
+          onPointerDown={handleCellPointerDownWithFocus}
           onPointerEnter={onPointerEnter}
           onCellClick={onCellClick}
           onCellDoubleClick={onCellDoubleClick}

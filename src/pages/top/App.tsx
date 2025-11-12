@@ -10,6 +10,7 @@ import YamlPanel from '../../components/block/YamlPanel'
 import SettingsOverlay from '../../components/block/SettingsOverlay'
 import GithubIntegrationPanel, {
   type GithubIntegrationLoadedFileInfo,
+  type GithubIntegrationSaveNotice,
 } from '../../components/block/GithubIntegrationPanel'
 import {
   clearStoredProviderToken,
@@ -20,6 +21,12 @@ import {
   type AuthUser,
   type LoginMode,
 } from '../../services/auth'
+import {
+  GithubRepositoryAccessError,
+  commitRepositoryFileUpdate,
+} from '../../services/githubRepositoryAccessService'
+
+const DEFAULT_GITHUB_COMMIT_MESSAGE = 'Update'
 
 // Function Header: Composes the top page using modular sub-components wired to state hooks.
 export default function App(): React.ReactElement {
@@ -29,10 +36,19 @@ export default function App(): React.ReactElement {
   const [isGithubIntegrationOpen, setGithubIntegrationOpen] = React.useState<boolean>(false)
   const [githubRepositoryUrl, setGithubRepositoryUrl] = React.useState<string>('')
   const [githubLastLoadedFile, setGithubLastLoadedFile] = React.useState<GithubIntegrationLoadedFileInfo | null>(null)
+  const [isGithubSaveInProgress, setGithubSaveInProgress] = React.useState<boolean>(false)
+  const [githubSaveNotice, setGithubSaveNotice] = React.useState<GithubIntegrationSaveNotice | null>(null)
   const [loginMode, setLoginModeState] = React.useState<LoginMode | null>(() => getLoginMode())
   const [currentUser, setCurrentUser] = React.useState<AuthUser | null>(null)
   const [isLoggingOut, setLoggingOut] = React.useState<boolean>(false)
   const [logoutError, setLogoutError] = React.useState<string | null>(null)
+  const [menuHeaderHeight, setMenuHeaderHeight] = React.useState<number>(0)
+  const [windowHeight, setWindowHeight] = React.useState<number>(() => {
+    if (typeof window === 'undefined') {
+      return 0
+    }
+    return window.innerHeight
+  })
 
   React.useEffect(() => {
     if (!loginMode) {
@@ -107,6 +123,7 @@ export default function App(): React.ReactElement {
           errorNoticePrefix: 'GitHubファイルの解析に失敗しました',
         })
         setGithubLastLoadedFile(info)
+        setGithubSaveNotice(null)
         closeGithubIntegration()
       } catch (error) {
         console.error('GitHubファイルの取り込みでエラーが発生しました', error)
@@ -114,6 +131,52 @@ export default function App(): React.ReactElement {
     },
     [closeGithubIntegration, setGithubLastLoadedFile, spreadsheet],
   )
+
+  const handleGithubFileSave = React.useCallback(async () => {
+    if (!githubLastLoadedFile || githubLastLoadedFile.mode !== 'repository') {
+      return
+    }
+
+    setGithubSaveNotice(null)
+    setGithubSaveInProgress(true)
+
+    try {
+      await commitRepositoryFileUpdate({
+        repository: githubLastLoadedFile.repository,
+        branch: githubLastLoadedFile.branch,
+        filePath: githubLastLoadedFile.filePath,
+        content: spreadsheet.tableYaml,
+        commitMessage: DEFAULT_GITHUB_COMMIT_MESSAGE,
+      })
+      setGithubSaveNotice({
+        tone: 'success',
+        message: {
+          ja: 'GitHubにUpdateコミットを作成しました。',
+          en: 'Created an Update commit on GitHub.',
+        },
+      })
+    } catch (error) {
+      if (error instanceof GithubRepositoryAccessError) {
+        setGithubSaveNotice({
+          tone: 'error',
+          message: {
+            ja: error.jaMessage,
+            en: error.enMessage,
+          },
+        })
+      } else {
+        setGithubSaveNotice({
+          tone: 'error',
+          message: {
+            ja: 'GitHubへの保存に失敗しました。時間を置いて再度お試しください。',
+            en: 'Failed to save to GitHub. Please try again later.',
+          },
+        })
+      }
+    } finally {
+      setGithubSaveInProgress(false)
+    }
+  }, [githubLastLoadedFile, spreadsheet.tableYaml])
 
   const handleLogout = React.useCallback(async () => {
     if (isLoggingOut) {
@@ -136,9 +199,42 @@ export default function App(): React.ReactElement {
     }
   }, [authClient, isLoggingOut, setLoginModeState])
 
+  const handleCreateNewYaml = React.useCallback(() => {
+    const template = [
+      '- name: "Sheet 1"',
+      '  rows:',
+      '    - feature: ""',
+      '      owner: ""',
+      '      status: ""',
+      '      effort: ""',
+    ].join('\n')
+    spreadsheet.setYamlBuffer(`${template}\n`)
+  }, [spreadsheet])
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    const handleResize = () => {
+      setWindowHeight(window.innerHeight)
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
+  const tableHeight = React.useMemo(() => {
+    if (windowHeight === 0 || menuHeaderHeight === 0) {
+      return null
+    }
+    return Math.max(windowHeight - menuHeaderHeight, 0)
+  }, [menuHeaderHeight, windowHeight])
   return (
     <div className={layoutTheme.pageShell} data-login-mode={loginMode ?? 'none'}>
       <MenuHeader
+        onHeightChange={setMenuHeaderHeight}
         onYamlInputClick={openYamlInput}
         onGithubIntegrationClick={openGithubIntegration}
         notice={spreadsheet.notice}
@@ -188,6 +284,7 @@ export default function App(): React.ReactElement {
       />
       <main className={layoutTheme.contentWrapper}>
         <SpreadsheetTable
+          availableHeight={tableHeight ?? undefined}
           rows={spreadsheet.rows}
           columns={spreadsheet.columns}
           activeRange={spreadsheet.activeRange}
@@ -224,6 +321,7 @@ export default function App(): React.ReactElement {
             onFileUpload={spreadsheet.handleFileUpload}
             onDownload={spreadsheet.handleDownloadYaml}
             onCopy={spreadsheet.handleCopyYaml}
+            onCreateNew={handleCreateNewYaml}
           />
         </SettingsOverlay>
       )}
@@ -239,6 +337,9 @@ export default function App(): React.ReactElement {
             onRepositoryUrlSubmit={handleRepositoryUrlSubmit}
             onYamlContentLoaded={handleGithubYamlLoaded}
             lastLoadedFileInfo={githubLastLoadedFile}
+            onSaveLastLoadedFile={handleGithubFileSave}
+            isSavingLastLoadedFile={isGithubSaveInProgress}
+            lastLoadedFileSaveNotice={githubSaveNotice}
           />
         </SettingsOverlay>
       )}

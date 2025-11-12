@@ -48,7 +48,7 @@ export default function FileSection({
               onClick={handleGithubActions}
               data-testid="github-file-actions"
             >
-              {select('GitHubファイル連携（準備中）', 'GitHub file integration (preview)')}
+              {select('GitHubファイル連携', 'GitHub file integration')}
             </Button>
           )}
         </div>

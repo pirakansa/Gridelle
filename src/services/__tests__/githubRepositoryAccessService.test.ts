@@ -3,11 +3,14 @@ import {
   GithubRepositoryAccessError,
   parseGithubRepositoryUrl,
   parseGithubBlobUrl,
+  parseGithubPullRequestUrl,
   verifyRepositoryCollaborator,
   listRepositoryBranches,
   fetchRepositoryTree,
   fetchRepositoryFileContent,
   fetchFileFromBlobUrl,
+  fetchPullRequestDetails,
+  commitRepositoryFileUpdate,
 } from '../githubRepositoryAccessService'
 import { createOctokitClient } from '../octokitService'
 
@@ -29,6 +32,20 @@ describe('githubRepositoryAccessService', () => {
 
   it('throws error for invalid host', () => {
     expect(() => parseGithubRepositoryUrl('https://example.com/owner/repo')).toThrow(
+      GithubRepositoryAccessError,
+    )
+  })
+
+  it('parses pull request url with files suffix', () => {
+    expect(parseGithubPullRequestUrl('https://github.com/gridelle/app/pull/123/files')).toEqual({
+      owner: 'gridelle',
+      repository: 'app',
+      pullNumber: 123,
+    })
+  })
+
+  it('throws error for malformed pull request url', () => {
+    expect(() => parseGithubPullRequestUrl('https://github.com/gridelle/app/issues/5')).toThrow(
       GithubRepositoryAccessError,
     )
   })
@@ -323,5 +340,159 @@ describe('githubRepositoryAccessService', () => {
         filePath: 'docs/table.yaml',
       },
     })
+  })
+
+  it('fetches pull request details and files', async () => {
+    const octokit = {
+      rest: {
+        pulls: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              head: {
+                ref: 'feature/pr',
+                repo: {
+                  name: 'forked-app',
+                  owner: { login: 'fork-owner' },
+                },
+              },
+            },
+          }),
+          listFiles: vi.fn().mockResolvedValue({
+            data: [
+              { filename: 'configs/pr.yaml', sha: 'sha-pr', status: 'modified' },
+              { filename: 'README.md', sha: 'sha-readme', status: 'modified' },
+            ],
+          }),
+        },
+        repos: {},
+      },
+    }
+
+    vi.mocked(createOctokitClient).mockReturnValue(octokit as never)
+
+    const details = await fetchPullRequestDetails('https://github.com/gridelle/app/pull/42')
+
+    expect(octokit.rest.pulls.get).toHaveBeenCalledWith({
+      owner: 'gridelle',
+      repo: 'app',
+      pull_number: 42,
+    })
+    expect(octokit.rest.pulls.listFiles).toHaveBeenCalledWith({
+      owner: 'gridelle',
+      repo: 'app',
+      pull_number: 42,
+      per_page: 100,
+    })
+    expect(details).toEqual({
+      coordinates: { owner: 'gridelle', repository: 'app', pullNumber: 42 },
+      head: {
+        repository: { owner: 'fork-owner', repository: 'forked-app' },
+        ref: 'feature/pr',
+      },
+      files: [
+        { path: 'configs/pr.yaml', sha: 'sha-pr', status: 'modified' },
+        { path: 'README.md', sha: 'sha-readme', status: 'modified' },
+      ],
+    })
+  })
+
+  it('throws when pull request files cannot be fetched due to auth error', async () => {
+    const octokit = {
+      rest: {
+        pulls: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              head: {
+                ref: 'feature/pr',
+                repo: {
+                  name: 'forked-app',
+                  owner: { login: 'fork-owner' },
+                },
+              },
+            },
+          }),
+          listFiles: vi.fn().mockRejectedValue({ status: 401 }),
+        },
+        repos: {},
+      },
+    }
+
+    vi.mocked(createOctokitClient).mockReturnValue(octokit as never)
+
+    await expect(fetchPullRequestDetails('https://github.com/gridelle/app/pull/42')).rejects.toMatchObject({
+      code: 'unauthorized',
+    })
+  })
+
+  it('commits repository file updates with base64 content', async () => {
+    const octokit = {
+      rest: {
+        repos: {
+          getContent: vi.fn().mockResolvedValue({
+            data: {
+              type: 'file',
+              sha: 'sha-old',
+            },
+          }),
+          createOrUpdateFileContents: vi.fn().mockResolvedValue({ status: 201 }),
+        },
+      },
+    }
+
+    vi.mocked(createOctokitClient).mockReturnValue(octokit as never)
+
+    await expect(
+      commitRepositoryFileUpdate({
+        repository: { owner: 'gridelle', repository: 'app' },
+        branch: 'main',
+        filePath: 'table.yaml',
+        content: 'key: value\n',
+        commitMessage: 'Update',
+      }),
+    ).resolves.toBeUndefined()
+
+    expect(octokit.rest.repos.getContent).toHaveBeenCalledWith({
+      owner: 'gridelle',
+      repo: 'app',
+      path: 'table.yaml',
+      ref: 'main',
+    })
+    expect(octokit.rest.repos.createOrUpdateFileContents).toHaveBeenCalledWith({
+      owner: 'gridelle',
+      repo: 'app',
+      path: 'table.yaml',
+      branch: 'main',
+      message: 'Update',
+      content: Buffer.from('key: value\n', 'utf-8').toString('base64'),
+      sha: 'sha-old',
+    })
+  })
+
+  it('throws when file update fails with unauthorized error', async () => {
+    const octokit = {
+      rest: {
+        repos: {
+          getContent: vi.fn().mockResolvedValue({
+            data: {
+              type: 'file',
+              sha: 'sha-old',
+            },
+          }),
+          createOrUpdateFileContents: vi.fn().mockRejectedValue({ status: 401 }),
+        },
+      },
+    }
+
+    vi.mocked(createOctokitClient).mockReturnValue(octokit as never)
+
+    await expect(
+      commitRepositoryFileUpdate({
+        repository: { owner: 'gridelle', repository: 'app' },
+        branch: 'main',
+        filePath: 'table.yaml',
+        content: 'key: value\n',
+        commitMessage: 'Update',
+      }),
+    ).rejects.toMatchObject({ code: 'unauthorized' })
   })
 })

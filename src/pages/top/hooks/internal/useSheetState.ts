@@ -80,6 +80,7 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
 
   const updateRows = React.useCallback(
     (nextRows: TableRow[]) => {
+      let didUpdate = false
       setSheets((current) => {
         if (!current.length) {
           return current
@@ -87,7 +88,8 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
         const targetIndex = Math.min(activeSheetIndex, current.length - 1)
         const updatedRows = cloneRows(nextRows)
         const nextColumns = deriveColumns(updatedRows)
-        const next = current.map((sheet, index) =>
+        didUpdate = true
+        return current.map((sheet, index) =>
           index === targetIndex
             ? {
                 ...sheet,
@@ -96,9 +98,10 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
               }
             : sheet,
         )
-        setNotice(null)
-        return next
       })
+      if (didUpdate) {
+        setNotice(null)
+      }
     },
     [activeSheetIndex, setNotice],
   )

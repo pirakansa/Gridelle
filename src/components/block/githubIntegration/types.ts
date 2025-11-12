@@ -18,5 +18,14 @@ export type YamlContentPayload = {
   mode: IntegrationMode
 }
 
+export type LocalizedNotice = {
+  tone: 'success' | 'error'
+  message: {
+    ja: string
+    en: string
+  }
+}
+
 export type GithubIntegrationMode = IntegrationMode
 export type GithubIntegrationLoadedFileInfo = LoadedFileInfo
+export type GithubIntegrationSaveNotice = LocalizedNotice

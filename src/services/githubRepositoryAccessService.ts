@@ -46,6 +46,7 @@ export type GithubRepositoryAccessErrorCode =
   | 'branch-fetch-failed'
   | 'tree-fetch-failed'
   | 'file-fetch-failed'
+  | 'file-update-failed'
   | 'invalid-blob-url'
   | 'invalid-pull-request-url'
   | 'pull-request-fetch-failed'
@@ -67,6 +68,33 @@ export type GithubBlobCoordinates = GithubRepositoryCoordinates & {
   filePath: string
 }
 
+export type PullRequestCoordinates = GithubRepositoryCoordinates & {
+  pullNumber: number
+}
+
+export type PullRequestChangedFile = {
+  path: string
+  sha: string | null
+  status: string
+}
+
+export type PullRequestDetails = {
+  coordinates: PullRequestCoordinates
+  head: {
+    repository: GithubRepositoryCoordinates
+    ref: string
+  }
+  files: PullRequestChangedFile[]
+}
+
+export type RepositoryFileUpdateParams = {
+  repository: GithubRepositoryCoordinates
+  branch: string
+  filePath: string
+  content: string
+  commitMessage: string
+}
+
 const decodeBase64Payload = (payload: string): string => {
   const cleaned = payload.replace(/\s+/g, '')
 
@@ -76,13 +104,13 @@ const decodeBase64Payload = (payload: string): string => {
       const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
       const decoder = new TextDecoder()
       return decoder.decode(bytes)
-  } catch {
-    throw new GithubRepositoryAccessError(
-      '取得したファイルのデコードに失敗しました。',
-      'file-fetch-failed',
-      'Failed to decode the fetched file.',
-    )
-  }
+    } catch {
+      throw new GithubRepositoryAccessError(
+        '取得したファイルのデコードに失敗しました。',
+        'file-fetch-failed',
+        'Failed to decode the fetched file.',
+      )
+    }
   }
 
   const bufferLike = (globalThis as {
@@ -92,19 +120,61 @@ const decodeBase64Payload = (payload: string): string => {
   if (bufferLike) {
     try {
       return bufferLike.from(cleaned, 'base64').toString('utf-8')
-  } catch {
-    throw new GithubRepositoryAccessError(
-      '取得したファイルのデコードに失敗しました。',
-      'file-fetch-failed',
-      'Failed to decode the fetched file.',
-    )
-  }
+    } catch {
+      throw new GithubRepositoryAccessError(
+        '取得したファイルのデコードに失敗しました。',
+        'file-fetch-failed',
+        'Failed to decode the fetched file.',
+      )
+    }
   }
 
   throw new GithubRepositoryAccessError(
     'ファイル内容を解読できませんでした。別の環境で再度お試しください。',
     'file-fetch-failed',
     'Unable to decode the file content. Please try again in a different environment.',
+  )
+}
+
+const encodeBase64Payload = (content: string): string => {
+  if (typeof globalThis.btoa === 'function') {
+    try {
+      const encoder = new TextEncoder()
+      const bytes = encoder.encode(content)
+      let binary = ''
+      bytes.forEach((byte) => {
+        binary += String.fromCharCode(byte)
+      })
+      return globalThis.btoa(binary)
+    } catch {
+      throw new GithubRepositoryAccessError(
+        'ファイル内容のエンコードに失敗しました。',
+        'file-update-failed',
+        'Failed to encode the file content.',
+      )
+    }
+  }
+
+  const bufferLike = (globalThis as {
+    Buffer?: { from: (_input: string, _encoding: string) => { toString: (_encoding: string) => string } }
+  }).Buffer
+
+  if (bufferLike) {
+    try {
+      return bufferLike.from(content, 'utf-8').toString('base64')
+    } catch {
+      throw new GithubRepositoryAccessError(
+        'ファイル内容のエンコードに失敗しました。',
+        'file-update-failed',
+        'Failed to encode the file content.',
+      )
+    }
+  }
+
+  throw new GithubRepositoryAccessError(
+    'ファイル内容をエンコードできませんでした。別の環境で再度お試しください。',
+    'file-update-failed',
+    'Unable to encode the file content. Please try again in a different environment.',
   )
 }
 
@@ -298,6 +368,77 @@ export async function parseGithubBlobUrl(rawUrl: string): Promise<GithubBlobCoor
     repository,
     ref: resolved.ref,
     filePath: resolved.filePath,
+  }
+}
+
+// Function Header: Parses a GitHub pull request URL and returns repository coordinates with pull number.
+export function parseGithubPullRequestUrl(rawUrl: string): PullRequestCoordinates {
+  let parsed: URL
+
+  try {
+    parsed = new URL(rawUrl)
+  } catch {
+    throw new GithubRepositoryAccessError(
+      'Pull Request の URL が正しくありません。 https://github.com/owner/repository/pull/123 の形式で入力してください。',
+      'invalid-pull-request-url',
+      'The pull request URL is invalid. Use the format https://github.com/owner/repository/pull/123.',
+    )
+  }
+
+  if (!GITHUB_HOST_PATTERN.test(parsed.hostname)) {
+    throw new GithubRepositoryAccessError(
+      'Pull Request URL のホスト名が無効です。 https://github.com/owner/repository/pull/123 の形式で入力してください。',
+      'invalid-pull-request-url',
+      'The pull request URL host is invalid. Use the format https://github.com/owner/repository/pull/123.',
+    )
+  }
+
+  const segments = parsed.pathname.split('/').filter(Boolean)
+
+  if (segments.length < 4) {
+    throw new GithubRepositoryAccessError(
+      'Pull Request URL から番号を判別できません。 https://github.com/owner/repository/pull/123 の形式で入力してください。',
+      'invalid-pull-request-url',
+      'Unable to determine the pull request number from the URL. Use the format https://github.com/owner/repository/pull/123.',
+    )
+  }
+
+  const pullIndex = segments.findIndex((segment) => segment === 'pull' || segment === 'pulls')
+
+  if (pullIndex < 2 || pullIndex + 1 >= segments.length) {
+    throw new GithubRepositoryAccessError(
+      'Pull Request URL から番号を判別できません。 https://github.com/owner/repository/pull/123 の形式で入力してください。',
+      'invalid-pull-request-url',
+      'Unable to determine the pull request number from the URL. Use the format https://github.com/owner/repository/pull/123.',
+    )
+  }
+
+  const pullNumberSegment = segments[pullIndex + 1]
+  const pullNumber = Number.parseInt(pullNumberSegment, 10)
+
+  if (!Number.isFinite(pullNumber)) {
+    throw new GithubRepositoryAccessError(
+      'Pull Request 番号が数値として認識できません。',
+      'invalid-pull-request-url',
+      'The pull request number is not a valid number.',
+    )
+  }
+
+  const owner = segments[0]
+  const repository = segments[1].replace(/\.git$/, '')
+
+  if (!OWNER_REPO_PATTERN.test(owner) || !OWNER_REPO_PATTERN.test(repository)) {
+    throw new GithubRepositoryAccessError(
+      'Pull Request URL に含まれる所有者またはリポジトリ名が無効です。',
+      'invalid-pull-request-url',
+      'The owner or repository in the pull request URL is invalid.',
+    )
+  }
+
+  return {
+    owner,
+    repository,
+    pullNumber,
   }
 }
 
@@ -543,5 +684,169 @@ export async function fetchFileFromBlobUrl(blobUrl: string): Promise<{
   return {
     content,
     coordinates,
+  }
+}
+
+// Function Header: Retrieves pull request metadata and changed files for selection workflows.
+export async function fetchPullRequestDetails(pullRequestUrl: string): Promise<PullRequestDetails> {
+  const coordinates = parseGithubPullRequestUrl(pullRequestUrl)
+  const octokit = createOctokitClient()
+
+  let pullRequest: Awaited<ReturnType<typeof octokit.rest.pulls.get>>['data']
+
+  try {
+    const { data } = await octokit.rest.pulls.get({
+      owner: coordinates.owner,
+      repo: coordinates.repository,
+      pull_number: coordinates.pullNumber,
+    })
+    pullRequest = data
+  } catch (error: unknown) {
+    const status = typeof error === 'object' && error && 'status' in error ? (error as { status?: number }).status : null
+
+    if (status === 401 || status === 403) {
+      throw new GithubRepositoryAccessError(
+        'GitHubの認証に失敗しました。再度ログインし直してください。',
+        'unauthorized',
+        'GitHub authentication failed. Please sign in again.',
+      )
+    }
+
+    throw new GithubRepositoryAccessError(
+      'Pull Request の情報を取得できませんでした。URLとアクセス権限を確認してください。',
+      'pull-request-fetch-failed',
+      'Unable to fetch the pull request details. Check the URL and your permissions.',
+    )
+  }
+
+  const headRepoOwner = pullRequest.head?.repo?.owner?.login
+  const headRepoName = pullRequest.head?.repo?.name
+  const headRef = pullRequest.head?.ref
+
+  if (!headRepoOwner || !headRepoName || !headRef) {
+    throw new GithubRepositoryAccessError(
+      'Pull Request のヘッド情報を取得できませんでした。時間を置いて再度お試しください。',
+      'pull-request-fetch-failed',
+      'Unable to fetch the pull request head information. Please try again later.',
+    )
+  }
+
+  let filesResponse: Awaited<ReturnType<typeof octokit.rest.pulls.listFiles>>['data'] = []
+
+  try {
+    const { data } = await octokit.rest.pulls.listFiles({
+      owner: coordinates.owner,
+      repo: coordinates.repository,
+      pull_number: coordinates.pullNumber,
+      per_page: 100,
+    })
+    filesResponse = data
+  } catch (error: unknown) {
+    const status = typeof error === 'object' && error && 'status' in error ? (error as { status?: number }).status : null
+
+    if (status === 401 || status === 403) {
+      throw new GithubRepositoryAccessError(
+        'GitHubの認証に失敗しました。再度ログインし直してください。',
+        'unauthorized',
+        'GitHub authentication failed. Please sign in again.',
+      )
+    }
+
+    throw new GithubRepositoryAccessError(
+      'Pull Request の変更ファイルを取得できませんでした。時間を置いて再度お試しください。',
+      'pull-request-fetch-failed',
+      'Unable to fetch the pull request file list. Please try again later.',
+    )
+  }
+
+  const files = filesResponse
+    .filter((file) => typeof file.filename === 'string')
+    .map((file) => ({
+      path: file.filename as string,
+      sha: typeof file.sha === 'string' ? file.sha : null,
+      status: typeof file.status === 'string' ? file.status : 'modified',
+    }))
+
+  return {
+    coordinates,
+    head: {
+      repository: {
+        owner: headRepoOwner,
+        repository: headRepoName,
+      },
+      ref: headRef,
+    },
+    files,
+  }
+}
+
+// Function Header: Updates a repository file by committing the provided YAML via Octokit.
+export async function commitRepositoryFileUpdate({
+  repository,
+  branch,
+  filePath,
+  content,
+  commitMessage,
+}: RepositoryFileUpdateParams): Promise<void> {
+  const octokit = createOctokitClient()
+  let existingSha: string | undefined
+
+  try {
+    const { data } = await octokit.rest.repos.getContent({
+      owner: repository.owner,
+      repo: repository.repository,
+      path: filePath,
+      ref: branch,
+    })
+
+    if (!Array.isArray(data) && data.type === 'file' && typeof data.sha === 'string') {
+      existingSha = data.sha
+    }
+  } catch (error: unknown) {
+    const status = typeof error === 'object' && error && 'status' in error ? (error as { status?: number }).status : null
+
+    if (status === 401 || status === 403) {
+      throw new GithubRepositoryAccessError(
+        'GitHubの認証に失敗しました。再度ログインし直してください。',
+        'unauthorized',
+        'GitHub authentication failed. Please sign in again.',
+      )
+    }
+
+    if (status !== 404) {
+      throw new GithubRepositoryAccessError(
+        'GitHubファイルの更新準備に失敗しました。時間を置いて再度お試しください。',
+        'file-update-failed',
+        'Failed to prepare the GitHub file for updating. Please try again later.',
+      )
+    }
+  }
+
+  try {
+    await octokit.rest.repos.createOrUpdateFileContents({
+      owner: repository.owner,
+      repo: repository.repository,
+      path: filePath,
+      branch,
+      message: commitMessage,
+      content: encodeBase64Payload(content),
+      sha: existingSha,
+    })
+  } catch (error: unknown) {
+    const status = typeof error === 'object' && error && 'status' in error ? (error as { status?: number }).status : null
+
+    if (status === 401 || status === 403) {
+      throw new GithubRepositoryAccessError(
+        'GitHubの認証に失敗しました。再度ログインし直してください。',
+        'unauthorized',
+        'GitHub authentication failed. Please sign in again.',
+      )
+    }
+
+    throw new GithubRepositoryAccessError(
+      'GitHubファイルの更新に失敗しました。時間を置いて再度お試しください。',
+      'file-update-failed',
+      'Failed to update the GitHub file. Please try again later.',
+    )
   }
 }
