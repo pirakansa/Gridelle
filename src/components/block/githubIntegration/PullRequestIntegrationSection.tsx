@@ -53,6 +53,7 @@ export default function PullRequestIntegrationSection({
   const [isFileLoading, setIsFileLoading] = React.useState<boolean>(false)
   const [fileErrorMessage, setFileErrorMessage] = React.useState<LocalizedMessage | null>(null)
   const [fileSuccessMessage, setFileSuccessMessage] = React.useState<LocalizedMessage | null>(null)
+  const activeFileRequestIdRef = React.useRef<number>(0)
 
   const resolveMessage = React.useCallback(
     (message: LocalizedMessage | null) => (message ? select(message.ja, message.en) : null),
@@ -118,9 +119,16 @@ export default function PullRequestIntegrationSection({
       setFileErrorMessage(null)
       setFileSuccessMessage(null)
 
+      const requestId = activeFileRequestIdRef.current + 1
+      activeFileRequestIdRef.current = requestId
+
       services
         .fetchRepositoryFileContent(pullRequestDetails.head.repository, pullRequestDetails.head.ref, filePath)
         .then((content) => {
+          if (activeFileRequestIdRef.current !== requestId) {
+            return
+          }
+
           setFileSuccessMessage(createMessage(`${filePath} を読み込みました。`, `Loaded ${filePath}.`))
           onFileSelected?.(filePath)
           onYamlContentLoaded?.({
@@ -132,6 +140,10 @@ export default function PullRequestIntegrationSection({
           })
         })
         .catch((error) => {
+          if (activeFileRequestIdRef.current !== requestId) {
+            return
+          }
+
           if (error instanceof services.GithubRepositoryAccessError) {
             setFileErrorMessage(createMessage(error.jaMessage, error.enMessage))
           } else {
@@ -144,7 +156,9 @@ export default function PullRequestIntegrationSection({
           }
         })
         .finally(() => {
-          setIsFileLoading(false)
+          if (activeFileRequestIdRef.current === requestId) {
+            setIsFileLoading(false)
+          }
         })
     },
     [onFileSelected, onYamlContentLoaded, pullRequestDetails, services],
