@@ -1,7 +1,7 @@
 // File Header: Table cell component handling editing visuals, selection, and fill handle.
 import React from 'react'
 import type { TableCell } from '../../../services/workbookService'
-import type { CellPosition, SelectionRange } from '../../../pages/top/useSpreadsheetState'
+import type { EditingCellState, SelectionRange } from '../../../pages/top/useSpreadsheetState'
 import { useI18n } from '../../../utils/i18n'
 
 type EditableCellProps = {
@@ -13,7 +13,7 @@ type EditableCellProps = {
   activeRange: SelectionRange | null
   fillPreview: SelectionRange | null
   isFillDragActive: boolean
-  editingCell: CellPosition | null
+  editingCell: EditingCellState | null
   onPointerDown: (_event: React.PointerEvent<HTMLTableCellElement>, _rowIndex: number, _columnIndex: number) => void
   onPointerEnter: (_rowIndex: number, _columnIndex: number) => void
   onCellClick: (_event: React.MouseEvent<HTMLTableCellElement>, _rowIndex: number, _columnIndex: number) => void
@@ -69,9 +69,15 @@ export default function EditableCell({
     if (isEditing) {
       hasCommittedRef.current = false
       discardRef.current = false
+      if (editingCell?.replaceValue) {
+        setDraftValue(editingCell.initialValue ?? '')
+        return
+      }
+      setDraftValue(cellValue)
+      return
     }
     setDraftValue((current) => (current === cellValue ? current : cellValue))
-  }, [cellValue, isEditing])
+  }, [cellValue, editingCell, isEditing])
 
   const { className } = deriveCellPresentation({
     activeRange,

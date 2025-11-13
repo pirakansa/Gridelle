@@ -1,7 +1,7 @@
 // File Header: Table body wrapper delegating per-row rendering.
 import React from 'react'
 import type { TableRow as TableRowData } from '../../../services/workbookService'
-import type { CellPosition, SelectionRange } from '../../../pages/top/useSpreadsheetState'
+import type { EditingCellState, SelectionRange } from '../../../pages/top/useSpreadsheetState'
 import TableRow from './TableRow'
 import { useI18n } from '../../../utils/i18n'
 
@@ -12,7 +12,7 @@ type TableBodyProps = {
   activeRange: SelectionRange | null
   fillPreview: SelectionRange | null
   isFillDragActive: boolean
-  editingCell: CellPosition | null
+  editingCell: EditingCellState | null
   onRowNumberClick: (_rowIndex: number, _extend: boolean) => void
   onPointerDown: (
     _event: React.PointerEvent<HTMLTableCellElement>,

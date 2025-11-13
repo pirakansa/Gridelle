@@ -9,9 +9,9 @@ import { useMacroManager } from './hooks/useMacroManager'
 import type { RegisteredFunctionMeta } from './utils/cellFunctionEngine'
 import type { LoadedWasmModule } from '../../services/wasmMacroService'
 import { applyCellFunctions } from './utils/cellFunctionEngine'
-import type { CellPosition, Notice, SelectionRange } from './types'
+import type { EditingCellState, Notice, SelectionRange } from './types'
 
-export type { CellPosition, SelectionRange } from './types'
+export type { CellPosition, EditingCellState, SelectionRange } from './types'
 
 type UseSpreadsheetState = {
   notice: Notice | null
@@ -84,7 +84,7 @@ type UseSpreadsheetState = {
   handleCellChange: (_rowIndex: number, _column: string, _value: string) => void
   handlePaste: (_event: React.ClipboardEvent<HTMLDivElement>) => void
   isFillDragActive: boolean
-  editingCell: CellPosition | null
+  editingCell: EditingCellState | null
   handleCellEditorBlur: () => void
   handleCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
   macroFunctions: RegisteredFunctionMeta[]
