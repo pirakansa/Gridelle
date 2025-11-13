@@ -44,6 +44,7 @@ type Props = {
   canMoveSelectedRowsUp: boolean
   canMoveSelectedRowsDown: boolean
   selectionSummary: string
+  selectionFunctionSummary: string
   onClearSelection: () => void
   hasSelection: boolean
   bulkValue: string
@@ -95,6 +96,7 @@ export default function MenuHeader({
   canMoveSelectedRowsUp,
   canMoveSelectedRowsDown,
   selectionSummary,
+  selectionFunctionSummary,
   onClearSelection,
   hasSelection,
   bulkValue,
@@ -310,6 +312,7 @@ export default function MenuHeader({
               {activeMenuSection === 'selection' && (
                 <SelectionSection
                   selectionSummary={selectionSummary}
+                  selectionFunctionSummary={selectionFunctionSummary}
                   hasSelection={hasSelection}
                   onClearSelection={onClearSelection}
                   bulkValue={bulkValue}

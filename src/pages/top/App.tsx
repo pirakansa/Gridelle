@@ -268,6 +268,7 @@ export default function App(): React.ReactElement {
         canMoveSelectedRowsDown={spreadsheet.canMoveSelectedRowsDown}
         onDeleteSelectedRows={spreadsheet.handleDeleteSelectedRows}
         selectionSummary={spreadsheet.selectionSummary}
+        selectionFunctionSummary={spreadsheet.selectionFunctionSummary}
         onClearSelection={spreadsheet.clearSelection}
         hasSelection={Boolean(spreadsheet.selection)}
         bulkValue={spreadsheet.bulkValue}

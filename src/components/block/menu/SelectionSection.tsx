@@ -8,6 +8,7 @@ import { useI18n } from '../../../utils/i18n'
 
 type SelectionSectionProps = {
   selectionSummary: string
+  selectionFunctionSummary: string
   hasSelection: boolean
   onClearSelection: () => void
   bulkValue: string
@@ -23,6 +24,7 @@ type SelectionSectionProps = {
 // Function Header: Shows current selection summary and allows clearing it.
 export default function SelectionSection({
   selectionSummary,
+  selectionFunctionSummary,
   hasSelection,
   onClearSelection,
   bulkValue,
@@ -94,6 +96,9 @@ export default function SelectionSection({
         <div className="flex flex-wrap items-center gap-3 md:gap-4">
           <p data-testid="selection-summary" className="text-sm font-medium text-slate-700">
             {selectionSummary}
+          </p>
+          <p data-testid="selection-function-summary" className="text-xs text-slate-500">
+            {selectionFunctionSummary}
           </p>
           <div className="flex items-center gap-3 text-xs text-slate-500">
             <span>{select('⌘/Ctrl+V で貼り付け / Escape で選択解除', '⌘/Ctrl+V to paste / Escape to clear selection')}</span>

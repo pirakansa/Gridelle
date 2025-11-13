@@ -355,6 +355,14 @@ describe('App', () => {
     await waitFor(() => {
       expect(metricCell).toHaveTextContent('12')
     })
+    const metricCellBox = screen.getByTestId('cell-box-2-metric')
+    expect(metricCellBox).toHaveAttribute('data-has-function', 'true')
+    expect(screen.getByTestId('cell-func-indicator-2-metric')).toHaveTextContent('Fx')
+    await user.click(screen.getByTestId('menu-tab-selection'))
+    await user.click(metricCellBox)
+    await waitFor(() => {
+      expect(screen.getByTestId('selection-function-summary').textContent).toContain('sum(key=metric)')
+    })
   })
 
   it('セルに複数行のテキストを入力できる', async () => {
@@ -1006,6 +1014,54 @@ describe('App', () => {
     })
   })
 
+  it('フィルハンドルで左方向に値をコピーできる', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-0-owner'))
+    const handle = screen.getByTestId('fill-handle')
+    const targetCell = screen.getByTestId('cell-box-0-feature')
+
+    await act(async () => {
+      fireEvent.pointerDown(handle)
+    })
+
+    await act(async () => {
+      fireEvent.pointerEnter(targetCell)
+    })
+
+    await act(async () => {
+      fireEvent.pointerUp(window)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('Alice')
+    })
+  })
+
+  it('フィルハンドルで上方向に値をコピーできる', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-1-feature'))
+    const handle = screen.getByTestId('fill-handle')
+    const targetCell = screen.getByTestId('cell-box-0-feature')
+
+    await act(async () => {
+      fireEvent.pointerDown(handle)
+    })
+
+    await act(async () => {
+      fireEvent.pointerEnter(targetCell)
+    })
+
+    await act(async () => {
+      fireEvent.pointerUp(window)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('YAML Export')
+    })
+  })
+
   it('行番号をクリックすると行全体が選択される', () => {
     render(<App />)
     fireEvent.click(screen.getByTestId('menu-tab-selection'))
@@ -1017,6 +1073,8 @@ describe('App', () => {
 
     const summary = screen.getByTestId('selection-summary')
     expect(summary.textContent).toContain('4セル選択中')
+    const functionSummary = screen.getByTestId('selection-function-summary')
+    expect(functionSummary.textContent).toContain('関数情報: 未設定')
   })
 
   it('シートを切り替えると別データが表示される', async () => {
