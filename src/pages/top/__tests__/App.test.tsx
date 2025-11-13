@@ -945,6 +945,30 @@ describe('App', () => {
     })
   })
 
+  it('フィルハンドルで右方向に値をコピーできる', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-0-feature'))
+    const handle = screen.getByTestId('fill-handle')
+    const targetCell = screen.getByTestId('cell-box-0-owner')
+
+    await act(async () => {
+      fireEvent.pointerDown(handle)
+    })
+
+    await act(async () => {
+      fireEvent.pointerEnter(targetCell)
+    })
+
+    await act(async () => {
+      fireEvent.pointerUp(window)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-owner')).toHaveTextContent('テーブル編集')
+    })
+  })
+
   it('行番号をクリックすると行全体が選択される', () => {
     render(<App />)
     fireEvent.click(screen.getByTestId('menu-tab-selection'))
