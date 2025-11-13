@@ -9,7 +9,13 @@ import { useMacroManager } from './hooks/useMacroManager'
 import type { RegisteredFunctionMeta } from './utils/cellFunctionEngine'
 import type { LoadedWasmModule } from '../../services/wasmMacroService'
 import { applyCellFunctions } from './utils/cellFunctionEngine'
-import type { EditingCellState, Notice, SelectionRange } from './types'
+import {
+  createLocalizedText,
+  type EditingCellState,
+  type LocalizedText,
+  type Notice,
+  type SelectionRange,
+} from './types'
 
 export type { CellPosition, EditingCellState, SelectionRange } from './types'
 
@@ -47,7 +53,7 @@ type UseSpreadsheetState = {
   applyYamlBuffer: () => void
   ingestYamlContent: (
     _content: string,
-    _options?: { successNotice?: string; errorNoticePrefix?: string },
+    _options?: { successNotice?: LocalizedText; errorNoticePrefix?: LocalizedText },
   ) => Promise<void>
   handleFileUpload: (_event: React.ChangeEvent<HTMLInputElement>) => void
   handleDownloadYaml: () => void
@@ -206,14 +212,14 @@ export function useSpreadsheetState(): UseSpreadsheetState {
 
   const handleInsertRowBelowSelection = React.useCallback((): void => {
     if (!selection) {
-      setNotice({ text: '挿入する行を選択してください。', tone: 'error' })
+      setNotice({ text: createLocalizedText('挿入する行を選択してください。', 'Select a row to insert.'), tone: 'error' })
       return
     }
     const baseColumns = columns.length ? columns : ['column_1']
     const newRow = createEmptyRow(baseColumns)
     if (!rows.length) {
       updateRows([newRow])
-      setNotice({ text: '行を追加しました。', tone: 'success' })
+      setNotice({ text: createLocalizedText('行を追加しました。', 'Added a row.'), tone: 'success' })
       return
     }
     const maxIndex = rows.length - 1
@@ -223,16 +229,19 @@ export function useSpreadsheetState(): UseSpreadsheetState {
       ? [...rows, newRow]
       : [...rows.slice(0, insertIndex), newRow, ...rows.slice(insertIndex)]
     updateRows(nextRows)
-    setNotice({ text: '選択行の下に行を追加しました。', tone: 'success' })
+    setNotice({
+      text: createLocalizedText('選択行の下に行を追加しました。', 'Inserted a row below the selection.'),
+      tone: 'success',
+    })
   }, [selection, columns, rows, updateRows, setNotice])
 
   const handleMoveSelectedRowsUp = React.useCallback((): void => {
     if (!selection) {
-      setNotice({ text: '移動する行を選択してください。', tone: 'error' })
+      setNotice({ text: createLocalizedText('移動する行を選択してください。', 'Select rows to move.'), tone: 'error' })
       return
     }
     if (!rows.length) {
-      setNotice({ text: '移動できる行がありません。', tone: 'error' })
+      setNotice({ text: createLocalizedText('移動できる行がありません。', 'No rows can be moved.'), tone: 'error' })
       return
     }
     const maxIndex = rows.length - 1
@@ -241,7 +250,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     const normalizedStart = Math.min(start, end)
     const normalizedEnd = Math.max(start, end)
     if (normalizedStart === 0) {
-      setNotice({ text: 'これ以上上に移動できません。', tone: 'error' })
+      setNotice({ text: createLocalizedText('これ以上上に移動できません。', 'Cannot move any higher.'), tone: 'error' })
       return
     }
     const nextRows = [...rows]
@@ -250,16 +259,19 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     nextRows.splice(normalizedStart - 1, 0, ...block)
     updateRows(nextRows)
     reselectRowRange(normalizedStart - 1, normalizedEnd - 1)
-    setNotice({ text: '選択行を上へ移動しました。', tone: 'success' })
+    setNotice({
+      text: createLocalizedText('選択行を上へ移動しました。', 'Moved the selected rows up.'),
+      tone: 'success',
+    })
   }, [selection, rows, updateRows, reselectRowRange, setNotice])
 
   const handleMoveSelectedRowsDown = React.useCallback((): void => {
     if (!selection) {
-      setNotice({ text: '移動する行を選択してください。', tone: 'error' })
+      setNotice({ text: createLocalizedText('移動する行を選択してください。', 'Select rows to move.'), tone: 'error' })
       return
     }
     if (!rows.length) {
-      setNotice({ text: '移動できる行がありません。', tone: 'error' })
+      setNotice({ text: createLocalizedText('移動できる行がありません。', 'No rows can be moved.'), tone: 'error' })
       return
     }
     const maxIndex = rows.length - 1
@@ -268,7 +280,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     const normalizedStart = Math.min(start, end)
     const normalizedEnd = Math.max(start, end)
     if (normalizedEnd >= maxIndex) {
-      setNotice({ text: 'これ以上下に移動できません。', tone: 'error' })
+      setNotice({ text: createLocalizedText('これ以上下に移動できません。', 'Cannot move any lower.'), tone: 'error' })
       return
     }
     const nextRows = [...rows]
@@ -277,12 +289,15 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     nextRows.splice(normalizedStart + 1, 0, ...block)
     updateRows(nextRows)
     reselectRowRange(normalizedStart + 1, normalizedEnd + 1)
-    setNotice({ text: '選択行を下へ移動しました。', tone: 'success' })
+    setNotice({
+      text: createLocalizedText('選択行を下へ移動しました。', 'Moved the selected rows down.'),
+      tone: 'success',
+    })
   }, [selection, rows, updateRows, reselectRowRange, setNotice])
 
   const handleInsertColumnRightOfSelection = React.useCallback((): void => {
     if (!selection) {
-      setNotice({ text: '挿入する列を選択してください。', tone: 'error' })
+      setNotice({ text: createLocalizedText('挿入する列を選択してください。', 'Select columns to insert.'), tone: 'error' })
       return
     }
     const newColumnKey = generateNextColumnKey(columns)
@@ -302,16 +317,22 @@ export function useSpreadsheetState(): UseSpreadsheetState {
       filtered.splice(targetIndex, 0, newColumnKey)
       return filtered
     })
-    setNotice({ text: `列「${newColumnKey}」を選択列の右に追加しました。`, tone: 'success' })
+    setNotice({
+      text: createLocalizedText(
+        `列「${newColumnKey}」を選択列の右に追加しました。`,
+        `Added column "${newColumnKey}" to the right of the selection.`,
+      ),
+      tone: 'success',
+    })
   }, [selection, columns, rows, updateRows, setColumnOrder, setNotice])
 
   const handleMoveSelectedColumnsLeft = React.useCallback((): void => {
     if (!selection) {
-      setNotice({ text: '移動する列を選択してください。', tone: 'error' })
+      setNotice({ text: createLocalizedText('移動する列を選択してください。', 'Select columns to move.'), tone: 'error' })
       return
     }
     if (!columns.length) {
-      setNotice({ text: '移動できる列がありません。', tone: 'error' })
+      setNotice({ text: createLocalizedText('移動できる列がありません。', 'No columns can be moved.'), tone: 'error' })
       return
     }
     const start = Math.max(0, Math.min(selection.startCol, columns.length - 1))
@@ -319,7 +340,10 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     const normalizedStart = Math.min(start, end)
     const normalizedEnd = Math.max(start, end)
     if (normalizedStart === 0) {
-      setNotice({ text: 'これ以上左に移動できません。', tone: 'error' })
+      setNotice({
+        text: createLocalizedText('これ以上左に移動できません。', 'Cannot move any further left.'),
+        tone: 'error',
+      })
       return
     }
     const nextOrder = [...columns]
@@ -328,16 +352,19 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     nextOrder.splice(normalizedStart - 1, 0, ...block)
     setColumnOrder(() => nextOrder)
     reselectColumnRange(normalizedStart - 1, normalizedEnd - 1)
-    setNotice({ text: '選択列を左へ移動しました。', tone: 'success' })
+    setNotice({
+      text: createLocalizedText('選択列を左へ移動しました。', 'Moved the selected columns left.'),
+      tone: 'success',
+    })
   }, [selection, columns, setColumnOrder, reselectColumnRange, setNotice])
 
   const handleMoveSelectedColumnsRight = React.useCallback((): void => {
     if (!selection) {
-      setNotice({ text: '移動する列を選択してください。', tone: 'error' })
+      setNotice({ text: createLocalizedText('移動する列を選択してください。', 'Select columns to move.'), tone: 'error' })
       return
     }
     if (!columns.length) {
-      setNotice({ text: '移動できる列がありません。', tone: 'error' })
+      setNotice({ text: createLocalizedText('移動できる列がありません。', 'No columns can be moved.'), tone: 'error' })
       return
     }
     const maxIndex = columns.length - 1
@@ -346,7 +373,10 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     const normalizedStart = Math.min(start, end)
     const normalizedEnd = Math.max(start, end)
     if (normalizedEnd >= maxIndex) {
-      setNotice({ text: 'これ以上右に移動できません。', tone: 'error' })
+      setNotice({
+        text: createLocalizedText('これ以上右に移動できません。', 'Cannot move any further right.'),
+        tone: 'error',
+      })
       return
     }
     const nextOrder = [...columns]
@@ -355,16 +385,19 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     nextOrder.splice(normalizedStart + 1, 0, ...block)
     setColumnOrder(() => nextOrder)
     reselectColumnRange(normalizedStart + 1, normalizedEnd + 1)
-    setNotice({ text: '選択列を右へ移動しました。', tone: 'success' })
+    setNotice({
+      text: createLocalizedText('選択列を右へ移動しました。', 'Moved the selected columns right.'),
+      tone: 'success',
+    })
   }, [selection, columns, setColumnOrder, reselectColumnRange, setNotice])
 
   const handleDeleteSelectedColumns = React.useCallback((): void => {
     if (!selection) {
-      setNotice({ text: '削除する列を選択してください。', tone: 'error' })
+      setNotice({ text: createLocalizedText('削除する列を選択してください。', 'Select columns to delete.'), tone: 'error' })
       return
     }
     if (!columns.length) {
-      setNotice({ text: '削除できる列がありません。', tone: 'error' })
+      setNotice({ text: createLocalizedText('削除できる列がありません。', 'No columns can be deleted.'), tone: 'error' })
       return
     }
     const maxIndex = columns.length - 1
@@ -374,7 +407,10 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     const normalizedEnd = Math.max(start, end)
     const targetColumns = columns.slice(normalizedStart, normalizedEnd + 1)
     if (!targetColumns.length) {
-      setNotice({ text: '削除できる列が見つかりません。', tone: 'error' })
+      setNotice({
+        text: createLocalizedText('削除できる列が見つかりません。', 'No deletable columns were found.'),
+        tone: 'error',
+      })
       return
     }
     const targetColumnSet = new Set(targetColumns)
@@ -392,8 +428,8 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     setColumnOrder(() => remainingColumns)
     clearSelection()
     const message = remainingColumns.length
-      ? `${targetColumns.length}列を削除しました。`
-      : 'すべての列を削除しました。'
+      ? createLocalizedText(`${targetColumns.length}列を削除しました。`, `Deleted ${targetColumns.length} columns.`)
+      : createLocalizedText('すべての列を削除しました。', 'Deleted all columns.')
     setNotice({ text: message, tone: 'success' })
   }, [selection, columns, rows, updateRows, setColumnOrder, clearSelection, setNotice])
 
@@ -406,11 +442,11 @@ export function useSpreadsheetState(): UseSpreadsheetState {
 
   const handleDeleteSelectedRows = React.useCallback((): void => {
     if (!selection) {
-      setNotice({ text: '削除する行を選択してください。', tone: 'error' })
+      setNotice({ text: createLocalizedText('削除する行を選択してください。', 'Select rows to delete.'), tone: 'error' })
       return
     }
     if (!rows.length) {
-      setNotice({ text: '削除できる行がありません。', tone: 'error' })
+      setNotice({ text: createLocalizedText('削除できる行がありません。', 'No rows can be deleted.'), tone: 'error' })
       return
     }
     const maxIndex = rows.length - 1
@@ -422,7 +458,10 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     updateRows(nextRows)
     clearSelection()
     const removedCount = normalizedEnd - normalizedStart + 1
-    setNotice({ text: `${removedCount}行を削除しました。`, tone: 'success' })
+    setNotice({
+      text: createLocalizedText(`${removedCount}行を削除しました。`, `Deleted ${removedCount} rows.`),
+      tone: 'success',
+    })
   }, [selection, rows, updateRows, clearSelection, setNotice])
 
   return {

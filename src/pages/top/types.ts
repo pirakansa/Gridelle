@@ -1,7 +1,17 @@
 // File Header: Shared type definitions used across spreadsheet-related hooks.
 import type { TableRow } from '../../services/workbookService'
 
-export type Notice = { text: string; tone: 'error' | 'success' }
+export type LocalizedText = {
+  ja: string
+  en: string
+}
+
+export const createLocalizedText = (ja: string, en: string): LocalizedText => ({
+  ja,
+  en,
+})
+
+export type Notice = { text: LocalizedText; tone: 'error' | 'success' }
 
 export type CellPosition = { rowIndex: number; columnIndex: number }
 

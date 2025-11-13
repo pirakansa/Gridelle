@@ -268,7 +268,7 @@ const sumFunctionHandler: CellFunctionHandler = (args, context) => {
 }
 
 registerCellFunction('sum', sumFunctionHandler, {
-  label: '組み込み: sum',
+  label: 'BIF: sum',
   source: 'builtin',
   description: '指定列の値を合計します。',
 })

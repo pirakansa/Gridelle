@@ -25,6 +25,7 @@ import {
   GithubRepositoryAccessError,
   commitRepositoryFileUpdate,
 } from '../../services/githubRepositoryAccessService'
+import { createLocalizedText } from './types'
 
 const DEFAULT_GITHUB_COMMIT_MESSAGE = 'Update'
 
@@ -119,8 +120,14 @@ export default function App(): React.ReactElement {
     async ({ yaml, ...info }: GithubIntegrationLoadedFileInfo & { yaml: string }) => {
       try {
         await spreadsheet.ingestYamlContent(yaml, {
-          successNotice: `GitHubから ${info.filePath} を読み込みました。`,
-          errorNoticePrefix: 'GitHubファイルの解析に失敗しました',
+          successNotice: createLocalizedText(
+            `GitHubから ${info.filePath} を読み込みました。`,
+            `Loaded ${info.filePath} from GitHub.`,
+          ),
+          errorNoticePrefix: createLocalizedText(
+            'GitHubファイルの解析に失敗しました',
+            'Failed to parse the GitHub file',
+          ),
         })
         setGithubLastLoadedFile(info)
         setGithubSaveNotice(null)

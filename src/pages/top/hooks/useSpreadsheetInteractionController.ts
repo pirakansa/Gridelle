@@ -183,7 +183,7 @@ export const useSpreadsheetInteractionController = ({
   const handleCellPointerEnter = React.useCallback(
     (rowIndex: number, columnIndex: number): void => {
       if (isFillDragActive && selection) {
-        updateFillPreview(rowIndex)
+        updateFillPreview(rowIndex, columnIndex)
         return
       }
       if (!isSelecting) {

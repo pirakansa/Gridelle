@@ -1,7 +1,7 @@
 // File Header: Hook providing handlers to mutate selection styling and functions.
 import React from 'react'
 import { cloneCell, type TableCell, type TableRow, type CellFunctionConfig } from '../../../../services/workbookService'
-import type { Notice, SelectionRange, UpdateRows } from '../../types'
+import { createLocalizedText, type Notice, type SelectionRange, type UpdateRows } from '../../types'
 
 type Options = {
   selection: SelectionRange | null
@@ -29,11 +29,17 @@ export function useSelectionStyling({
   const updateSelectionCells = React.useCallback(
     (mutator: (_cell: TableCell) => { cell: TableCell; changed: boolean }): boolean => {
       if (!selection) {
-        setNotice({ text: 'セルを選択してください。', tone: 'error' })
+        setNotice({
+          text: createLocalizedText('セルを選択してください。', 'Select some cells first.'),
+          tone: 'error',
+        })
         return false
       }
       if (!columns.length || !rows.length) {
-        setNotice({ text: 'セルを選択してください。', tone: 'error' })
+        setNotice({
+          text: createLocalizedText('セルを選択してください。', 'Select some cells first.'),
+          tone: 'error',
+        })
         return false
       }
 
@@ -97,7 +103,9 @@ export function useSelectionStyling({
 
       if (changed) {
         setNotice({
-          text: normalized ? '選択セルの文字色を更新しました。' : '選択セルの文字色をクリアしました。',
+          text: normalized
+            ? createLocalizedText('選択セルの文字色を更新しました。', 'Updated the text color for the selection.')
+            : createLocalizedText('選択セルの文字色をクリアしました。', 'Cleared the text color from the selection.'),
           tone: 'success',
         })
       }
@@ -129,7 +137,9 @@ export function useSelectionStyling({
 
       if (changed) {
         setNotice({
-          text: normalized ? '選択セルの背景色を更新しました。' : '選択セルの背景色をクリアしました。',
+          text: normalized
+            ? createLocalizedText('選択セルの背景色を更新しました。', 'Updated the background color for the selection.')
+            : createLocalizedText('選択セルの背景色をクリアしました。', 'Cleared the background color from the selection.'),
           tone: 'success',
         })
       }
@@ -149,7 +159,10 @@ export function useSelectionStyling({
     })
 
     if (changed) {
-      setNotice({ text: '選択セルのスタイルをクリアしました。', tone: 'success' })
+      setNotice({
+        text: createLocalizedText('選択セルのスタイルをクリアしました。', 'Cleared the selection styles.'),
+        tone: 'success',
+      })
     }
   }, [setNotice, updateSelectionCells])
 
@@ -185,11 +198,16 @@ export function useSelectionStyling({
       })
 
       if (!changed) {
-        setNotice({ text: '関数を適用できるセルを選択してください。', tone: 'error' })
+        setNotice({
+          text: createLocalizedText('関数を適用できるセルを選択してください。', 'Select cells that can accept the function.'),
+          tone: 'error',
+        })
         return
       }
       setNotice({
-        text: config ? '選択セルに関数を設定しました。' : '選択セルの関数をクリアしました。',
+        text: config
+          ? createLocalizedText('選択セルに関数を設定しました。', 'Applied the function to the selection.')
+          : createLocalizedText('選択セルの関数をクリアしました。', 'Cleared the function from the selection.'),
         tone: 'success',
       })
     },

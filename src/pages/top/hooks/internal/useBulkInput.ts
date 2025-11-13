@@ -1,7 +1,7 @@
 // File Header: Applies bulk input values across the currently selected spreadsheet range.
 import React from 'react'
 import { cloneRow, createCell, type TableRow } from '../../../../services/workbookService'
-import type { Notice, SelectionRange, UpdateRows } from '../../types'
+import { createLocalizedText, type Notice, type SelectionRange, type UpdateRows } from '../../types'
 import { parseClipboardText } from '../../utils/clipboardFormat'
 
 type UseBulkInputOptions = {
@@ -24,7 +24,10 @@ export function useBulkInput({
 }: UseBulkInputOptions): () => void {
   return React.useCallback((): void => {
     if (!selection) {
-      setNotice({ text: '一括入力するセルを選択してください。', tone: 'error' })
+      setNotice({
+        text: createLocalizedText('一括入力するセルを選択してください。', 'Select cells to update in bulk.'),
+        tone: 'error',
+      })
       return
     }
 
@@ -100,6 +103,9 @@ export function useBulkInput({
     })
 
     updateRows(nextRows)
-    setNotice({ text: '選択セルを一括更新しました。', tone: 'success' })
+    setNotice({
+      text: createLocalizedText('選択セルを一括更新しました。', 'Updated the selection in bulk.'),
+      tone: 'success',
+    })
   }, [bulkValue, columns, rows, selection, setNotice, updateRows])
 }

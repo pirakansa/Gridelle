@@ -246,7 +246,7 @@ export default function MenuHeader({
             className={`text-sm ${notice.tone === 'error' ? 'text-red-600' : 'text-emerald-600'}`}
             role={notice.tone === 'error' ? 'alert' : 'status'}
           >
-            {notice.text}
+            {select(notice.text.ja, notice.text.en)}
           </p>
         )}
         {!isMenuCollapsed && (
@@ -262,7 +262,7 @@ export default function MenuHeader({
                   role={notice.tone === 'error' ? 'alert' : 'status'}
                   data-testid="table-notice"
                 >
-                  {notice.text}
+                  {select(notice.text.ja, notice.text.en)}
                 </p>
               )}
               {activeMenuSection === 'file' && (
