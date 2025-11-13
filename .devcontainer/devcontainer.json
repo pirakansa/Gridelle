@@ -2,7 +2,7 @@
     "build": {
         "dockerfile": "Dockerfile"
     },
-    "onCreateCommand": "mkdir -p /home/node/bin && curl -L https://github.com/openai/codex/releases/download/rust-v0.56.0/codex-x86_64-unknown-linux-musl.zst | zstd -d -o /home/node/bin/codex && chmod a+x /home/node/bin/codex",
+    "onCreateCommand": "sudo apt-get update && sudo apt-get install -y openssh-client && mkdir -p /home/node/bin && curl -L https://github.com/openai/codex/releases/download/rust-v0.56.0/codex-x86_64-unknown-linux-musl.zst | zstd -d -o /home/node/bin/codex && chmod a+x /home/node/bin/codex",
     "mounts": [
         "source=${localEnv:HOME}/.codex,target=/home/node/.codex,type=bind,consistency=cached"
     ],

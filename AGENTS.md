@@ -261,4 +261,7 @@ Template example:
 
 ## 15. Checklist
 
-*
+* [ ] `npm run type-check`
+* [ ] `npm run lint`
+* [ ] `npm run test`
+* [ ] `npm run build`
