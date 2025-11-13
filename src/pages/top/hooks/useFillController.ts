@@ -48,8 +48,8 @@ export const useFillController = ({
       if (!selection) {
         return
       }
-      const extendsRows = targetRange.endRow > selection.endRow
-      const extendsCols = targetRange.endCol > selection.endCol
+      const extendsRows = targetRange.startRow < selection.startRow || targetRange.endRow > selection.endRow
+      const extendsCols = targetRange.startCol < selection.startCol || targetRange.endCol > selection.endCol
       if (!extendsRows && !extendsCols) {
         return
       }
@@ -59,19 +59,29 @@ export const useFillController = ({
       const patternWidth = Math.max(1, selection.endCol - selection.startCol + 1)
       let nextRows = rows.map((row) => cloneRow(row))
 
-      while (nextRows.length <= targetRange.endRow) {
+      const rowStart = Math.min(selection.startRow, targetRange.startRow)
+      const rowEnd = Math.max(selection.endRow, targetRange.endRow)
+      const columnStart = Math.min(selection.startCol, targetRange.startCol)
+      const columnEnd = Math.max(selection.endCol, targetRange.endCol)
+
+      while (nextRows.length <= rowEnd) {
         nextRows = [...nextRows, createEmptyRow(columns)]
       }
 
-      for (let rowIndex = selection.startRow; rowIndex <= targetRange.endRow; rowIndex += 1) {
+      for (let rowIndex = rowStart; rowIndex <= rowEnd; rowIndex += 1) {
         const patternRow =
           patternRows[((rowIndex - selection.startRow) % patternHeight + patternHeight) % patternHeight] ??
           createEmptyRow(columns)
         const baseRow = nextRows[rowIndex] ?? createEmptyRow(columns)
         const updatedRow = cloneRow(baseRow)
 
-        for (let columnIndex = selection.startCol; columnIndex <= targetRange.endCol; columnIndex += 1) {
-          if (rowIndex <= selection.endRow && columnIndex <= selection.endCol) {
+        for (let columnIndex = columnStart; columnIndex <= columnEnd; columnIndex += 1) {
+          const isWithinOriginalSelection =
+            rowIndex >= selection.startRow &&
+            rowIndex <= selection.endRow &&
+            columnIndex >= selection.startCol &&
+            columnIndex <= selection.endCol
+          if (isWithinOriginalSelection) {
             continue
           }
           const targetColumnKey = columns[columnIndex]
@@ -118,11 +128,14 @@ export const useFillController = ({
       if (!isFillDragActive) {
         return
       }
-      if (
-        fillPreview &&
-        selection &&
-        (fillPreview.endRow > selection.endRow || fillPreview.endCol > selection.endCol)
-      ) {
+      const previewExtendsSelection =
+        fillPreview !== null &&
+        selection !== null &&
+          (fillPreview.startRow < selection.startRow ||
+            fillPreview.endRow > selection.endRow ||
+            fillPreview.startCol < selection.startCol ||
+            fillPreview.endCol > selection.endCol)
+      if (fillPreview && selection && previewExtendsSelection) {
         applyFill(fillPreview)
       }
       resetFillState()
@@ -155,13 +168,16 @@ export const useFillController = ({
       if (!selection) {
         return
       }
-      let nextPreview = selection
-      if (rowIndex > selection.endRow) {
-        nextPreview = { ...nextPreview, endRow: rowIndex }
+      if (columnCount === 0) {
+        return
       }
-      if (columnIndex > selection.endCol) {
-        const maxColumnIndex = columnCount - 1
-        nextPreview = { ...nextPreview, endCol: Math.min(columnIndex, maxColumnIndex) }
+      const maxColumnIndex = columnCount - 1
+      const safeColumnIndex = Math.min(Math.max(columnIndex, 0), maxColumnIndex)
+      const nextPreview: SelectionRange = {
+        startRow: Math.min(selection.startRow, rowIndex),
+        endRow: Math.max(selection.endRow, rowIndex),
+        startCol: Math.min(selection.startCol, safeColumnIndex),
+        endCol: Math.max(selection.endCol, safeColumnIndex),
       }
       setFillPreview(nextPreview)
     },

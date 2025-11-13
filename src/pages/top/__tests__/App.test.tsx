@@ -1014,6 +1014,54 @@ describe('App', () => {
     })
   })
 
+  it('フィルハンドルで左方向に値をコピーできる', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-0-owner'))
+    const handle = screen.getByTestId('fill-handle')
+    const targetCell = screen.getByTestId('cell-box-0-feature')
+
+    await act(async () => {
+      fireEvent.pointerDown(handle)
+    })
+
+    await act(async () => {
+      fireEvent.pointerEnter(targetCell)
+    })
+
+    await act(async () => {
+      fireEvent.pointerUp(window)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('Alice')
+    })
+  })
+
+  it('フィルハンドルで上方向に値をコピーできる', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByTestId('cell-box-1-feature'))
+    const handle = screen.getByTestId('fill-handle')
+    const targetCell = screen.getByTestId('cell-box-0-feature')
+
+    await act(async () => {
+      fireEvent.pointerDown(handle)
+    })
+
+    await act(async () => {
+      fireEvent.pointerEnter(targetCell)
+    })
+
+    await act(async () => {
+      fireEvent.pointerUp(window)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('YAML Export')
+    })
+  })
+
   it('行番号をクリックすると行全体が選択される', () => {
     render(<App />)
     fireEvent.click(screen.getByTestId('menu-tab-selection'))
