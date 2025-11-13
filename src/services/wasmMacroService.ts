@@ -1,9 +1,11 @@
 // File Header: Loads user-provided WASM modules and registers them as spreadsheet macros.
 import {
   registerCellFunction,
-  resolveFunctionRange,
+  resolveFunctionTargets,
   type CellFunctionArgs,
   type CellFunctionContext,
+  type CellFunctionResult,
+  type CellStyleDirectives,
 } from '../pages/top/utils/cellFunctionEngine'
 
 export type LoadedWasmModule = {
@@ -21,6 +23,9 @@ const wasmModules = new Map<string, LoadedWasmModule>()
 
 const BYTES_PER_F64 = 8
 const WASM_PAGE_BYTES = 65536
+const STYLE_STRUCT_BYTES = 16
+const STYLE_FLAG_TEXT = 1
+const STYLE_FLAG_BG = 2
 
 export const getLoadedWasmModules = (): LoadedWasmModule[] => Array.from(wasmModules.values())
 
@@ -107,27 +112,83 @@ const ensureMemoryCapacity = (memory: WebAssembly.Memory, requiredBytes: number)
 
 const createWasmHandler =
   (fn: (..._args: number[]) => number, memory: WebAssembly.Memory) =>
-  (args: CellFunctionArgs, context: CellFunctionContext): number | string => {
-    const { targetColumn, rowIndexes } = resolveFunctionRange(args, context)
-    const scopedIndexes = rowIndexes.filter(
-      (rowIndex) => !(rowIndex === context.rowIndex && targetColumn === context.columnKey),
+  (args: CellFunctionArgs, context: CellFunctionContext): CellFunctionResult => {
+    const targets = resolveFunctionTargets(args, context)
+    const scopedTargets = targets.filter(
+      (target) => !(target.rowIndex === context.rowIndex && target.columnKey === context.columnKey),
     )
-    const targetIndexes = scopedIndexes.length ? scopedIndexes : rowIndexes
-    if (!targetIndexes.length) {
+    const effectiveTargets = scopedTargets.length ? scopedTargets : targets
+    if (!effectiveTargets.length) {
       return ''
     }
 
-    const requiredBytes = targetIndexes.length * BYTES_PER_F64
-    ensureMemoryCapacity(memory, requiredBytes)
-    const bufferView = new Float64Array(memory.buffer, 0, targetIndexes.length)
-    targetIndexes.forEach((rowIndex, offset) => {
-      const raw = Number(context.getCellValue(rowIndex, targetColumn))
+    const valuesByteLength = effectiveTargets.length * BYTES_PER_F64
+    const totalBytes = valuesByteLength + STYLE_STRUCT_BYTES
+    ensureMemoryCapacity(memory, totalBytes)
+
+    const bufferView = new Float64Array(memory.buffer, 0, effectiveTargets.length)
+    effectiveTargets.forEach(({ rowIndex, columnKey }, offset) => {
+      const raw = Number(context.getCellValue(rowIndex, columnKey))
       bufferView[offset] = Number.isFinite(raw) ? raw : 0
     })
 
-    const result = fn(0, targetIndexes.length)
+    const styleView = new DataView(memory.buffer, valuesByteLength, STYLE_STRUCT_BYTES)
+    for (let offset = 0; offset < STYLE_STRUCT_BYTES; offset += 4) {
+      styleView.setInt32(offset, 0, true)
+    }
+
+    const acceptsStyles = fn.length >= 3
+    const result = acceptsStyles ? fn(0, effectiveTargets.length, valuesByteLength) : fn(0, effectiveTargets.length)
     if (typeof result !== 'number' || Number.isNaN(result)) {
       return ''
     }
-    return result
+    if (!acceptsStyles) {
+      return result
+    }
+    const styles = extractStyles(styleView)
+    if (!styles) {
+      return result
+    }
+    return {
+      value: result,
+      styles,
+    }
   }
+
+const extractStyles = (view: DataView): CellStyleDirectives | undefined => {
+  const flags = view.getInt32(0, true)
+  if (!flags) {
+    return undefined
+  }
+  const directives: CellStyleDirectives = {}
+  if (flags & STYLE_FLAG_TEXT) {
+    const packed = view.getInt32(4, true)
+    if (packed < 0) {
+      directives.color = null
+    } else {
+      const formatted = formatRgbColor(packed)
+      if (formatted) {
+        directives.color = formatted
+      }
+    }
+  }
+  if (flags & STYLE_FLAG_BG) {
+    const packed = view.getInt32(8, true)
+    if (packed < 0) {
+      directives.bgColor = null
+    } else {
+      const formatted = formatRgbColor(packed)
+      if (formatted) {
+        directives.bgColor = formatted
+      }
+    }
+  }
+  return Object.keys(directives).length ? directives : undefined
+}
+
+const formatRgbColor = (value: number): string | undefined => {
+  if (!Number.isInteger(value) || value < 0 || value > 0xffffff) {
+    return undefined
+  }
+  return `#${value.toString(16).padStart(6, '0')}`
+}
