@@ -111,18 +111,9 @@ export const useClipboardHandlers = ({
         }
       }
       const text = event.clipboardData?.getData('text/plain') ?? ''
-      if (!text.trim()) {
-        return
-      }
       event.preventDefault()
-      const matrix = parseClipboardText(text)
-      const hasMeaningfulValue = matrix.some((row) => row.some((value) => value.length > 0))
-      if (!hasMeaningfulValue) {
-        return
-      }
-      if (!matrix.length) {
-        return
-      }
+      const parsedMatrix = parseClipboardText(text)
+      const matrix = parsedMatrix.length ? parsedMatrix : [['']]
       const start = getSelectionAnchor()
       const widths = matrix.map((row) => (row.length ? row.length : 1))
       const requiredRows = start.rowIndex + matrix.length

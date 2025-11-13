@@ -765,6 +765,43 @@ describe('App', () => {
     })
   })
 
+  it('空のセルをコピーしてペーストすると既存の値を消去できる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const sourceCell = screen.getByTestId('cell-box-0-feature')
+    fireEvent.doubleClick(sourceCell)
+    const editor = (await screen.findByTestId('cell-0-feature')) as HTMLTextAreaElement
+    await user.clear(editor)
+    fireEvent.keyDown(editor, { key: 'Enter', code: 'Enter' })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('')
+    })
+
+    const targetCell = screen.getByTestId('cell-box-1-feature')
+    fireEvent.click(targetCell)
+    const shell = screen.getByTestId('interactive-table-shell')
+    shell.focus()
+
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent
+    const clipboardData = {
+      getData: vi.fn().mockReturnValue(''),
+    }
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: clipboardData,
+    })
+    Object.defineProperty(pasteEvent, 'preventDefault', {
+      value: vi.fn(),
+    })
+
+    fireEvent(shell, pasteEvent)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('')
+    })
+  })
+
   it('セル編集中に複数行をペーストしても範囲展開されない', async () => {
     render(<App />)
 
