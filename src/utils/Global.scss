@@ -63,3 +63,8 @@ body {
   @apply absolute bottom-0 right-0 h-2 w-2 rounded-sm bg-blue-500 shadow-sm transition hover:bg-blue-600;
   cursor: crosshair;
 }
+
+.cell-func-indicator {
+  @apply absolute top-1 right-1 rounded bg-violet-600 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase leading-none text-white shadow-sm;
+  pointer-events: none;
+}

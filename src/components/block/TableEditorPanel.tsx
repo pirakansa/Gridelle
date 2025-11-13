@@ -21,6 +21,7 @@ type Props = {
   onAddRow: () => void
   onAddColumn: () => void
   selectionSummary: string
+  selectionFunctionSummary: string
   onClearSelection: () => void
   hasSelection: boolean
   bulkValue: string
@@ -43,6 +44,7 @@ export default function TableEditorPanel({
   onAddRow,
   onAddColumn,
   selectionSummary,
+  selectionFunctionSummary,
   onClearSelection,
   hasSelection,
   bulkValue,
@@ -181,6 +183,9 @@ export default function TableEditorPanel({
               <span className={ribbonTitleClass}>{select('選択', 'Selection')}</span>
               <p data-testid="selection-summary" className="text-sm font-medium text-slate-700">
                 {selectionSummary}
+              </p>
+              <p data-testid="selection-function-summary" className="text-xs text-slate-500">
+                {selectionFunctionSummary}
               </p>
               <div className="flex items-center gap-3 text-xs text-slate-500">
                 <span>{select('⌘/Ctrl+V で貼り付け / Escape で選択解除', '⌘/Ctrl+V to paste / Escape to clear selection')}</span>

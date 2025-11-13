@@ -2,6 +2,7 @@
 import React from 'react'
 import type { TableCell } from '../../../services/workbookService'
 import type { EditingCellState, SelectionRange } from '../../../pages/top/useSpreadsheetState'
+import { summarizeCellFunction } from '../../../pages/top/utils/cellFunctionSummary'
 import { useI18n } from '../../../utils/i18n'
 
 type EditableCellProps = {
@@ -46,6 +47,18 @@ export default function EditableCell({
 }: EditableCellProps): React.ReactElement {
   const { select } = useI18n()
   const cellValue = cell?.value ?? ''
+  const hasFunction = Boolean(cell?.func)
+  const functionSummary = React.useMemo(() => summarizeCellFunction(cell?.func), [cell?.func])
+  const functionIndicatorLabel = React.useMemo(() => {
+    if (!hasFunction) {
+      return undefined
+    }
+    const summary = functionSummary || cell?.func?.name
+    if (!summary) {
+      return select('関数付きセル', 'Cell with function')
+    }
+    return select(`関数付きセル: ${summary}`, `Cell with function: ${summary}`)
+  }, [cell?.func, functionSummary, hasFunction, select])
   const cellStyle = React.useMemo<React.CSSProperties>(() => {
     const style: React.CSSProperties = {}
     const bgColor = cell?.bgColor?.trim()
@@ -121,6 +134,7 @@ export default function EditableCell({
     <td
       className={className}
       data-testid={`cell-box-${rowIndex}-${column}`}
+      data-has-function={hasFunction ? 'true' : undefined}
       data-selected={
         activeRange && isCellWithinRange(activeRange, rowIndex, columnIndex) ? 'true' : undefined
       }
@@ -142,6 +156,16 @@ export default function EditableCell({
       onDragStart={(event) => event.preventDefault()}
       style={cellStyle}
     >
+      {hasFunction && !isEditing ? (
+        <span
+          className="cell-func-indicator"
+          data-testid={`cell-func-indicator-${rowIndex}-${column}`}
+          title={functionSummary || undefined}
+          aria-label={functionIndicatorLabel}
+        >
+          Fx
+        </span>
+      ) : null}
       <div className="flex h-full select-none items-start gap-1 px-1">
         {isEditing ? (
           <textarea

@@ -13,6 +13,7 @@ import { useSelectionNormalizer } from './internal/useSelectionNormalizer'
 import { useSelectionStyling } from './internal/useSelectionStyling'
 import { useHeaderSelectionHandlers } from './internal/useHeaderSelectionHandlers'
 import { useI18n } from '../../../utils/i18n'
+import { summarizeCellFunction } from '../utils/cellFunctionSummary'
 
 type UseSpreadsheetInteractionControllerParams = {
   columns: string[]
@@ -28,6 +29,7 @@ type UseSpreadsheetInteractionController = {
   activeRange: SelectionRange | null
   fillPreview: SelectionRange | null
   selectionSummary: string
+  selectionFunctionSummary: string
   isFillDragActive: boolean
   editingCell: EditingCellState | null
   clearSelection: () => void
@@ -280,12 +282,17 @@ export const useSpreadsheetInteractionController = ({
 
   const selectionTextColor = anchorCell?.color ?? ''
   const selectionBackgroundColor = anchorCell?.bgColor ?? ''
+  const selectionFunctionSummary = React.useMemo(
+    () => describeSelectionFunction(selection, columns, rows, select),
+    [columns, rows, select, selection],
+  )
 
   return {
     selection,
     activeRange,
     fillPreview,
     selectionSummary,
+    selectionFunctionSummary,
     isFillDragActive,
     editingCell,
     clearSelection,
@@ -308,4 +315,73 @@ export const useSpreadsheetInteractionController = ({
     handleCellEditorBlur,
     handleCellEditorKeyDown,
   }
+}
+
+type SelectFn = ReturnType<typeof useI18n>['select']
+
+function describeSelectionFunction(
+  selection: SelectionRange | null,
+  columns: string[],
+  rows: TableRow[],
+  select: SelectFn,
+): string {
+  if (!selection) {
+    return select('関数情報: 選択されていません', 'Function info: No selection')
+  }
+  if (!columns.length || !rows.length) {
+    return select('関数情報: 取得できません', 'Function info: Unavailable')
+  }
+  const maxRowIndex = rows.length - 1
+  const maxColIndex = columns.length - 1
+  if (maxRowIndex < 0 || maxColIndex < 0) {
+    return select('関数情報: 取得できません', 'Function info: Unavailable')
+  }
+  const rowStart = clampIndex(Math.min(selection.startRow, selection.endRow), maxRowIndex)
+  const rowEnd = clampIndex(Math.max(selection.startRow, selection.endRow), maxRowIndex)
+  const colStart = clampIndex(Math.min(selection.startCol, selection.endCol), maxColIndex)
+  const colEnd = clampIndex(Math.max(selection.startCol, selection.endCol), maxColIndex)
+
+  const uniqueFunctions = new Set<string>()
+  let hasFunctionlessCell = false
+
+  for (let rowIndex = rowStart; rowIndex <= rowEnd; rowIndex += 1) {
+    const row = rows[rowIndex]
+    if (!row) {
+      hasFunctionlessCell = true
+      continue
+    }
+    for (let colIndex = colStart; colIndex <= colEnd; colIndex += 1) {
+      const columnKey = columns[colIndex]
+      if (!columnKey) {
+        hasFunctionlessCell = true
+        continue
+      }
+      const cell = row[columnKey]
+      if (!cell || !cell.func) {
+        hasFunctionlessCell = true
+        continue
+      }
+      const summary = summarizeCellFunction(cell.func)
+      uniqueFunctions.add(summary || cell.func.name)
+    }
+  }
+
+  if (uniqueFunctions.size === 0) {
+    return select('関数情報: 未設定', 'Function info: None')
+  }
+  if (uniqueFunctions.size === 1) {
+    const [summary] = Array.from(uniqueFunctions)
+    if (hasFunctionlessCell) {
+      return select(`関数情報: ${summary}（一部のセルは未設定）`, `Function info: ${summary} (partial)`)
+    }
+    return select(`関数情報: ${summary}`, `Function info: ${summary}`)
+  }
+  return select('関数情報: 複数の関数が設定されています', 'Function info: Multiple functions')
+}
+
+function clampIndex(target: number, max: number): number {
+  if (Number.isNaN(target)) {
+    return 0
+  }
+  return Math.min(Math.max(target, 0), Math.max(max, 0))
 }

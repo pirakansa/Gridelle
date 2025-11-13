@@ -71,6 +71,7 @@ type UseSpreadsheetState = {
   selection: SelectionRange | null
   activeRange: SelectionRange | null
   selectionSummary: string
+  selectionFunctionSummary: string
   fillPreview: SelectionRange | null
   clearSelection: () => void
   handleCellPointerDown: (
@@ -160,6 +161,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     activeRange,
     fillPreview,
     selectionSummary,
+    selectionFunctionSummary,
     isFillDragActive,
     editingCell,
     clearSelection,
@@ -517,6 +519,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     activeRange,
     fillPreview,
     selectionSummary,
+    selectionFunctionSummary,
     clearSelection,
     handleCellPointerDown,
     handleCellPointerEnter,
