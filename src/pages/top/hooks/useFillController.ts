@@ -1,7 +1,7 @@
 // File Header: Hook coordinating spreadsheet fill handle interactions.
 import React from 'react'
 import { cloneRow, createCell, type TableRow } from '../../../services/workbookService'
-import type { CellPosition, Notice, SelectionRange, UpdateRows } from '../types'
+import { createLocalizedText, type CellPosition, type Notice, type SelectionRange, type UpdateRows } from '../types'
 import { createEmptyRow } from '../utils/spreadsheetTableUtils'
 
 export type UseFillControllerParams = {
@@ -77,7 +77,10 @@ export const useFillController = ({
           : null,
       )
       setAnchorCell((prev) => (prev ? { rowIndex: prev.rowIndex, columnIndex: prev.columnIndex } : null))
-      setNotice({ text: 'フィルを適用しました。', tone: 'success' })
+      setNotice({
+        text: createLocalizedText('フィルを適用しました。', 'Applied the fill operation.'),
+        tone: 'success',
+      })
     },
     [columns, rows, selection, setSelection, setAnchorCell, updateRows, setNotice],
   )
@@ -107,7 +110,10 @@ export const useFillController = ({
       event.preventDefault()
       event.stopPropagation()
       if (!selection) {
-        setNotice({ text: 'フィル対象のセルを選択してください。', tone: 'error' })
+        setNotice({
+          text: createLocalizedText('フィル対象のセルを選択してください。', 'Select cells to fill.'),
+          tone: 'error',
+        })
         return
       }
       setIsFillDragActive(true)

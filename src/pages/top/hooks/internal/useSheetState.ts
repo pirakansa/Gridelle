@@ -1,7 +1,7 @@
 import React from 'react'
 import { cloneRow, deriveColumns, type TableRow, type TableSheet, createCell } from '../../../../services/workbookService'
 import { createEmptyRow } from '../../utils/spreadsheetTableUtils'
-import type { Notice } from '../../types'
+import { createLocalizedText, type Notice } from '../../types'
 import {
   arraysEqual,
   cloneRows,
@@ -124,7 +124,10 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
         })
       : [{ [nextColumnName]: createCell() }]
     updateRows(nextRows)
-    setNotice({ text: `列「${nextColumnName}」を追加しました。`, tone: 'success' })
+    setNotice({
+      text: createLocalizedText(`列「${nextColumnName}」を追加しました。`, `Added column "${nextColumnName}".`),
+      tone: 'success',
+    })
   }, [columns, rows, updateRows, setNotice])
 
   const addSheet = React.useCallback((): void => {
@@ -138,7 +141,10 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
           columnOrder: [],
         },
       ]
-      setNotice({ text: `シート「${sheetName}」を追加しました。`, tone: 'success' })
+      setNotice({
+        text: createLocalizedText(`シート「${sheetName}」を追加しました。`, `Added sheet "${sheetName}".`),
+        tone: 'success',
+      })
       setActiveSheetIndex(next.length - 1)
       return next
     })
@@ -147,11 +153,17 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
   const deleteSheet = React.useCallback((): void => {
     setSheets((current) => {
       if (!current.length) {
-        setNotice({ text: '削除できるシートがありません。', tone: 'error' })
+        setNotice({
+          text: createLocalizedText('削除できるシートがありません。', 'No sheets can be deleted.'),
+          tone: 'error',
+        })
         return current
       }
       if (current.length === 1) {
-        setNotice({ text: '最後のシートは削除できません。', tone: 'error' })
+        setNotice({
+          text: createLocalizedText('最後のシートは削除できません。', 'The last sheet cannot be deleted.'),
+          tone: 'error',
+        })
         return current
       }
       const targetIndex = Math.min(activeSheetIndex, current.length - 1)
@@ -159,7 +171,10 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
       const next = current.filter((_, index) => index !== targetIndex)
       const nextActiveIndex = Math.min(targetIndex, next.length - 1)
       setActiveSheetIndex(nextActiveIndex)
-      setNotice({ text: `シート「${targetSheet.name}」を削除しました。`, tone: 'success' })
+      setNotice({
+        text: createLocalizedText(`シート「${targetSheet.name}」を削除しました。`, `Deleted sheet "${targetSheet.name}".`),
+        tone: 'success',
+      })
       return next
     })
   }, [activeSheetIndex, setActiveSheetIndex, setNotice])
@@ -168,7 +183,10 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
     (name: string): void => {
       const trimmed = name.trim()
       if (!trimmed) {
-        setNotice({ text: 'シート名を入力してください。', tone: 'error' })
+        setNotice({
+          text: createLocalizedText('シート名を入力してください。', 'Enter a sheet name.'),
+          tone: 'error',
+        })
         return
       }
       setSheets((current) => {
@@ -184,7 +202,10 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
               }
             : sheet,
         )
-        setNotice({ text: `シート名を「${trimmed}」に更新しました。`, tone: 'success' })
+        setNotice({
+          text: createLocalizedText(`シート名を「${trimmed}」に更新しました。`, `Renamed the sheet to "${trimmed}".`),
+          tone: 'success',
+        })
         return next
       })
     },
@@ -214,7 +235,10 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
         const next = current.map((sheet, sheetIndex) =>
           sheetIndex === targetIndex ? { ...sheet, columnOrder: nextOrder } : sheet,
         )
-        setNotice({ text: `列「${columnKey}」を移動しました。`, tone: 'success' })
+        setNotice({
+          text: createLocalizedText(`列「${columnKey}」を移動しました。`, `Moved column "${columnKey}".`),
+          tone: 'success',
+        })
         return next
       })
     },

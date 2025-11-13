@@ -1,5 +1,6 @@
 // File Header: Component responsible for YAML textarea interactions and related controls.
 import React from 'react'
+import type { Notice } from '../../pages/top/types'
 import { layoutTheme } from '../../utils/Theme'
 import Button from '../atom/Button'
 import { buildButtonClassName } from '../atom/buttonStyles'
@@ -7,7 +8,7 @@ import { useI18n } from '../../utils/i18n'
 
 type Props = {
   yamlBuffer: string
-  notice: { text: string; tone: 'error' | 'success' } | null
+  notice: Notice | null
   onChange: (_value: string) => void
   onApply: () => void
   onFileUpload: (_event: React.ChangeEvent<HTMLInputElement>) => void
@@ -84,7 +85,7 @@ export default function YamlPanel({
             }`}
             role={notice.tone === 'error' ? 'alert' : 'status'}
           >
-            {notice.text}
+            {select(notice.text.ja, notice.text.en)}
           </p>
         )}
       </div>

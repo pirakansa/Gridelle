@@ -1,6 +1,13 @@
 import React from 'react'
 import { cloneCell, type TableRow } from '../../../../services/workbookService'
-import type { CellPosition, EditingCellState, Notice, SelectionRange, UpdateRows } from '../../types'
+import {
+  createLocalizedText,
+  type CellPosition,
+  type EditingCellState,
+  type Notice,
+  type SelectionRange,
+  type UpdateRows,
+} from '../../types'
 
 type UseKeyboardShortcutsOptions = {
   beginSelectionWithReset: (_position: CellPosition, _preserveAnchor?: boolean) => void
@@ -135,7 +142,10 @@ export function useKeyboardShortcuts({
           return updated
         })
         updateRows(nextRows)
-        setNotice({ text: '選択セルの内容を削除しました。', tone: 'success' })
+        setNotice({
+          text: createLocalizedText('選択セルの内容を削除しました。', 'Cleared the selected cells.'),
+          tone: 'success',
+        })
         return
       }
 

@@ -1,5 +1,6 @@
 // File Header: Ribbon-style menu exposing spreadsheet structure and selection controls.
 import React from 'react'
+import type { Notice } from '../../pages/top/types'
 import { layoutTheme } from '../../utils/Theme'
 import Button from '../atom/Button'
 import TextAreaField from '../atom/TextAreaField'
@@ -7,7 +8,7 @@ import TextInput from '../atom/TextInput'
 import { useI18n } from '../../utils/i18n'
 
 type Props = {
-  notice: { text: string; tone: 'error' | 'success' } | null
+  notice: Notice | null
   sheetNames: string[]
   activeSheetIndex: number
   onSelectSheet: (_index: number) => void
@@ -153,7 +154,7 @@ export default function TableEditorPanel({
               role={notice.tone === 'error' ? 'alert' : 'status'}
               data-testid="table-notice"
             >
-              {notice.text}
+              {select(notice.text.ja, notice.text.en)}
             </p>
           )}
           <div className="grid gap-4 lg:grid-cols-3">

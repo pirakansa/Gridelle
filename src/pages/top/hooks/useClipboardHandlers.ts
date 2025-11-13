@@ -1,7 +1,7 @@
 // File Header: Hook bundling spreadsheet clipboard interactions.
 import React from 'react'
 import { cloneRow, createCell, getCellValue, type TableRow } from '../../../services/workbookService'
-import type { Notice, SelectionRange, UpdateRows } from '../types'
+import { createLocalizedText, type Notice, type SelectionRange, type UpdateRows } from '../types'
 import {
   createEmptyRow,
   ensureColumnCapacity,
@@ -41,12 +41,18 @@ export const useClipboardHandlers = ({
   const handleCopySelection = React.useCallback(
     async (): Promise<void> => {
       if (!navigator.clipboard) {
-        setNotice({ text: 'クリップボードAPIが利用できません。', tone: 'error' })
+        setNotice({
+          text: createLocalizedText('クリップボードAPIが利用できません。', 'Clipboard API is unavailable.'),
+          tone: 'error',
+        })
         return
       }
 
       if (!columns.length || !rows.length) {
-        setNotice({ text: 'コピーできるセルがありません。', tone: 'error' })
+        setNotice({
+          text: createLocalizedText('コピーできるセルがありません。', 'No cells are available to copy.'),
+          tone: 'error',
+        })
         return
       }
 
@@ -81,9 +87,15 @@ export const useClipboardHandlers = ({
 
       try {
         await navigator.clipboard.writeText(serializeClipboardMatrix(valueMatrix))
-        setNotice({ text: 'セルの値をコピーしました。', tone: 'success' })
+        setNotice({
+          text: createLocalizedText('セルの値をコピーしました。', 'Copied the cell values.'),
+          tone: 'success',
+        })
       } catch {
-        setNotice({ text: 'セルのコピーに失敗しました。', tone: 'error' })
+        setNotice({
+          text: createLocalizedText('セルのコピーに失敗しました。', 'Failed to copy the cells.'),
+          tone: 'error',
+        })
       }
     },
     [columns, rows, selection, getSelectionAnchor, setNotice],
@@ -152,7 +164,10 @@ export const useClipboardHandlers = ({
         endCol,
       })
       setAnchorCell({ rowIndex: start.rowIndex, columnIndex: start.columnIndex })
-      setNotice({ text: '貼り付けを適用しました。', tone: 'success' })
+      setNotice({
+        text: createLocalizedText('貼り付けを適用しました。', 'Applied the paste operation.'),
+        tone: 'success',
+      })
     },
     [columns, rows, getSelectionAnchor, setColumnOrder, updateRows, setNotice, setSelection, setAnchorCell],
   )

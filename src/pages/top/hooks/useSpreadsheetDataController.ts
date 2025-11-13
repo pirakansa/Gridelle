@@ -10,7 +10,7 @@ import {
 } from '../../../services/workbookService'
 import { copyText } from '../../../services/clipboardService'
 import { downloadTextFile, readFileAsText } from '../../../services/fileTransferService'
-import type { Notice } from '../types'
+import { createLocalizedText, type LocalizedText, type Notice } from '../types'
 import { useSheetState } from './internal/useSheetState'
 import { createSheetState, stripSheetState } from './internal/spreadsheetDataUtils'
 import { parseWorkbookAsync } from '../../../services/yamlWorkerClient'
@@ -47,8 +47,8 @@ type UseSpreadsheetDataController = {
   ingestYamlContent: (
     _content: string,
     _options?: {
-      successNotice?: string
-      errorNoticePrefix?: string
+      successNotice?: LocalizedText
+      errorNoticePrefix?: LocalizedText
     },
   ) => Promise<void>
   handleFileUpload: (_event: React.ChangeEvent<HTMLInputElement>) => void
@@ -194,12 +194,12 @@ export const useSpreadsheetDataController = (
   const parseAndApplyYaml = React.useCallback(
     async (
       content: string,
-      options?: { successNotice?: string; errorNoticePrefix?: string },
+      options?: { successNotice?: LocalizedText; errorNoticePrefix?: LocalizedText },
     ): Promise<void> => {
       const requestId = Date.now()
       parseRequestIdRef.current = requestId
       setYamlBuffer(content)
-      setNotice({ text: 'YAMLを解析しています…', tone: 'success' })
+      setNotice({ text: createLocalizedText('YAMLを解析しています…', 'Parsing YAML…'), tone: 'success' })
 
       try {
         const parsedSheets = await parseWorkbookAsync(content, {
@@ -220,16 +220,24 @@ export const useSpreadsheetDataController = (
           }
           return Math.min(prev, parsed.length - 1)
         })
-        setNotice({ text: options?.successNotice ?? 'YAMLをテーブルに反映しました。', tone: 'success' })
+        setNotice({
+          text:
+            options?.successNotice ??
+            createLocalizedText('YAMLをテーブルに反映しました。', 'Applied the YAML to the table.'),
+          tone: 'success',
+        })
       } catch (error) {
         if (parseRequestIdRef.current !== requestId) {
           throw error
         }
         const message = error instanceof Error ? error.message : String(error)
-        const noticeMessage = options?.errorNoticePrefix
-          ? `${options.errorNoticePrefix}: ${message}`
-          : message
-        setNotice({ text: noticeMessage, tone: 'error' })
+        const noticeText = options?.errorNoticePrefix
+          ? {
+              ja: `${options.errorNoticePrefix.ja}: ${message}`,
+              en: `${options.errorNoticePrefix.en}: ${message}`,
+            }
+          : createLocalizedText(message, message)
+        setNotice({ text: noticeText, tone: 'error' })
         throw error
       }
     },
@@ -254,8 +262,11 @@ export const useSpreadsheetDataController = (
       readFileAsText(file)
         .then((content) => {
           void parseAndApplyYaml(content, {
-            successNotice: 'ファイルを読み込みました。',
-            errorNoticePrefix: 'アップロードしたファイルを解析できませんでした',
+            successNotice: createLocalizedText('ファイルを読み込みました。', 'Loaded the file.'),
+            errorNoticePrefix: createLocalizedText(
+              'アップロードしたファイルを解析できませんでした',
+              'Failed to parse the uploaded file',
+            ),
           }).catch(() => {
             // Notice already handled in parseAndApplyYaml.
           })
@@ -263,7 +274,10 @@ export const useSpreadsheetDataController = (
         .catch((error) => {
           const message = error instanceof Error ? error.message : String(error)
           setNotice({
-            text: `ファイルの読み込みに失敗しました: ${message}`,
+            text: createLocalizedText(
+              `ファイルの読み込みに失敗しました: ${message}`,
+              `Failed to read the file: ${message}`,
+            ),
             tone: 'error',
           })
         })
@@ -273,15 +287,21 @@ export const useSpreadsheetDataController = (
 
   const handleDownloadYaml = React.useCallback((): void => {
     downloadTextFile('table.yaml', tableYaml)
-    setNotice({ text: 'table.yaml をダウンロードしました。', tone: 'success' })
+    setNotice({ text: createLocalizedText('table.yaml をダウンロードしました。', 'Downloaded table.yaml.'), tone: 'success' })
   }, [tableYaml])
 
   const handleCopyYaml = React.useCallback(async (): Promise<void> => {
     try {
       await copyText(tableYaml)
-      setNotice({ text: 'YAMLをクリップボードにコピーしました。', tone: 'success' })
+      setNotice({
+        text: createLocalizedText('YAMLをクリップボードにコピーしました。', 'Copied the YAML to the clipboard.'),
+        tone: 'success',
+      })
     } catch {
-      setNotice({ text: 'クリップボードへのコピーに失敗しました。', tone: 'error' })
+      setNotice({
+        text: createLocalizedText('クリップボードへのコピーに失敗しました。', 'Failed to copy to the clipboard.'),
+        tone: 'error',
+      })
     }
   }, [tableYaml])
 
