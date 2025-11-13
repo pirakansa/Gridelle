@@ -1,6 +1,6 @@
 // File Header: Exposes handlers for selecting entire rows or columns from headers.
 import React from 'react'
-import type { CellPosition, SelectionRange } from '../../types'
+import type { CellPosition, EditingCellState, SelectionRange } from '../../types'
 import type { TableRow } from '../../../../services/workbookService'
 
 type Options = {
@@ -10,7 +10,7 @@ type Options = {
   setSelection: React.Dispatch<React.SetStateAction<SelectionRange | null>>
   setAnchorCell: React.Dispatch<React.SetStateAction<CellPosition | null>>
   setIsSelecting: React.Dispatch<React.SetStateAction<boolean>>
-  setEditingCell: React.Dispatch<React.SetStateAction<CellPosition | null>>
+  setEditingCell: React.Dispatch<React.SetStateAction<EditingCellState | null>>
 }
 
 type Result = {

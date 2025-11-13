@@ -1,12 +1,13 @@
 // File Header: Hook exposing spreadsheet cell editing helpers.
 import React from 'react'
-import type { CellPosition } from '../types'
+import type { EditingCellState } from '../types'
 
 type UseCellEditingHandlersParams = {
-  editingCell: CellPosition | null
-  setEditingCell: React.Dispatch<React.SetStateAction<CellPosition | null>>
+  editingCell: EditingCellState | null
+  setEditingCell: React.Dispatch<React.SetStateAction<EditingCellState | null>>
   columnsLength: number
   rowsLength: number
+  onCommitEditing: (_cell: EditingCellState) => void
 }
 
 type UseCellEditingHandlersResult = {
@@ -20,6 +21,7 @@ export const useCellEditingHandlers = ({
   setEditingCell,
   columnsLength,
   rowsLength,
+  onCommitEditing,
 }: UseCellEditingHandlersParams): UseCellEditingHandlersResult => {
   const handleCellEditorBlur = React.useCallback((): void => {
     setEditingCell(null)
@@ -34,10 +36,14 @@ export const useCellEditingHandlers = ({
       }
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault()
+        const currentCell = editingCell
         setEditingCell(null)
+        if (currentCell) {
+          onCommitEditing(currentCell)
+        }
       }
     },
-    [setEditingCell],
+    [editingCell, onCommitEditing, setEditingCell],
   )
 
   React.useEffect(() => {

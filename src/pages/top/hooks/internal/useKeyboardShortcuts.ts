@@ -1,17 +1,17 @@
 import React from 'react'
 import { cloneCell, type TableRow } from '../../../../services/workbookService'
-import type { CellPosition, Notice, SelectionRange, UpdateRows } from '../../types'
+import type { CellPosition, EditingCellState, Notice, SelectionRange, UpdateRows } from '../../types'
 
 type UseKeyboardShortcutsOptions = {
   beginSelectionWithReset: (_position: CellPosition, _preserveAnchor?: boolean) => void
   clearSelection: () => void
   columns: string[]
-  editingCell: CellPosition | null
+  editingCell: EditingCellState | null
   getSelectionAnchor: () => CellPosition
   handleCopySelection: () => Promise<void>
   rows: TableRow[]
   selection: SelectionRange | null
-  setEditingCell: React.Dispatch<React.SetStateAction<CellPosition | null>>
+  setEditingCell: React.Dispatch<React.SetStateAction<EditingCellState | null>>
   setIsSelecting: React.Dispatch<React.SetStateAction<boolean>>
   setNotice: React.Dispatch<React.SetStateAction<Notice | null>>
   updateRows: UpdateRows
@@ -48,6 +48,28 @@ export function useKeyboardShortcuts({
         }
         event.preventDefault()
         void handleCopySelection()
+        return
+      }
+
+      if (
+        !editingCell &&
+        event.key.length === 1 &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        columns.length &&
+        rows.length
+      ) {
+        event.preventDefault()
+        const maxRow = rows.length - 1
+        const maxCol = columns.length - 1
+        const baseAnchor = getSelectionAnchor()
+        const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
+        const rowIndex = clamp(baseAnchor.rowIndex, 0, maxRow)
+        const columnIndex = clamp(baseAnchor.columnIndex, 0, maxCol)
+        beginSelectionWithReset({ rowIndex, columnIndex })
+        setIsSelecting(false)
+        setEditingCell({ rowIndex, columnIndex, initialValue: event.key, replaceValue: true })
         return
       }
 

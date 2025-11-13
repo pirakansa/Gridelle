@@ -1,7 +1,7 @@
 // File Header: Hook encapsulating selection, fill, clipboard, and editing interactions.
 import React from 'react'
 import { type TableRow, type CellFunctionConfig } from '../../../services/workbookService'
-import type { CellPosition, Notice, SelectionRange, UpdateRows } from '../types'
+import type { CellPosition, EditingCellState, Notice, SelectionRange, UpdateRows } from '../types'
 import { stringifySelection } from '../utils/spreadsheetTableUtils'
 import { useClipboardHandlers } from './useClipboardHandlers'
 import { useCellEditingHandlers } from './useCellEditingHandlers'
@@ -29,7 +29,7 @@ type UseSpreadsheetInteractionController = {
   fillPreview: SelectionRange | null
   selectionSummary: string
   isFillDragActive: boolean
-  editingCell: CellPosition | null
+  editingCell: EditingCellState | null
   clearSelection: () => void
   applyBulkInput: () => void
   selectionTextColor: string
@@ -146,6 +146,21 @@ export const useSpreadsheetInteractionController = ({
     setEditingCell,
   })
 
+  const handleEditingCommit = React.useCallback(
+    (cell: EditingCellState): void => {
+      if (!rows.length || !columns.length) {
+        return
+      }
+      const maxRowIndex = rows.length - 1
+      const maxColIndex = columns.length - 1
+      const targetRowIndex = Math.min(cell.rowIndex + 1, maxRowIndex)
+      const targetColumnIndex = Math.min(cell.columnIndex, maxColIndex)
+      beginSelectionWithReset({ rowIndex: targetRowIndex, columnIndex: targetColumnIndex })
+      setIsSelecting(false)
+    },
+    [beginSelectionWithReset, columns.length, rows.length, setIsSelecting],
+  )
+
   const handleCellPointerDown = React.useCallback(
     (
       event: React.PointerEvent<HTMLTableCellElement>,
@@ -242,6 +257,7 @@ export const useSpreadsheetInteractionController = ({
     setEditingCell,
     columnsLength: columns.length,
     rowsLength: rows.length,
+    onCommitEditing: handleEditingCommit,
   })
 
   const activeRange = fillPreview ?? selection

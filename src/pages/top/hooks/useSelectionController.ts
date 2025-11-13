@@ -1,7 +1,7 @@
 // File Header: Hook managing spreadsheet selection and anchor state.
 import React from 'react'
 import { buildSelectionRange } from '../utils/spreadsheetTableUtils'
-import type { CellPosition, SelectionRange } from '../types'
+import type { CellPosition, EditingCellState, SelectionRange } from '../types'
 
 export type SelectionController = {
   selection: SelectionRange | null
@@ -10,8 +10,8 @@ export type SelectionController = {
   setAnchorCell: React.Dispatch<React.SetStateAction<CellPosition | null>>
   isSelecting: boolean
   setIsSelecting: React.Dispatch<React.SetStateAction<boolean>>
-  editingCell: CellPosition | null
-  setEditingCell: React.Dispatch<React.SetStateAction<CellPosition | null>>
+  editingCell: EditingCellState | null
+  setEditingCell: React.Dispatch<React.SetStateAction<EditingCellState | null>>
   getSelectionAnchor: () => CellPosition
   beginSelection: (_position: CellPosition, _preserveAnchor?: boolean) => void
   extendSelection: (_position: CellPosition) => void
@@ -23,7 +23,7 @@ export const useSelectionController = (): SelectionController => {
   const [selection, setSelection] = React.useState<SelectionRange | null>(null)
   const [anchorCell, setAnchorCell] = React.useState<CellPosition | null>(null)
   const [isSelecting, setIsSelecting] = React.useState<boolean>(false)
-  const [editingCell, setEditingCell] = React.useState<CellPosition | null>(null)
+  const [editingCell, setEditingCell] = React.useState<EditingCellState | null>(null)
 
   const getSelectionAnchor = React.useCallback((): CellPosition => {
     if (anchorCell) {

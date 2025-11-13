@@ -5,6 +5,11 @@ export type Notice = { text: string; tone: 'error' | 'success' }
 
 export type CellPosition = { rowIndex: number; columnIndex: number }
 
+export type EditingCellState = CellPosition & {
+  initialValue?: string | null
+  replaceValue?: boolean
+}
+
 export type SelectionRange = {
   startRow: number
   endRow: number

@@ -1,6 +1,6 @@
 // File Header: Spreadsheet-like table rendering selection, fill, and editing interactions.
 import React from 'react'
-import type { CellPosition, SelectionRange } from '../../pages/top/useSpreadsheetState'
+import type { EditingCellState, SelectionRange } from '../../pages/top/useSpreadsheetState'
 import type { TableRow } from '../../services/workbookService'
 import { layoutTheme } from '../../utils/Theme'
 import TableHead from './table/TableHead'
@@ -14,7 +14,7 @@ type Props = {
   selection: SelectionRange | null
   fillPreview: SelectionRange | null
   isFillDragActive: boolean
-  editingCell: CellPosition | null
+  editingCell: EditingCellState | null
   onRowNumberClick: (_rowIndex: number, _extend: boolean) => void
   onColumnHeaderClick: (_columnIndex: number, _extend: boolean) => void
   onPointerDown: (

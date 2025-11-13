@@ -1,7 +1,7 @@
 // File Header: Table row component handling row header actions and delegating cells.
 import React from 'react'
 import type { TableRow as TableRowData } from '../../../services/workbookService'
-import type { CellPosition, SelectionRange } from '../../../pages/top/useSpreadsheetState'
+import type { EditingCellState, SelectionRange } from '../../../pages/top/useSpreadsheetState'
 import EditableCell from './EditableCell'
 import { useI18n } from '../../../utils/i18n'
 
@@ -13,7 +13,7 @@ type TableRowProps = {
   activeRange: SelectionRange | null
   fillPreview: SelectionRange | null
   isFillDragActive: boolean
-  editingCell: CellPosition | null
+  editingCell: EditingCellState | null
   onRowNumberClick: (_rowIndex: number, _extend: boolean) => void
   onPointerDown: (
     _event: React.PointerEvent<HTMLTableCellElement>,
