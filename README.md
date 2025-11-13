@@ -33,6 +33,7 @@ Gridelle is a Vite + React application that lets you review and edit YAML workbo
 ### Automation & extensions
 - Toggle between Firebase auth (default) and an offline mode that provides guest sessions plus GitHub PAT input, so you can keep your data local while still calling the Octokit client.
 - Register custom WebAssembly modules as spreadsheet macros; each exported function becomes a reusable formula that operates on selected ranges.
+- The function macro feature remains experimental and may change without notice.
 - Stress-test rendering performance by generating large synthetic YAML workbooks via the bundled CLI utility.
 
 ### UX niceties
@@ -149,6 +150,6 @@ The GitHub integration panel lets you bounce between blob URLs, repository trees
 - Shared UI lives in `src/components/`, while page-specific logic sits under `src/pages/`.
 - Authentication services, clipboard helpers, GitHub accessors, YAML workers, and macro loaders are consolidated in `src/services/`.
 - Static assets and icons stay in `public/`, while automation scripts and design docs live in `docs/`.
-- Source code is MIT licensed (see `LICENSE`).
+- Source code is MIT licensed (see `LICENSE`). Hosting Gridelle as a commercial or large-scale internal service on the provided servers requires a separate agreement.
 
 When opening issues or PRs, include a concise problem statement, user impact, and the tests you ran so reviewers can respond quickly.
