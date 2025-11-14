@@ -1075,6 +1075,17 @@ describe('App', () => {
     expect(functionSummary.textContent).toContain('関数情報: 未設定')
   })
 
+  it('関数メニューのデフォルトが sum になる', () => {
+    render(<App />)
+    fireEvent.click(screen.getByTestId('menu-tab-macro'))
+
+    const selectElement = screen.getByTestId('macro-function-select') as HTMLSelectElement
+    expect(selectElement.value).toBe('sum')
+    const firstOption = selectElement.querySelector('option')
+    expect(firstOption).not.toBeNull()
+    expect(firstOption?.value).toBe('sum')
+  })
+
   it('シートを切り替えると別データが表示される', async () => {
     const user = userEvent.setup()
     render(<App />)

@@ -49,6 +49,17 @@ export default function MacroSection({
   const [cellReferences, setCellReferences] = React.useState<CellReferenceDraft[]>([])
   const [status, setStatus] = React.useState<LocalizedMessage | null>(null)
   const [error, setError] = React.useState<LocalizedMessage | null>(null)
+  const prioritizedFunctions = React.useMemo(() => {
+    if (!availableFunctions.length) {
+      return availableFunctions
+    }
+    const sumEntry = availableFunctions.find((fn) => fn.id === 'sum')
+    if (!sumEntry) {
+      return availableFunctions
+    }
+    const others = availableFunctions.filter((fn) => fn.id !== 'sum')
+    return [sumEntry, ...others]
+  }, [availableFunctions])
 
   const getColumnsForSheet = React.useCallback(
     (sheetName: string): string[] => {
@@ -79,10 +90,10 @@ export default function MacroSection({
   )
 
   React.useEffect(() => {
-    if (!selectedFunctionId && availableFunctions.length) {
-      setSelectedFunctionId(availableFunctions[0]?.id ?? '')
+    if (!selectedFunctionId && prioritizedFunctions.length) {
+      setSelectedFunctionId(prioritizedFunctions[0]?.id ?? '')
     }
-  }, [availableFunctions, selectedFunctionId])
+  }, [prioritizedFunctions, selectedFunctionId])
 
   React.useEffect(() => {
     setCellReferences((prev) => {
@@ -294,10 +305,10 @@ export default function MacroSection({
               className="mt-1 flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 sm:mt-0"
               data-testid="macro-function-select"
             >
-              {availableFunctions.length === 0 && (
+              {prioritizedFunctions.length === 0 && (
                 <option value="">{select('関数が登録されていません', 'No functions registered')}</option>
               )}
-              {availableFunctions.map((fn) => (
+              {prioritizedFunctions.map((fn) => (
                 <option key={fn.id} value={fn.id}>
                   {fn.label}
                 </option>
@@ -435,4 +446,3 @@ export default function MacroSection({
     </section>
   )
 }
-
