@@ -8,6 +8,7 @@ import SheetSection from './menu/SheetSection'
 import StructureSection from './menu/StructureSection'
 import SelectionSection from './menu/SelectionSection'
 import MacroSection from './menu/MacroSection'
+import WasmSection from './menu/WasmSection'
 import HelpSection from './menu/HelpSection'
 import UserSection from './menu/UserSection'
 import FileSection from './menu/FileSection'
@@ -338,10 +339,11 @@ export default function MenuHeader({
                   selectionRange={selectionRange}
                   hasSelection={hasSelection}
                   availableFunctions={macroFunctions}
-                  loadedModules={loadedMacroModules}
-                  onLoadModule={onLoadWasmModule}
                   onApplyFunction={onApplySelectionFunction}
                 />
+              )}
+              {activeMenuSection === 'wasm' && (
+                <WasmSection loadedModules={loadedMacroModules} onLoadModule={onLoadWasmModule} />
               )}
               {activeMenuSection === 'user' && (
                 <UserSection

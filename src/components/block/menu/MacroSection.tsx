@@ -1,8 +1,7 @@
-// File Header: Ribbon section for loading WASM macros and applying them to selected cells.
+// File Header: Ribbon section for applying registered functions to selected cells.
 import React from 'react'
 import type { CellFunctionConfig } from '../../../services/workbookService'
 import type { RegisteredFunctionMeta } from '../../../pages/top/utils/cellFunctionEngine'
-import type { LoadedWasmModule } from '../../../services/wasmMacroService'
 import type { SelectionRange } from '../../../pages/top/types'
 import { useI18n } from '../../../utils/i18n'
 
@@ -14,13 +13,8 @@ type MacroSectionProps = {
   selectionRange: SelectionRange | null
   hasSelection: boolean
   availableFunctions: RegisteredFunctionMeta[]
-  loadedModules: LoadedWasmModule[]
-  onLoadModule: (_params: { moduleId: string; url: string }) => Promise<void>
   onApplyFunction: (_config: CellFunctionConfig | null) => void
 }
-
-const SAMPLE_MODULE_ID = 'sample_sum'
-const SAMPLE_URL = '/macros/sample_sum.wasm'
 
 type LocalizedMessage = {
   readonly ja: string
@@ -38,7 +32,7 @@ type CellReferenceDraft = {
   sheetName: string
 }
 
-// Function Header: Renders controls for importing WASM modules and applying functions to selected cells.
+// Function Header: Provides function selection and cell reference controls.
 export default function MacroSection({
   columns,
   sheetNames,
@@ -47,20 +41,14 @@ export default function MacroSection({
   selectionRange,
   hasSelection,
   availableFunctions,
-  loadedModules,
-  onLoadModule,
   onApplyFunction,
 }: MacroSectionProps): React.ReactElement {
   const { select } = useI18n()
-  const [moduleId, setModuleId] = React.useState<string>(SAMPLE_MODULE_ID)
-  const [wasmUrl, setWasmUrl] = React.useState<string>(SAMPLE_URL)
   const [selectedFunctionId, setSelectedFunctionId] = React.useState<string>('')
   const cellRefSequence = React.useRef<number>(0)
   const [cellReferences, setCellReferences] = React.useState<CellReferenceDraft[]>([])
   const [status, setStatus] = React.useState<LocalizedMessage | null>(null)
   const [error, setError] = React.useState<LocalizedMessage | null>(null)
-  const [isLoading, setLoading] = React.useState<boolean>(false)
-  const [activePanel, setActivePanel] = React.useState<'wasm' | 'apply'>('apply')
 
   const getColumnsForSheet = React.useCallback(
     (sheetName: string): string[] => {
@@ -87,8 +75,14 @@ export default function MacroSection({
         ...overrides,
       }
     },
-    [cellRefSequence, currentSheetName, getColumnsForSheet, sheetNames],
+    [currentSheetName, getColumnsForSheet, sheetNames],
   )
+
+  React.useEffect(() => {
+    if (!selectedFunctionId && availableFunctions.length) {
+      setSelectedFunctionId(availableFunctions[0]?.id ?? '')
+    }
+  }, [availableFunctions, selectedFunctionId])
 
   React.useEffect(() => {
     setCellReferences((prev) => {
@@ -134,34 +128,27 @@ export default function MacroSection({
     })
   }, [currentSheetName, sheetNames])
 
+  const canAddCells = sheetNames.some((name) => getColumnsForSheet(name).length > 0)
+  const canImportSelection = Boolean(selectionRange && getColumnsForSheet(currentSheetName).length)
+
   const handleAddCellReference = React.useCallback(() => {
     setCellReferences((prev) => [...prev, createCellReference()])
   }, [createCellReference])
-
-  const activeSheetColumns = getColumnsForSheet(currentSheetName)
-  const canAddCells = sheetNames.some((name) => getColumnsForSheet(name).length > 0)
-  const canImportSelection = Boolean(selectionRange && activeSheetColumns.length)
 
   const handleRemoveCellReference = React.useCallback((id: string): void => {
     setCellReferences((prev) => prev.filter((ref) => ref.id !== id))
   }, [])
 
   const handleChangeCellReferenceRow = React.useCallback((id: string, value: string): void => {
-    setCellReferences((prev) =>
-      prev.map((ref) => (ref.id === id ? { ...ref, row: value } : ref)),
-    )
+    setCellReferences((prev) => prev.map((ref) => (ref.id === id ? { ...ref, row: value } : ref)))
   }, [])
 
   const handleChangeCellReferenceColumn = React.useCallback((id: string, value: string): void => {
-    setCellReferences((prev) =>
-      prev.map((ref) => (ref.id === id ? { ...ref, columnKey: value } : ref)),
-    )
+    setCellReferences((prev) => prev.map((ref) => (ref.id === id ? { ...ref, columnKey: value } : ref)))
   }, [])
 
   const handleChangeCellReferenceSheet = React.useCallback((id: string, value: string): void => {
-    setCellReferences((prev) =>
-      prev.map((ref) => (ref.id === id ? { ...ref, sheetName: value } : ref)),
-    )
+    setCellReferences((prev) => prev.map((ref) => (ref.id === id ? { ...ref, sheetName: value } : ref)))
   }, [])
 
   const handleClearCellReferences = React.useCallback((): void => {
@@ -173,10 +160,7 @@ export default function MacroSection({
     setError(null)
     if (!selectionRange) {
       setError(
-        createMessage(
-          '入力として追加するセル範囲を選択してください。',
-          'Select the cells you want to add as inputs.',
-        ),
+        createMessage('入力として追加するセル範囲を選択してください。', 'Select the cells you want to add as inputs.'),
       )
       return
     }
@@ -226,32 +210,6 @@ export default function MacroSection({
     )
   }, [cellReferences, columns, createCellReference, currentSheetName, selectionRange])
 
-  React.useEffect(() => {
-    if (!selectedFunctionId && availableFunctions.length) {
-      setSelectedFunctionId(availableFunctions[0]?.id ?? '')
-    }
-  }, [availableFunctions, selectedFunctionId])
-
-  const handleLoadModule = async (): Promise<void> => {
-    setStatus(null)
-    setError(null)
-    setLoading(true)
-    try {
-      await onLoadModule({ moduleId, url: wasmUrl })
-      setStatus(
-        createMessage(
-          `WASMモジュール「${moduleId}」を読み込みました。`,
-          `Loaded WASM module "${moduleId}".`,
-        ),
-      )
-    } catch (loadError) {
-      const fallback = loadError instanceof Error ? loadError.message : String(loadError)
-      setError(createMessage(fallback, fallback))
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleApplyFunction = (): void => {
     setStatus(null)
     setError(null)
@@ -296,10 +254,7 @@ export default function MacroSection({
 
     if (hasInvalidReference) {
       setError(
-        createMessage(
-          '入力セルの行番号と列を確認してください。',
-          'Check the row numbers and columns for the input cells.',
-        ),
+        createMessage('入力セルの行番号と列を確認してください。', 'Check the row numbers and columns for the input cells.'),
       )
       return
     }
@@ -318,192 +273,87 @@ export default function MacroSection({
     onApplyFunction(null)
   }
 
-  const renderLoadedModules = (): React.ReactElement => {
-    if (!loadedModules.length) {
-      return (
-        <p className="text-sm text-slate-500">
-          {select('読み込まれたWASMモジュールはありません。', 'No WASM modules have been loaded yet.')}
-        </p>
-      )
-    }
-    return (
-      <ul className="space-y-1 text-sm text-slate-600" data-testid="loaded-wasm-list">
-        {loadedModules.map((module) => (
-          <li key={module.id}>
-            <span className="font-semibold text-slate-800">{module.id}</span> ({module.exports.join(', ')})
-          </li>
-        ))}
-      </ul>
-    )
-  }
-
   const statusText = status ? select(status.ja, status.en) : null
   const errorText = error ? select(error.ja, error.en) : null
 
   return (
-    <section aria-label={select('関数 / マクロ', 'Functions / macros')}>
-      <div className="mb-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          className={`rounded border px-3 py-1.5 text-sm font-semibold ${
-            activePanel === 'apply'
-              ? 'border-slate-900 bg-slate-900 text-white'
-              : 'border-slate-300 text-slate-700 hover:bg-slate-50'
-          }`}
-          onClick={() => setActivePanel('apply')}
-        >
-          {select('関数を適用', 'Apply function')}
-        </button>
-        <button
-          type="button"
-          className={`rounded border px-3 py-1.5 text-sm font-semibold ${
-            activePanel === 'wasm'
-              ? 'border-slate-900 bg-slate-900 text-white'
-              : 'border-slate-300 text-slate-700 hover:bg-slate-50'
-          }`}
-          onClick={() => setActivePanel('wasm')}
-        >
-          {select('WASMモジュール管理', 'Manage WASM modules')}
-        </button>
-      </div>
-      <div className="grid gap-5">
-        <div
-          className={`rounded-lg border border-slate-200 p-4 transition ${
-            activePanel === 'wasm' ? 'block' : 'hidden'
-          }`}
-        >
-          <h3 className="text-sm font-semibold text-slate-900">
-            {select('WASMモジュールを読み込む', 'Load a WASM module')}
-          </h3>
-          <p className="mt-2 text-sm text-slate-600">
-            {select(
-              '外部のWASMファイルを読み込むと、エクスポートされた関数をセルマクロとして利用できます。サンプルとして',
-              'Load an external WASM file to use its exported functions as cell macros. Sample module:',
-            )}
-            <code className="ml-1 font-mono text-xs text-slate-800">{SAMPLE_URL}</code>
-            {select(' を用意しています。', ' is available.')}
+    <section aria-label={select('関数適用', 'Apply functions')} className="space-y-4">
+      <div className="rounded-lg border border-slate-200 p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <h3 className="text-sm font-semibold text-slate-900">{select('関数を選択セルに適用', 'Apply a function')}</h3>
+          <p className="text-xs text-slate-500">
+            {select('入力セルを登録してから適用します。', 'Register input cells before applying.')}
           </p>
-          <div className="mt-4 space-y-3">
-            <label className="block text-xs font-semibold text-slate-700">
-              {select('モジュールID', 'Module ID')}
-              <input
-                type="text"
-                value={moduleId}
-                onChange={(event) => setModuleId(event.target.value)}
-                className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                placeholder="sample_sum"
-              />
-            </label>
-            <label className="block text-xs font-semibold text-slate-700">
-              {select('WASMファイルURL', 'WASM file URL')}
-              <input
-                type="text"
-                value={wasmUrl}
-                onChange={(event) => setWasmUrl(event.target.value)}
-                className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                placeholder="/macros/sample_sum.wasm"
-              />
-            </label>
-            <button
-              type="button"
-              className="rounded bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
-              onClick={handleLoadModule}
-              disabled={isLoading}
-              data-testid="load-wasm-button"
-            >
-              {isLoading
-                ? select('読み込み中…', 'Loading…')
-                : select('WASMを読み込む', 'Load WASM')}
-            </button>
-          </div>
-          <div className="mt-4 border-t border-slate-100 pt-3">
-            <h4 className="text-xs font-semibold text-slate-700">
-              {select('読み込み済みモジュール', 'Loaded modules')}
-            </h4>
-            {renderLoadedModules()}
-          </div>
         </div>
-
-        <div
-          className={`rounded-lg border border-slate-200 p-4 transition ${
-            activePanel === 'apply' ? 'block' : 'hidden'
-          }`}
-        >
-          <div className="flex flex-wrap items-center gap-3">
-            <h3 className="text-sm font-semibold text-slate-900">{select('関数を選択セルに適用', 'Apply a function')}</h3>
-            <p className="text-xs text-slate-500">
-              {select('入力セルを登録してから適用します。', 'Register input cells before applying.')}
-            </p>
-          </div>
-          <div className="mt-3 space-y-3">
-            <label className="flex flex-col text-xs font-semibold text-slate-700 sm:flex-row sm:items-center sm:gap-3">
-              <span>{select('利用可能な関数', 'Available functions')}</span>
-              <select
-                value={selectedFunctionId}
-                onChange={(event) => setSelectedFunctionId(event.target.value)}
-                className="mt-1 flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 sm:mt-0"
-                data-testid="macro-function-select"
+        <div className="mt-3 space-y-3">
+          <label className="flex flex-col text-xs font-semibold text-slate-700 sm:flex-row sm:items-center sm:gap-3">
+            <span>{select('利用可能な関数', 'Available functions')}</span>
+            <select
+              value={selectedFunctionId}
+              onChange={(event) => setSelectedFunctionId(event.target.value)}
+              className="mt-1 flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 sm:mt-0"
+              data-testid="macro-function-select"
+            >
+              {availableFunctions.length === 0 && (
+                <option value="">{select('関数が登録されていません', 'No functions registered')}</option>
+              )}
+              {availableFunctions.map((fn) => (
+                <option key={fn.id} value={fn.id}>
+                  {fn.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            <span>{select(`入力セル: ${cellReferences.length} 件`, `Input cells: ${cellReferences.length}`)}</span>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-white disabled:opacity-50"
+                onClick={handleAddCellReference}
+                disabled={!canAddCells}
               >
-                {availableFunctions.length === 0 && (
-                  <option value="">{select('関数が登録されていません', 'No functions registered')}</option>
-                )}
-                {availableFunctions.map((fn) => (
-                  <option key={fn.id} value={fn.id}>
-                    {fn.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-              <span>{select(`入力セル: ${cellReferences.length} 件`, `Input cells: ${cellReferences.length}`)}</span>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-white disabled:opacity-50"
-                  onClick={handleAddCellReference}
-                  disabled={!canAddCells}
-                >
-                  {select('セルを追加', 'Add')}
-                </button>
-                <button
-                  type="button"
-                  className="rounded border border-blue-200 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-white disabled:opacity-50"
-                  onClick={handleImportSelectionAsInputs}
-                  disabled={!canImportSelection}
-                >
-                  {select('選択を追加', 'Use selection')}
-                </button>
-                <button
-                  type="button"
-                  className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-white disabled:opacity-50"
-                  onClick={handleClearCellReferences}
-                  disabled={!cellReferences.length}
-                >
-                  {select('クリア', 'Clear')}
-                </button>
-              </div>
+                {select('セルを追加', 'Add')}
+              </button>
+              <button
+                type="button"
+                className="rounded border border-blue-200 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-white disabled:opacity-50"
+                onClick={handleImportSelectionAsInputs}
+                disabled={!canImportSelection}
+              >
+                {select('選択を追加', 'Use selection')}
+              </button>
+              <button
+                type="button"
+                className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-white disabled:opacity-50"
+                onClick={handleClearCellReferences}
+                disabled={!cellReferences.length}
+              >
+                {select('クリア', 'Clear')}
+              </button>
             </div>
-            {cellReferences.length === 0 ? (
-              <p className="rounded border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500">
-                {select('参照セルが未設定です。上のボタンから追加してください。', 'No input cells configured. Use the buttons above.')}
-              </p>
-            ) : (
-              <div className="max-h-72 overflow-auto rounded border border-slate-200">
-                <table className="min-w-full text-sm text-slate-700">
-                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                    <tr>
-                      <th className="px-2 py-2 text-left">{select('行番号', 'Row')}</th>
-                      <th className="px-2 py-2 text-left">{select('列', 'Column')}</th>
-                      <th className="px-2 py-2 text-left">{select('シート', 'Sheet')}</th>
-                      <th className="px-2 py-2 text-left">{select('操作', 'Actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cellReferences.map((reference, index) => {
-                      const sheetKey = reference.sheetName || currentSheetName
-                      const availableColumns = getColumnsForSheet(sheetKey)
-                      return (
-                        <tr key={reference.id} className="border-t border-slate-100">
+          </div>
+          {cellReferences.length === 0 ? (
+            <p className="rounded border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500">
+              {select('参照セルが未設定です。上のボタンから追加してください。', 'No input cells configured. Use the buttons above.')}
+            </p>
+          ) : (
+            <div className="max-h-72 overflow-auto rounded border border-slate-200">
+              <table className="min-w-full text-sm text-slate-700">
+                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-2 py-2 text-left">{select('行番号', 'Row')}</th>
+                    <th className="px-2 py-2 text-left">{select('列', 'Column')}</th>
+                    <th className="px-2 py-2 text-left">{select('シート', 'Sheet')}</th>
+                    <th className="px-2 py-2 text-left">{select('操作', 'Actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cellReferences.map((reference, index) => {
+                    const sheetKey = reference.sheetName || currentSheetName
+                    const availableColumns = getColumnsForSheet(sheetKey)
+                    return (
+                      <tr key={reference.id} className="border-t border-slate-100">
                         <td className="px-2 py-1.5">
                           <input
                             type="number"
@@ -551,41 +401,38 @@ export default function MacroSection({
                           </button>
                         </td>
                       </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="rounded bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:opacity-60"
-                onClick={handleApplyFunction}
-                disabled={!hasSelection}
-                data-testid="apply-macro-button"
-              >
-                {select('選択セルに適用', 'Apply to selection')}
-              </button>
-              <button
-                type="button"
-                className="rounded border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                onClick={handleClearFunction}
-              >
-                {select('関数をクリア', 'Clear function')}
-              </button>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:opacity-60"
+              onClick={handleApplyFunction}
+              disabled={!hasSelection}
+              data-testid="apply-macro-button"
+            >
+              {select('選択セルに適用', 'Apply to selection')}
+            </button>
+            <button
+              type="button"
+              className="rounded border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              onClick={handleClearFunction}
+            >
+              {select('関数をクリア', 'Clear function')}
+            </button>
           </div>
         </div>
       </div>
       {(statusText || errorText) && (
-        <p
-          className={`mt-4 text-sm ${errorText ? 'text-red-600' : 'text-emerald-600'}`}
-          role={errorText ? 'alert' : 'status'}
-        >
+        <p className={`text-sm ${errorText ? 'text-red-600' : 'text-emerald-600'}`} role={errorText ? 'alert' : 'status'}>
           {errorText ?? statusText}
         </p>
       )}
     </section>
   )
 }
+
