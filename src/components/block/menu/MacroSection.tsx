@@ -60,6 +60,7 @@ export default function MacroSection({
   const [status, setStatus] = React.useState<LocalizedMessage | null>(null)
   const [error, setError] = React.useState<LocalizedMessage | null>(null)
   const [isLoading, setLoading] = React.useState<boolean>(false)
+  const [activePanel, setActivePanel] = React.useState<'wasm' | 'apply'>('apply')
 
   const getColumnsForSheet = React.useCallback(
     (sheetName: string): string[] => {
@@ -341,8 +342,36 @@ export default function MacroSection({
 
   return (
     <section aria-label={select('関数 / マクロ', 'Functions / macros')}>
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div className="rounded-lg border border-slate-200 p-4">
+      <div className="mb-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          className={`rounded border px-3 py-1.5 text-sm font-semibold ${
+            activePanel === 'apply'
+              ? 'border-slate-900 bg-slate-900 text-white'
+              : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+          }`}
+          onClick={() => setActivePanel('apply')}
+        >
+          {select('関数を適用', 'Apply function')}
+        </button>
+        <button
+          type="button"
+          className={`rounded border px-3 py-1.5 text-sm font-semibold ${
+            activePanel === 'wasm'
+              ? 'border-slate-900 bg-slate-900 text-white'
+              : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+          }`}
+          onClick={() => setActivePanel('wasm')}
+        >
+          {select('WASMモジュール管理', 'Manage WASM modules')}
+        </button>
+      </div>
+      <div className="grid gap-5">
+        <div
+          className={`rounded-lg border border-slate-200 p-4 transition ${
+            activePanel === 'wasm' ? 'block' : 'hidden'
+          }`}
+        >
           <h3 className="text-sm font-semibold text-slate-900">
             {select('WASMモジュールを読み込む', 'Load a WASM module')}
           </h3>
@@ -395,7 +424,11 @@ export default function MacroSection({
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-200 p-4">
+        <div
+          className={`rounded-lg border border-slate-200 p-4 transition ${
+            activePanel === 'apply' ? 'block' : 'hidden'
+          }`}
+        >
           <div className="flex flex-wrap items-center gap-3">
             <h3 className="text-sm font-semibold text-slate-900">{select('関数を選択セルに適用', 'Apply a function')}</h3>
             <p className="text-xs text-slate-500">
