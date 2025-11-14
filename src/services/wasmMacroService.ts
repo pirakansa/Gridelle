@@ -115,7 +115,12 @@ const createWasmHandler =
   (args: CellFunctionArgs, context: CellFunctionContext): CellFunctionResult => {
     const targets = resolveFunctionTargets(args, context)
     const scopedTargets = targets.filter(
-      (target) => !(target.rowIndex === context.rowIndex && target.columnKey === context.columnKey),
+      (target) =>
+        !(
+          target.rowIndex === context.rowIndex &&
+          target.columnKey === context.columnKey &&
+          (target.sheetName ?? context.sheetName) === context.sheetName
+        ),
     )
     const effectiveTargets = scopedTargets.length ? scopedTargets : targets
     if (!effectiveTargets.length) {
@@ -127,8 +132,8 @@ const createWasmHandler =
     ensureMemoryCapacity(memory, totalBytes)
 
     const bufferView = new Float64Array(memory.buffer, 0, effectiveTargets.length)
-    effectiveTargets.forEach(({ rowIndex, columnKey }, offset) => {
-      const raw = Number(context.getCellValue(rowIndex, columnKey))
+    effectiveTargets.forEach(({ rowIndex, columnKey, sheetName }, offset) => {
+      const raw = Number(context.getCellValue(rowIndex, columnKey, { sheetName }))
       bufferView[offset] = Number.isFinite(raw) ? raw : 0
     })
 

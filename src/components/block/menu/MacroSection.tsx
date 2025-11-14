@@ -8,6 +8,8 @@ import { useI18n } from '../../../utils/i18n'
 
 type MacroSectionProps = {
   columns: string[]
+  sheetNames: string[]
+  currentSheetName: string
   selectionRange: SelectionRange | null
   hasSelection: boolean
   availableFunctions: RegisteredFunctionMeta[]
@@ -32,11 +34,14 @@ type CellReferenceDraft = {
   id: string
   row: string
   columnKey: string
+  sheetName: string
 }
 
 // Function Header: Renders controls for importing WASM modules and applying functions to selected cells.
 export default function MacroSection({
   columns,
+  sheetNames,
+  currentSheetName,
   selectionRange,
   hasSelection,
   availableFunctions,
@@ -55,17 +60,19 @@ export default function MacroSection({
   const [isLoading, setLoading] = React.useState<boolean>(false)
 
   const createCellReference = React.useCallback(
-    (overrides?: Partial<Pick<CellReferenceDraft, 'row' | 'columnKey'>>): CellReferenceDraft => {
+    (overrides?: Partial<Pick<CellReferenceDraft, 'row' | 'columnKey' | 'sheetName'>>): CellReferenceDraft => {
       const id = `cell-ref-${cellRefSequence.current}`
       cellRefSequence.current += 1
+      const defaultSheet = currentSheetName || sheetNames[0] || ''
       return {
         id,
         row: '',
         columnKey: columns[0] ?? '',
+        sheetName: defaultSheet,
         ...overrides,
       }
     },
-    [cellRefSequence, columns],
+    [cellRefSequence, columns, currentSheetName, sheetNames],
   )
 
   React.useEffect(() => {
@@ -86,6 +93,25 @@ export default function MacroSection({
     })
   }, [columns])
 
+  React.useEffect(() => {
+    setCellReferences((prev) => {
+      if (!prev.length) {
+        return prev
+      }
+      const fallbackSheet = currentSheetName || sheetNames[0] || ''
+      const validSheets = sheetNames.length ? sheetNames : [fallbackSheet]
+      let didChange = false
+      const next = prev.map((ref) => {
+        if (!ref.sheetName || !validSheets.includes(ref.sheetName)) {
+          didChange = true
+          return { ...ref, sheetName: fallbackSheet }
+        }
+        return ref
+      })
+      return didChange ? next : prev
+    })
+  }, [currentSheetName, sheetNames])
+
   const handleAddCellReference = React.useCallback(() => {
     setCellReferences((prev) => [...prev, createCellReference()])
   }, [createCellReference])
@@ -103,6 +129,12 @@ export default function MacroSection({
   const handleChangeCellReferenceColumn = React.useCallback((id: string, value: string): void => {
     setCellReferences((prev) =>
       prev.map((ref) => (ref.id === id ? { ...ref, columnKey: value } : ref)),
+    )
+  }, [])
+
+  const handleChangeCellReferenceSheet = React.useCallback((id: string, value: string): void => {
+    setCellReferences((prev) =>
+      prev.map((ref) => (ref.id === id ? { ...ref, sheetName: value } : ref)),
     )
   }, [])
 
@@ -129,7 +161,7 @@ export default function MacroSection({
         if (!columnKey) {
           continue
         }
-        appended.push(createCellReference({ row: String(rowIndex + 1), columnKey }))
+        appended.push(createCellReference({ row: String(rowIndex + 1), columnKey, sheetName: currentSheetName }))
       }
     }
     if (!appended.length) {
@@ -141,9 +173,9 @@ export default function MacroSection({
       )
       return
     }
-    const existingKeys = new Set(cellReferences.map((ref) => `${ref.row}:${ref.columnKey}`))
+    const existingKeys = new Set(cellReferences.map((ref) => `${ref.sheetName}:${ref.row}:${ref.columnKey}`))
     const deduped = appended.filter((ref) => {
-      const key = `${ref.row}:${ref.columnKey}`
+      const key = `${ref.sheetName}:${ref.row}:${ref.columnKey}`
       if (existingKeys.has(key)) {
         return false
       }
@@ -166,7 +198,7 @@ export default function MacroSection({
         'Added the selection as input cells. Reselect the destination cells before applying.',
       ),
     )
-  }, [cellReferences, columns, createCellReference, selectionRange])
+  }, [cellReferences, columns, createCellReference, currentSheetName, selectionRange])
 
   React.useEffect(() => {
     if (!selectedFunctionId && availableFunctions.length) {
@@ -214,16 +246,22 @@ export default function MacroSection({
       .map((reference) => {
         const columnKey = reference.columnKey?.trim()
         const parsedRow = Number(reference.row)
-        if (!columnKey || !Number.isFinite(parsedRow) || parsedRow < 1) {
+        const sheetName = reference.sheetName?.trim() || currentSheetName
+        if (!columnKey || !Number.isFinite(parsedRow) || parsedRow < 1 || !sheetName) {
+          hasInvalidReference = true
+          return null
+        }
+        if (sheetNames.length && !sheetNames.includes(sheetName)) {
           hasInvalidReference = true
           return null
         }
         return {
           row: Math.round(parsedRow),
           key: columnKey,
+          sheet: sheetName,
         }
       })
-      .filter((entry): entry is { row: number; key: string } => entry !== null)
+      .filter((entry): entry is { row: number; key: string; sheet: string } => entry !== null)
 
     if (!normalizedCells.length) {
       setError(createMessage('入力セルを最低1つ追加してください。', 'Add at least one input cell before applying.'))
@@ -409,6 +447,20 @@ export default function MacroSection({
                             ))}
                           </select>
                         </label>
+                        <label className="block text-xs font-semibold text-slate-700">
+                          {select('シート', 'Sheet')}
+                          <select
+                            value={reference.sheetName}
+                            onChange={(event) => handleChangeCellReferenceSheet(reference.id, event.target.value)}
+                            className="mt-1 min-w-[8rem] rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                          >
+                            {sheetNames.map((name) => (
+                              <option key={name} value={name}>
+                                {name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
                       </div>
                       <button
                         type="button"
@@ -426,7 +478,7 @@ export default function MacroSection({
                   type="button"
                   className="rounded border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                   onClick={handleAddCellReference}
-                  disabled={!columns.length}
+                  disabled={!columns.length || !sheetNames.length}
                 >
                   {select('セルを追加', 'Add a cell')}
                 </button>
@@ -434,7 +486,7 @@ export default function MacroSection({
                   type="button"
                   className="rounded border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
                   onClick={handleImportSelectionAsInputs}
-                  disabled={!selectionRange || !columns.length}
+                  disabled={!selectionRange || !columns.length || !sheetNames.length}
                 >
                   {select('選択セルを入力に追加', 'Add selection as inputs')}
                 </button>

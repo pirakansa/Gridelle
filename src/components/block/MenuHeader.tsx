@@ -330,6 +330,8 @@ export default function MenuHeader({
               {activeMenuSection === 'macro' && (
                 <MacroSection
                   columns={columns}
+                  sheetNames={sheetNames}
+                  currentSheetName={currentSheetName}
                   selectionRange={selectionRange}
                   hasSelection={hasSelection}
                   availableFunctions={macroFunctions}

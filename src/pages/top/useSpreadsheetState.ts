@@ -158,10 +158,11 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     () => registeredFunctions.map((fn) => `${fn.id}:${fn.moduleId ?? ''}`).join('|'),
     [registeredFunctions],
   )
+  const activeSheetName = sheets[activeSheetIndex]?.name ?? 'Sheet 1'
   const computedRows = React.useMemo(() => {
     void macroRegistrySignature
-    return applyCellFunctions(rows, columns)
-  }, [rows, columns, macroRegistrySignature])
+    return applyCellFunctions(rows, columns, { workbook: sheets, sheetName: activeSheetName })
+  }, [rows, columns, macroRegistrySignature, sheets, activeSheetName])
 
   const {
     selection,
@@ -485,7 +486,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
       clearSelection()
       setActiveSheetIndex(index)
     },
-    currentSheetName: sheets[activeSheetIndex]?.name ?? '',
+    currentSheetName: activeSheetName,
     rows: computedRows,
     columns,
     handleAddRow,

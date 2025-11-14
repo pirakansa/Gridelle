@@ -5,7 +5,7 @@ import {
   registerCellFunction,
   resolveFunctionTargets,
 } from '../cellFunctionEngine'
-import { createCell, type TableRow } from '../../../../services/workbookService'
+import { createCell, type TableRow, type TableSheet } from '../../../../services/workbookService'
 
 describe('applyCellFunctions', () => {
   it('evaluates sum functions across the specified column', () => {
@@ -101,12 +101,15 @@ describe('applyCellFunctions', () => {
   })
 
   it('resolves flexible targets including axis and column ranges', () => {
+    const columns = ['col', 'another', 'th']
     const context = {
       rows: [{ col: createCell('1') }, { col: createCell('2') }],
-      columns: ['col', 'another', 'th'],
+      columns,
       rowIndex: 0,
       columnKey: 'col',
+      sheetName: 'Sheet 1',
       getCellValue: () => '',
+      resolveColumnKey: (index: number) => columns[index],
     }
     const targets = resolveFunctionTargets({ axis: 'row', columns: { start: 2, end: 3 }, rows: 2 }, context)
     expect(targets).toEqual([
@@ -116,16 +119,19 @@ describe('applyCellFunctions', () => {
   })
 
   it('resolves explicit cell references from args.cells', () => {
+    const columns = ['A', 'B']
     const context = {
       rows: [
         { A: createCell('1'), B: createCell('') },
         { A: createCell('2'), B: createCell('') },
         { A: createCell(''), B: createCell('3') },
       ],
-      columns: ['A', 'B'],
+      columns,
       rowIndex: 0,
       columnKey: 'A',
+      sheetName: 'Sheet 1',
       getCellValue: () => '',
+      resolveColumnKey: (index: number) => columns[index],
     }
     const targets = resolveFunctionTargets(
       {
@@ -142,6 +148,55 @@ describe('applyCellFunctions', () => {
       { rowIndex: 2, columnKey: 'B' },
       { rowIndex: 1, columnKey: 'B' },
     ])
+  })
+
+  it('attaches sheet metadata when explicit cells specify a sheet', () => {
+    const columns = ['A']
+    const context = {
+      rows: [{ A: createCell('1') }],
+      columns,
+      rowIndex: 0,
+      columnKey: 'A',
+      sheetName: 'Sheet 1',
+      getCellValue: () => '',
+      resolveColumnKey: (index: number) => columns[index],
+    }
+    const targets = resolveFunctionTargets(
+      {
+        cells: [{ row: 1, key: 'A', sheet: 'Sheet 2' }],
+      },
+      context,
+    )
+    expect(targets).toEqual([{ rowIndex: 0, columnKey: 'A', sheetName: 'Sheet 2' }])
+  })
+
+  it('evaluates macros that reference cells on other sheets', () => {
+    const analysisRows: TableRow[] = [
+      {
+        input: createCell('3'),
+        result: {
+          value: '',
+          func: {
+            name: 'sum',
+            args: {
+              cells: [
+                { row: 1, key: 'input' },
+                { row: 1, key: 'input', sheet: 'Data' },
+              ],
+            },
+          },
+        },
+      },
+    ]
+    const workbook: TableSheet[] = [
+      { name: 'Analysis', rows: analysisRows },
+      { name: 'Data', rows: [{ input: createCell('7') }] },
+    ]
+    const evaluated = applyCellFunctions(analysisRows, ['input', 'result'], {
+      workbook,
+      sheetName: 'Analysis',
+    })
+    expect(evaluated[0]?.result?.value).toBe('10')
   })
 
   it('applies style directives without overriding values when handlers return structured output', () => {
