@@ -371,22 +371,19 @@ export default function MacroSection({
         </div>
 
         <div className="rounded-lg border border-slate-200 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">
-            {select('関数を選択セルに適用', 'Apply a function to the selection')}
-          </h3>
-          <p className="mt-2 text-sm text-slate-600">
-            {select(
-              '結果を書き込むセルを先に選択してから、参照したいセルをすべて登録してください。',
-              'Select the destination cells first, then list every input cell the macro should read.',
-            )}
-          </p>
-          <div className="mt-4 space-y-4">
-            <label className="block text-xs font-semibold text-slate-700">
-              {select('利用可能な関数', 'Available functions')}
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="text-sm font-semibold text-slate-900">{select('関数を選択セルに適用', 'Apply a function')}</h3>
+            <p className="text-xs text-slate-500">
+              {select('入力セルを登録してから適用します。', 'Register input cells before applying.')}
+            </p>
+          </div>
+          <div className="mt-3 space-y-3">
+            <label className="flex flex-col text-xs font-semibold text-slate-700 sm:flex-row sm:items-center sm:gap-3">
+              <span>{select('利用可能な関数', 'Available functions')}</span>
               <select
                 value={selectedFunctionId}
                 onChange={(event) => setSelectedFunctionId(event.target.value)}
-                className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                className="mt-1 flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 sm:mt-0"
                 data-testid="macro-function-select"
               >
                 {availableFunctions.length === 0 && (
@@ -399,45 +396,68 @@ export default function MacroSection({
                 ))}
               </select>
             </label>
-            <div className="space-y-4">
-              <p className="text-xs text-slate-500">
-                {select(
-                  '集計でも演算でも、参照元のセルをすべてここに並べてください。選択範囲をそのまま取り込むこともできます。',
-                  'List every input cell here (aggregations and formulas alike). You can import the current selection directly.',
-                )}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              <span>{select(`入力セル: ${cellReferences.length} 件`, `Input cells: ${cellReferences.length}`)}</span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-white disabled:opacity-50"
+                  onClick={handleAddCellReference}
+                  disabled={!columns.length || !sheetNames.length}
+                >
+                  {select('セルを追加', 'Add')}
+                </button>
+                <button
+                  type="button"
+                  className="rounded border border-blue-200 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-white disabled:opacity-50"
+                  onClick={handleImportSelectionAsInputs}
+                  disabled={!selectionRange || !columns.length || !sheetNames.length}
+                >
+                  {select('選択を追加', 'Use selection')}
+                </button>
+                <button
+                  type="button"
+                  className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-white disabled:opacity-50"
+                  onClick={handleClearCellReferences}
+                  disabled={!cellReferences.length}
+                >
+                  {select('クリア', 'Clear')}
+                </button>
+              </div>
+            </div>
+            {cellReferences.length === 0 ? (
+              <p className="rounded border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500">
+                {select('参照セルが未設定です。上のボタンから追加してください。', 'No input cells configured. Use the buttons above.')}
               </p>
-              {cellReferences.length === 0 ? (
-                <p className="text-xs text-slate-500">
-                  {select(
-                    '入力セルが未設定です。「セルを追加」または「選択セルを入力に追加」を押してください。',
-                    'No input cells configured yet. Use "Add a cell" or "Add selection as inputs".',
-                  )}
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {cellReferences.map((reference, index) => (
-                    <div
-                      key={reference.id}
-                      className="flex flex-wrap items-end gap-3 rounded border border-slate-200 p-3"
-                    >
-                      <div className="flex flex-1 flex-wrap gap-3">
-                        <label className="block text-xs font-semibold text-slate-700">
-                          {select('行番号', 'Row number')}
+            ) : (
+              <div className="overflow-x-auto rounded border border-slate-200">
+                <table className="min-w-full text-sm text-slate-700">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-2 py-2 text-left">{select('行番号', 'Row')}</th>
+                      <th className="px-2 py-2 text-left">{select('列', 'Column')}</th>
+                      <th className="px-2 py-2 text-left">{select('シート', 'Sheet')}</th>
+                      <th className="px-2 py-2 text-left">{select('操作', 'Actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cellReferences.map((reference, index) => (
+                      <tr key={reference.id} className="border-t border-slate-100">
+                        <td className="px-2 py-1.5">
                           <input
                             type="number"
                             min={1}
                             value={reference.row}
                             onChange={(event) => handleChangeCellReferenceRow(reference.id, event.target.value)}
-                            className="mt-1 w-32 rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            className="w-20 rounded border border-slate-300 px-2 py-1 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                             placeholder={String(index + 1)}
                           />
-                        </label>
-                        <label className="block text-xs font-semibold text-slate-700">
-                          {select('列', 'Column')}
+                        </td>
+                        <td className="px-2 py-1.5">
                           <select
                             value={reference.columnKey}
                             onChange={(event) => handleChangeCellReferenceColumn(reference.id, event.target.value)}
-                            className="mt-1 min-w-[8rem] rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            className="min-w-[7rem] rounded border border-slate-300 px-2 py-1 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                           >
                             {columns.length === 0 && <option value="">{select('列がありません', 'No columns')}</option>}
                             {columns.map((column) => (
@@ -446,13 +466,12 @@ export default function MacroSection({
                               </option>
                             ))}
                           </select>
-                        </label>
-                        <label className="block text-xs font-semibold text-slate-700">
-                          {select('シート', 'Sheet')}
+                        </td>
+                        <td className="px-2 py-1.5">
                           <select
                             value={reference.sheetName}
                             onChange={(event) => handleChangeCellReferenceSheet(reference.id, event.target.value)}
-                            className="mt-1 min-w-[8rem] rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            className="min-w-[7rem] rounded border border-slate-300 px-2 py-1 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                           >
                             {sheetNames.map((name) => (
                               <option key={name} value={name}>
@@ -460,52 +479,22 @@ export default function MacroSection({
                               </option>
                             ))}
                           </select>
-                        </label>
-                      </div>
-                      <button
-                        type="button"
-                        className="rounded border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                        onClick={() => handleRemoveCellReference(reference.id)}
-                      >
-                        {select('削除', 'Remove')}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="rounded border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                  onClick={handleAddCellReference}
-                  disabled={!columns.length || !sheetNames.length}
-                >
-                  {select('セルを追加', 'Add a cell')}
-                </button>
-                <button
-                  type="button"
-                  className="rounded border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
-                  onClick={handleImportSelectionAsInputs}
-                  disabled={!selectionRange || !columns.length || !sheetNames.length}
-                >
-                  {select('選択セルを入力に追加', 'Add selection as inputs')}
-                </button>
-                <button
-                  type="button"
-                  className="rounded border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                  onClick={handleClearCellReferences}
-                  disabled={!cellReferences.length}
-                >
-                  {select('入力セルをクリア', 'Clear input cells')}
-                </button>
+                        </td>
+                        <td className="px-2 py-1.5 text-right">
+                          <button
+                            type="button"
+                            className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                            onClick={() => handleRemoveCellReference(reference.id)}
+                          >
+                            {select('削除', 'Remove')}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <p className="text-xs text-slate-500">
-                {select(
-                  '入力セルを追加した後は、もう一度結果を書き込むセルを選択してから「選択セルに適用」を押してください。',
-                  'After adding input cells, reselect the destination cells before applying the function.',
-                )}
-              </p>
-            </div>
+            )}
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
