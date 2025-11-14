@@ -99,4 +99,4 @@ func:
 ```
 
 ## カスタム関数との併用
-背景色変更などスタイルを伴う処理は、WASM マクロで柔軟に実装できます。`public/macros/sample_macros.wat` / `.wasm` には `color_if` サンプルが含まれており、`name: wasm:sample_macros.color_if` を設定すると 0 より大きい数値を淡い緑（`#a7f3d0`）にハイライトできます。詳細は `docs/wasm-macro-abi.md` を参照してください。
+背景色変更などスタイルを伴う処理は、WASM マクロで柔軟に実装できます。`public/macros/sample_macros.wat` / `.wasm` には `color_if` サンプルが含まれており、`name: wasm:macros.color_if` を設定すると 0 より大きい数値を淡い緑（`#a7f3d0`）にハイライトできます。詳細は `docs/wasm-macro-abi.md` を参照してください。
