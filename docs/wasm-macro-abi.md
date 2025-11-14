@@ -1,6 +1,6 @@
 # WASM マクロ ABI ガイド
 
-Gridelle で読み込む WebAssembly (WASM) マクロは、以下の ABI (Application Binary Interface) に従う必要があります。サンプル実装は `public/macros/sample_sum.wat` / `sample_sum.wasm` を参照してください（`sumRange` は最小構成、`color_if` はスタイル指示バッファを利用する応用例です）。
+Gridelle で読み込む WebAssembly (WASM) マクロは、以下の ABI (Application Binary Interface) に従う必要があります。サンプル実装は `public/macros/sample_macros.wat` / `sample_macros.wasm` を参照してください（`sumRange` は最小構成、`color_if` はスタイル指示バッファを利用する応用例です）。
 
 ## 実装要件
 
@@ -49,7 +49,7 @@ Gridelle で読み込む WebAssembly (WASM) マクロは、以下の ABI (Applic
 ```yaml
 value: ""
 func:
-  name: "wasm:sample_sum.sumRange"
+  name: "wasm:sample_macros.sumRange"
   args:
     axis: "column"       # 既定値。row を指定すると行方向に走査
     key: "effort"        # 対象列キー
@@ -62,7 +62,7 @@ func:
 
 ```yaml
 func:
-  name: "wasm:sample_sum.rowSum"
+  name: "wasm:sample_macros.rowSum"
   args:
     axis: "row"
     rows: 3
@@ -82,13 +82,13 @@ func:
         columnIndex: 2
 ```
 
-### スタイル出力を行うサンプル (`sample_sum.color_if`)
-`sample_sum.wasm` には 0 より大きな値を検知して淡い緑にする `color_if` 関数も含まれています。選択したセルの値を読み取り、スタイル指示バッファへ `bgColor = #a7f3d0` を書き込むサンプルです。
+### スタイル出力を行うサンプル (`sample_macros.color_if`)
+`sample_macros.wasm` には 0 より大きな値を検知して淡い緑にする `color_if` 関数も含まれています。選択したセルの値を読み取り、スタイル指示バッファへ `bgColor = #a7f3d0` を書き込むサンプルです。
 
 ```yaml
 value: ""
 func:
-  name: "wasm:sample_sum.color_if"
+  name: "wasm:sample_macros.color_if"
   args:
     key: effort
     rows:
