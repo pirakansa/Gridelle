@@ -5,6 +5,15 @@ import type { EditingCellState, SelectionRange } from '../../../pages/top/useSpr
 import { summarizeCellFunction } from '../../../pages/top/utils/cellFunctionSummary'
 import { useI18n } from '../../../utils/i18n'
 
+type DataGridBindings = {
+  className?: string
+  style?: React.CSSProperties | null
+  onMouseDown?: (_event: React.MouseEvent<HTMLTableCellElement>) => void
+  onMouseOver?: (_event: React.MouseEvent<HTMLTableCellElement>) => void
+  onContextMenu?: (_event: React.MouseEvent<HTMLTableCellElement>) => void
+  onKeyUp?: (_event: React.KeyboardEvent<HTMLTableCellElement>) => void
+}
+
 type EditableCellProps = {
   column: string
   columnIndex: number
@@ -23,6 +32,7 @@ type EditableCellProps = {
   onStartFillDrag: (_event: React.PointerEvent<HTMLButtonElement>) => void
   onCellEditorBlur: () => void
   onCellEditorKeyDown: (_event: React.KeyboardEvent<HTMLTextAreaElement>) => void
+  dataGridBindings?: DataGridBindings
 }
 
 // Function Header: Renders content/editing textarea along with selection/fill affordances.
@@ -44,6 +54,7 @@ export default function EditableCell({
   onStartFillDrag,
   onCellEditorBlur,
   onCellEditorKeyDown,
+  dataGridBindings,
 }: EditableCellProps): React.ReactElement {
   const { select } = useI18n()
   const cellValue = cell?.value ?? ''
@@ -100,6 +111,17 @@ export default function EditableCell({
     columnIndex,
   })
 
+  const mergedClassName = React.useMemo(() => {
+    return [dataGridBindings?.className, className].filter(Boolean).join(' ')
+  }, [className, dataGridBindings?.className])
+
+  const mergedStyle = React.useMemo<React.CSSProperties>(() => {
+    if (!dataGridBindings?.style) {
+      return cellStyle
+    }
+    return { ...dataGridBindings.style, ...cellStyle }
+  }, [cellStyle, dataGridBindings?.style])
+
   const commitDraftValue = React.useCallback(() => {
     if (discardRef.current || hasCommittedRef.current) {
       return
@@ -132,13 +154,15 @@ export default function EditableCell({
 
   return (
     <td
-      className={className}
+      className={mergedClassName}
       data-testid={`cell-box-${rowIndex}-${column}`}
       data-has-function={hasFunction ? 'true' : undefined}
       data-selected={
         activeRange && isCellWithinRange(activeRange, rowIndex, columnIndex) ? 'true' : undefined
       }
-      onPointerDown={(event) => {
+      onMouseDown={(event) => {
+        dataGridBindings?.onMouseDown?.(event)
+        const pointerEvent = event as unknown as React.PointerEvent<HTMLTableCellElement>
         if (editingCell && !isEditing) {
           const activeElement = document.activeElement
           if (activeElement instanceof HTMLElement) {
@@ -146,15 +170,23 @@ export default function EditableCell({
           }
         }
         if (!isEditing && !editingCell) {
-          event.preventDefault()
+          pointerEvent.preventDefault()
         }
-        onPointerDown(event, rowIndex, columnIndex)
+        onPointerDown(pointerEvent, rowIndex, columnIndex)
       }}
       onPointerEnter={() => onPointerEnter(rowIndex, columnIndex)}
+      onMouseOver={(event) => {
+        dataGridBindings?.onMouseOver?.(event)
+        onPointerEnter(rowIndex, columnIndex)
+      }}
       onClick={(event) => onCellClick(event, rowIndex, columnIndex)}
-      onDoubleClick={() => onCellDoubleClick(rowIndex, columnIndex)}
+      onDoubleClick={() => {
+        onCellDoubleClick(rowIndex, columnIndex)
+      }}
+      onContextMenu={(event) => dataGridBindings?.onContextMenu?.(event)}
+      onKeyUp={(event) => dataGridBindings?.onKeyUp?.(event)}
       onDragStart={(event) => event.preventDefault()}
-      style={cellStyle}
+      style={mergedStyle}
     >
       {hasFunction && !isEditing ? (
         <span
@@ -177,19 +209,20 @@ export default function EditableCell({
             rows={Math.max(1, draftValue.split('\n').length)}
             onBlur={handleEditorBlur}
             onKeyDown={handleEditorKeyDown}
+            onMouseDown={(event) => event.stopPropagation()}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => event.stopPropagation()}
             onDoubleClick={(event) => event.stopPropagation()}
             onPaste={(event) => event.stopPropagation()}
             draggable={false}
-            style={cellStyle}
+            style={mergedStyle}
           />
         ) : (
           <div
             className="w-full flex-1 select-none whitespace-pre rounded px-2 py-2 text-left text-sm"
             data-testid={`cell-display-${rowIndex}-${column}`}
             draggable={false}
-            style={cellStyle}
+            style={mergedStyle}
           >
             {cellValue}
           </div>
