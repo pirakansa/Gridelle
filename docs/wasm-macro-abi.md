@@ -1,6 +1,6 @@
 # WASM マクロ ABI ガイド
 
-Gridelle で読み込む WebAssembly (WASM) マクロは、以下の ABI (Application Binary Interface) に従う必要があります。サンプル実装は `public/macros/sample_sum.wat` / `sample_sum.wasm` を参照してください（サンプルは第3引数を使わない最小構成です。スタイル指示が必要な場合は本ガイドに沿って関数シグネチャを拡張してください）。
+Gridelle で読み込む WebAssembly (WASM) マクロは、以下の ABI (Application Binary Interface) に従う必要があります。サンプル実装は `public/macros/sample_sum.wat` / `sample_sum.wasm` を参照してください（`sumRange` は最小構成、`color_if` はスタイル指示バッファを利用する応用例です）。
 
 ## 実装要件
 
@@ -81,6 +81,22 @@ func:
       - row: 2
         columnIndex: 2
 ```
+
+### スタイル出力を行うサンプル (`sample_sum.color_if`)
+`sample_sum.wasm` には 0 より大きな値を検知して淡い緑にする `color_if` 関数も含まれています。選択したセルの値を読み取り、スタイル指示バッファへ `bgColor = #a7f3d0` を書き込むサンプルです。
+
+```yaml
+value: ""
+func:
+  name: "wasm:sample_sum.color_if"
+  args:
+    key: effort
+    rows:
+      start: 2
+      end: 10
+```
+
+0 以下の値は背景色がクリアされるため、条件付きフォーマットの雰囲気を手軽に試せます。
 
 | フィールド | 意味 |
 | --- | --- |

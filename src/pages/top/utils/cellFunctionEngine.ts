@@ -43,7 +43,6 @@ export type RegisteredFunctionMeta = {
   source: 'builtin' | 'wasm'
   moduleId?: string
   exportName?: string
-  order?: number
 }
 
 type RegistryRecord = {
@@ -61,7 +60,6 @@ type RegisterOptions = {
   source?: RegisteredFunctionMeta['source']
   moduleId?: string
   exportName?: string
-  order?: number
 }
 
 export function registerCellFunction(
@@ -80,7 +78,6 @@ export function registerCellFunction(
     source: options?.source ?? 'builtin',
     moduleId: options?.moduleId,
     exportName: options?.exportName,
-    order: options?.order,
   }
   registry.set(normalized, {
     handler,
@@ -102,14 +99,7 @@ const getCellFunctionHandler = (name: string): CellFunctionHandler | undefined =
 export const listRegisteredFunctions = (): RegisteredFunctionMeta[] =>
   Array.from(registry.values())
     .map((record) => record.meta)
-    .sort((a, b) => {
-      const orderA = typeof a.order === 'number' ? a.order : Number.POSITIVE_INFINITY
-      const orderB = typeof b.order === 'number' ? b.order : Number.POSITIVE_INFINITY
-      if (orderA !== orderB) {
-        return orderA - orderB
-      }
-      return a.label.localeCompare(b.label, 'ja')
-    })
+    .sort((a, b) => a.label.localeCompare(b.label, 'ja'))
 
 type EvaluationCacheEntry = {
   value: string
@@ -660,7 +650,6 @@ registerCellFunction('sum', sumFunctionHandler, {
   label: 'BIF: sum',
   source: 'builtin',
   description: '指定したセル範囲の値を合計します。',
-  order: 1,
 })
 
 const multiplyFunctionHandler: CellFunctionHandler = (args, context) => {
@@ -697,261 +686,4 @@ registerCellFunction('multiply', multiplyFunctionHandler, {
   label: 'BIF: multiply',
   source: 'builtin',
   description: '指定したセル範囲の値を掛け合わせます。',
-  order: 2,
-})
-
-type ConditionalOperator =
-  | 'eq'
-  | 'neq'
-  | 'gt'
-  | 'gte'
-  | 'lt'
-  | 'lte'
-  | 'includes'
-  | 'contains'
-  | 'empty'
-  | 'not_empty'
-
-const normalizeConditionalOperator = (value: unknown): ConditionalOperator => {
-  if (typeof value !== 'string') {
-    return 'eq'
-  }
-  const normalized = value.trim().toLowerCase()
-  if (
-    normalized === 'neq' ||
-    normalized === 'ne' ||
-    normalized === 'not' ||
-    normalized === 'not_equal' ||
-    normalized === 'not-equal'
-  ) {
-    return 'neq'
-  }
-  if (normalized === 'gt' || normalized === 'greater' || normalized === 'greater_than') {
-    return 'gt'
-  }
-  if (normalized === 'gte' || normalized === 'ge' || normalized === 'greater_or_equal') {
-    return 'gte'
-  }
-  if (normalized === 'lt' || normalized === 'less' || normalized === 'less_than') {
-    return 'lt'
-  }
-  if (normalized === 'lte' || normalized === 'le' || normalized === 'less_or_equal') {
-    return 'lte'
-  }
-  if (normalized === 'includes' || normalized === 'contains') {
-    return 'includes'
-  }
-  if (normalized === 'empty' || normalized === 'is_empty') {
-    return 'empty'
-  }
-  if (normalized === 'not_empty' || normalized === 'not-empty' || normalized === 'filled') {
-    return 'not_empty'
-  }
-  if (normalized === 'contains') {
-    return 'contains'
-  }
-  return 'eq'
-}
-
-const coerceNumber = (value: unknown): number | null => {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value
-  }
-  if (typeof value === 'string' && value.trim().length > 0) {
-    const parsed = Number(value)
-    return Number.isFinite(parsed) ? parsed : null
-  }
-  if (typeof value === 'boolean') {
-    return value ? 1 : 0
-  }
-  return null
-}
-
-const stringValue = (value: unknown): string => {
-  if (value === null || value === undefined) {
-    return ''
-  }
-  return String(value)
-}
-
-const gatherComparisonValues = (record: Record<string, unknown>): unknown[] => {
-  const result: unknown[] = []
-  const append = (candidate: unknown): void => {
-    if (candidate !== undefined) {
-      result.push(candidate)
-    }
-  }
-  if (Array.isArray(record.values)) {
-    record.values.forEach((entry) => append(entry))
-  }
-  append(record.value ?? record.target ?? record.equals ?? record.threshold)
-  if (Array.isArray(record.targets)) {
-    record.targets.forEach((entry) => append(entry))
-  }
-  if (result.length === 0) {
-    append(record.matchValue)
-  }
-  return result
-}
-
-const evaluateConditionForValue = (
-  actual: string,
-  expectedValues: unknown[],
-  operator: ConditionalOperator,
-  options: { caseInsensitive: boolean },
-): boolean => {
-  const normalizedActual = options.caseInsensitive ? actual.toLowerCase() : actual
-  switch (operator) {
-    case 'empty':
-      return actual.trim().length === 0
-    case 'not_empty':
-      return actual.trim().length > 0
-    case 'eq':
-    case 'neq': {
-      if (!expectedValues.length) {
-        return false
-      }
-      const comparator = (expected: unknown): boolean => {
-        const expectedNumber = coerceNumber(expected)
-        const actualNumber = coerceNumber(actual)
-        if (expectedNumber !== null && actualNumber !== null) {
-          return operator === 'eq' ? actualNumber === expectedNumber : actualNumber !== expectedNumber
-        }
-        const expectedString = options.caseInsensitive
-          ? stringValue(expected).trim().toLowerCase()
-          : stringValue(expected).trim()
-        return operator === 'eq'
-          ? normalizedActual === expectedString
-          : normalizedActual !== expectedString
-      }
-      return operator === 'eq'
-        ? expectedValues.some((expected) => comparator(expected))
-        : expectedValues.every((expected) => comparator(expected))
-    }
-    case 'gt':
-    case 'gte':
-    case 'lt':
-    case 'lte': {
-      if (!expectedValues.length) {
-        return false
-      }
-      const comparator = (expected: unknown): boolean => {
-        const expectedNumber = coerceNumber(expected)
-        const actualNumber = coerceNumber(actual)
-        if (expectedNumber === null || actualNumber === null) {
-          return false
-        }
-        if (operator === 'gt') {
-          return actualNumber > expectedNumber
-        }
-        if (operator === 'gte') {
-          return actualNumber >= expectedNumber
-        }
-        if (operator === 'lt') {
-          return actualNumber < expectedNumber
-        }
-        return actualNumber <= expectedNumber
-      }
-      return expectedValues.some((expected) => comparator(expected))
-    }
-    case 'includes':
-    case 'contains': {
-      if (!expectedValues.length) {
-        return false
-      }
-      return expectedValues.some((expected) => {
-        const expectedString = options.caseInsensitive
-          ? stringValue(expected).toLowerCase()
-          : stringValue(expected)
-        return normalizedActual.includes(expectedString)
-      })
-    }
-    default:
-      return false
-  }
-}
-
-const readTargetValue = (
-  target: ResolvedCellTarget,
-  context: CellFunctionContext,
-  rawSelfValue: string,
-): string => {
-  const resolvedSheet = target.sheetName ?? context.sheetName
-  const isSelf =
-    resolvedSheet === context.sheetName &&
-    target.rowIndex === context.rowIndex &&
-    target.columnKey === context.columnKey
-  if (isSelf) {
-    return rawSelfValue
-  }
-  return context.getCellValue(target.rowIndex, target.columnKey, {
-    ...(target.sheetName ? { sheetName: target.sheetName } : {}),
-  })
-}
-
-const conditionalFillFunctionHandler: CellFunctionHandler = (args, context) => {
-  const record = (args ?? {}) as Record<string, unknown>
-  const operator = normalizeConditionalOperator(record.operator)
-  const caseInsensitive = Boolean(record.caseInsensitive ?? record.ignoreCase ?? false)
-  const matchModeRaw =
-    typeof record.mode === 'string'
-      ? record.mode
-      : typeof record.match === 'string'
-        ? record.match
-        : typeof record.require === 'string'
-          ? record.require
-          : ''
-  const matchMode = matchModeRaw.trim().toLowerCase()
-  const matchStrategy: 'any' | 'all' = matchMode === 'all' || matchMode === 'every' ? 'all' : 'any'
-  const desiredColor = normalizeColorDirective(record.color) ?? '#fef3c7'
-  const elseColorProvided = Object.prototype.hasOwnProperty.call(record, 'elseColor')
-  const fallbackColor =
-    record.elseColor === null
-      ? null
-      : typeof record.elseColor === 'undefined'
-        ? undefined
-        : normalizeColorDirective(record.elseColor)
-  const comparisonValues = gatherComparisonValues(record)
-  const rawSelfValue = context.rows[context.rowIndex]?.[context.columnKey]?.value ?? ''
-  const hasTargetArgs =
-    'cells' in record || 'rows' in record || 'columns' in record || 'axis' in record || 'key' in record || 'keys' in record
-  const targets = hasTargetArgs ? resolveFunctionTargets(args, context) : []
-  const scopedTargets = targets.filter(
-    (target) =>
-      !(
-        (target.sheetName ?? context.sheetName) === context.sheetName &&
-        target.rowIndex === context.rowIndex &&
-        target.columnKey === context.columnKey
-      ),
-  )
-  const effectiveTargets = scopedTargets.length ? scopedTargets : targets
-  const valuesToInspect = effectiveTargets.length
-    ? effectiveTargets.map((target) => readTargetValue(target, context, rawSelfValue))
-    : [rawSelfValue]
-
-  const evaluator = (value: string): boolean =>
-    evaluateConditionForValue(value, comparisonValues, operator, { caseInsensitive })
-  const matches =
-    matchStrategy === 'all'
-      ? valuesToInspect.length > 0 && valuesToInspect.every((value) => evaluator(value))
-      : valuesToInspect.some((value) => evaluator(value))
-
-  if (!matches && !elseColorProvided) {
-    return ''
-  }
-
-  const styles: CellStyleDirectives = {}
-  if (matches) {
-    styles.bgColor = desiredColor
-  } else if (elseColorProvided) {
-    styles.bgColor = fallbackColor ?? null
-  }
-  return { styles }
-}
-
-registerCellFunction('color_if', conditionalFillFunctionHandler, {
-  label: 'BIF: color_if',
-  source: 'builtin',
-  description: '条件に応じてセルの背景色を変更します。',
-  order: 3,
 })
