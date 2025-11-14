@@ -24,8 +24,6 @@ describe('wasmMacroService', () => {
     const modules = getLoadedWasmModules()
     expect(modules.some((module) => module.id === 'test-sample')).toBe(true)
   })
-})
-
   it('passes style buffers to WASM exports that expect the third argument', async () => {
     const bytes = new Uint8Array([0x00]).buffer
     global.fetch = vi.fn(async () => ({
@@ -77,3 +75,4 @@ describe('wasmMacroService', () => {
     expect(evaluated[2]?.metric?.value).toBe('10')
     expect(evaluated[2]?.metric?.bgColor).toBe('#ff0000')
   })
+})
