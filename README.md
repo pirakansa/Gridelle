@@ -144,6 +144,7 @@ The GitHub integration panel lets you bounce between blob URLs, repository trees
 ## Automation helpers & docs
 - `docs/generate-large-yaml.mjs`: CLI script for producing synthetic workbooks when profiling the UI or benchmarking workers.
 - `docs/wasm-macro-abi.md`: ABI reference for building custom WebAssembly macros that Gridelle can load at runtime.
+- `docs/bif-functions.md`: Reference for Gridelle’s built-in spreadsheet functions (`sum`, `multiply`).
 - `docs/README.ja.md`: Japanese-language README retained for historical reasons.
 
 ## Project conventions
