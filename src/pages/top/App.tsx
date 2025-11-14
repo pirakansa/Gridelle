@@ -8,6 +8,7 @@ import SpreadsheetTable from '../../components/block/SpreadsheetTable'
 import MenuHeader from '../../components/block/MenuHeader'
 import YamlPanel from '../../components/block/YamlPanel'
 import SettingsOverlay from '../../components/block/SettingsOverlay'
+import SheetTabsBar from '../../components/block/SheetTabsBar'
 import GithubIntegrationPanel, {
   type GithubIntegrationLoadedFileInfo,
   type GithubIntegrationSaveNotice,
@@ -314,6 +315,12 @@ export default function App(): React.ReactElement {
           onPaste={spreadsheet.handlePaste}
           onCellEditorBlur={spreadsheet.handleCellEditorBlur}
           onCellEditorKeyDown={spreadsheet.handleCellEditorKeyDown}
+        />
+        <SheetTabsBar
+          sheetNames={spreadsheet.sheets.map((sheet) => sheet.name)}
+          activeSheetIndex={spreadsheet.activeSheetIndex}
+          onSelectSheet={spreadsheet.handleSelectSheet}
+          onAddSheet={spreadsheet.handleAddSheet}
         />
       </main>
       {isYamlInputOpen && (
