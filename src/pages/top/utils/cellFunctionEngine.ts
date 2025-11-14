@@ -519,3 +519,34 @@ registerCellFunction('sum', sumFunctionHandler, {
   source: 'builtin',
   description: '指定したセル範囲の値を合計します。',
 })
+
+const multiplyFunctionHandler: CellFunctionHandler = (args, context) => {
+  const targets = resolveFunctionTargets(args, context)
+  const scopedTargets = targets.filter(
+    (target) => !(target.rowIndex === context.rowIndex && target.columnKey === context.columnKey),
+  )
+  const effectiveTargets = scopedTargets.length ? scopedTargets : targets
+  if (!effectiveTargets.length) {
+    return ''
+  }
+  let product = 1
+  let hasNumeric = false
+  effectiveTargets.forEach(({ rowIndex, columnKey }) => {
+    const rawValue = context.getCellValue(rowIndex, columnKey)
+    const numericValue = Number(rawValue)
+    if (!Number.isNaN(numericValue)) {
+      product *= numericValue
+      hasNumeric = true
+    }
+  })
+  if (!hasNumeric) {
+    return ''
+  }
+  return product.toString()
+}
+
+registerCellFunction('multiply', multiplyFunctionHandler, {
+  label: 'BIF: multiply',
+  source: 'builtin',
+  description: '指定したセル範囲の値を掛け合わせます。',
+})

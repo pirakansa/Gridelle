@@ -49,11 +49,55 @@ describe('applyCellFunctions', () => {
     expect(evaluated[3]?.metric?.value).toBe('6')
   })
 
+  it('evaluates multiply functions across the specified column', () => {
+    const rows: TableRow[] = [
+      { metric: createCell('2') },
+      { metric: createCell('3') },
+      {
+        metric: {
+          value: '',
+          func: { name: 'multiply', args: { key: 'metric' } },
+        },
+      },
+    ]
+
+    const evaluated = applyCellFunctions(rows, ['metric'])
+
+    expect(evaluated[2]?.metric?.value).toBe('6')
+  })
+
+  it('limits multiply evaluation to the provided row range', () => {
+    const rows: TableRow[] = [
+      { metric: createCell('1') },
+      { metric: createCell('2') },
+      { metric: createCell('4') },
+      {
+        metric: {
+          value: '',
+          func: {
+            name: 'multiply',
+            args: {
+              key: 'metric',
+              rows: { start: 2, end: 3 },
+            },
+          },
+        },
+      },
+    ]
+
+    const evaluated = applyCellFunctions(rows, ['metric'])
+
+    expect(evaluated[3]?.metric?.value).toBe('8')
+  })
+
   it('lists registered functions with metadata', () => {
     const functions = listRegisteredFunctions()
     const sumEntry = functions.find((entry) => entry.id === 'sum')
     expect(sumEntry).toBeTruthy()
     expect(sumEntry?.source).toBe('builtin')
+    const multiplyEntry = functions.find((entry) => entry.id === 'multiply')
+    expect(multiplyEntry).toBeTruthy()
+    expect(multiplyEntry?.source).toBe('builtin')
   })
 
   it('resolves flexible targets including axis and column ranges', () => {
