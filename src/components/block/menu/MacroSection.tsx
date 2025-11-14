@@ -10,6 +10,7 @@ type MacroSectionProps = {
   columns: string[]
   sheetNames: string[]
   currentSheetName: string
+  sheetColumns: Record<string, string[]>
   selectionRange: SelectionRange | null
   hasSelection: boolean
   availableFunctions: RegisteredFunctionMeta[]
@@ -42,6 +43,7 @@ export default function MacroSection({
   columns,
   sheetNames,
   currentSheetName,
+  sheetColumns,
   selectionRange,
   hasSelection,
   availableFunctions,
@@ -59,20 +61,32 @@ export default function MacroSection({
   const [error, setError] = React.useState<LocalizedMessage | null>(null)
   const [isLoading, setLoading] = React.useState<boolean>(false)
 
+  const getColumnsForSheet = React.useCallback(
+    (sheetName: string): string[] => {
+      const custom = sheetColumns[sheetName]
+      if (custom && custom.length) {
+        return custom
+      }
+      return columns
+    },
+    [columns, sheetColumns],
+  )
+
   const createCellReference = React.useCallback(
     (overrides?: Partial<Pick<CellReferenceDraft, 'row' | 'columnKey' | 'sheetName'>>): CellReferenceDraft => {
       const id = `cell-ref-${cellRefSequence.current}`
       cellRefSequence.current += 1
       const defaultSheet = currentSheetName || sheetNames[0] || ''
+      const availableColumns = getColumnsForSheet(defaultSheet)
       return {
         id,
         row: '',
-        columnKey: columns[0] ?? '',
+        columnKey: availableColumns[0] ?? '',
         sheetName: defaultSheet,
         ...overrides,
       }
     },
-    [cellRefSequence, columns, currentSheetName, sheetNames],
+    [cellRefSequence, currentSheetName, getColumnsForSheet, sheetNames],
   )
 
   React.useEffect(() => {
@@ -80,18 +94,25 @@ export default function MacroSection({
       if (!prev.length) {
         return prev
       }
-      const fallback = columns[0] ?? ''
       let didChange = false
       const next = prev.map((ref) => {
-        if (!ref.columnKey || !columns.includes(ref.columnKey)) {
+        const available = getColumnsForSheet(ref.sheetName || currentSheetName)
+        if (!available.length) {
+          if (ref.columnKey) {
+            didChange = true
+            return { ...ref, columnKey: '' }
+          }
+          return ref
+        }
+        if (!available.includes(ref.columnKey)) {
           didChange = true
-          return { ...ref, columnKey: fallback }
+          return { ...ref, columnKey: available[0] }
         }
         return ref
       })
       return didChange ? next : prev
     })
-  }, [columns])
+  }, [currentSheetName, getColumnsForSheet])
 
   React.useEffect(() => {
     setCellReferences((prev) => {
@@ -115,6 +136,10 @@ export default function MacroSection({
   const handleAddCellReference = React.useCallback(() => {
     setCellReferences((prev) => [...prev, createCellReference()])
   }, [createCellReference])
+
+  const activeSheetColumns = getColumnsForSheet(currentSheetName)
+  const canAddCells = sheetNames.some((name) => getColumnsForSheet(name).length > 0)
+  const canImportSelection = Boolean(selectionRange && activeSheetColumns.length)
 
   const handleRemoveCellReference = React.useCallback((id: string): void => {
     setCellReferences((prev) => prev.filter((ref) => ref.id !== id))
@@ -403,7 +428,7 @@ export default function MacroSection({
                   type="button"
                   className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-white disabled:opacity-50"
                   onClick={handleAddCellReference}
-                  disabled={!columns.length || !sheetNames.length}
+                  disabled={!canAddCells}
                 >
                   {select('セルを追加', 'Add')}
                 </button>
@@ -411,7 +436,7 @@ export default function MacroSection({
                   type="button"
                   className="rounded border border-blue-200 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-white disabled:opacity-50"
                   onClick={handleImportSelectionAsInputs}
-                  disabled={!selectionRange || !columns.length || !sheetNames.length}
+                  disabled={!canImportSelection}
                 >
                   {select('選択を追加', 'Use selection')}
                 </button>
@@ -430,7 +455,7 @@ export default function MacroSection({
                 {select('参照セルが未設定です。上のボタンから追加してください。', 'No input cells configured. Use the buttons above.')}
               </p>
             ) : (
-              <div className="overflow-x-auto rounded border border-slate-200">
+              <div className="max-h-72 overflow-auto rounded border border-slate-200">
                 <table className="min-w-full text-sm text-slate-700">
                   <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                     <tr>
@@ -441,8 +466,11 @@ export default function MacroSection({
                     </tr>
                   </thead>
                   <tbody>
-                    {cellReferences.map((reference, index) => (
-                      <tr key={reference.id} className="border-t border-slate-100">
+                    {cellReferences.map((reference, index) => {
+                      const sheetKey = reference.sheetName || currentSheetName
+                      const availableColumns = getColumnsForSheet(sheetKey)
+                      return (
+                        <tr key={reference.id} className="border-t border-slate-100">
                         <td className="px-2 py-1.5">
                           <input
                             type="number"
@@ -459,8 +487,8 @@ export default function MacroSection({
                             onChange={(event) => handleChangeCellReferenceColumn(reference.id, event.target.value)}
                             className="min-w-[7rem] rounded border border-slate-300 px-2 py-1 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                           >
-                            {columns.length === 0 && <option value="">{select('列がありません', 'No columns')}</option>}
-                            {columns.map((column) => (
+                            {availableColumns.length === 0 && <option value="">{select('列がありません', 'No columns')}</option>}
+                            {availableColumns.map((column) => (
                               <option key={column} value={column}>
                                 {column}
                               </option>
@@ -490,7 +518,8 @@ export default function MacroSection({
                           </button>
                         </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

@@ -285,6 +285,7 @@ export default function App(): React.ReactElement {
         macroFunctions={spreadsheet.macroFunctions}
         loadedMacroModules={spreadsheet.loadedMacroModules}
         onLoadWasmModule={spreadsheet.loadWasmModule}
+        sheetColumns={spreadsheet.sheetColumns}
         loginMode={loginMode}
         userEmail={currentUser?.email ?? null}
         onLogout={handleLogout}

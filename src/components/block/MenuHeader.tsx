@@ -61,6 +61,7 @@ type Props = {
   macroFunctions: RegisteredFunctionMeta[]
   loadedMacroModules: LoadedWasmModule[]
   onLoadWasmModule: (_params: { moduleId: string; url: string }) => Promise<void>
+  sheetColumns: Record<string, string[]>
   loginMode: LoginMode | null
   userEmail: string | null
   onLogout: () => Promise<void>
@@ -114,6 +115,7 @@ export default function MenuHeader({
   macroFunctions,
   loadedMacroModules,
   onLoadWasmModule,
+  sheetColumns,
   loginMode,
   userEmail,
   onLogout,
@@ -332,6 +334,7 @@ export default function MenuHeader({
                   columns={columns}
                   sheetNames={sheetNames}
                   currentSheetName={currentSheetName}
+                  sheetColumns={sheetColumns}
                   selectionRange={selectionRange}
                   hasSelection={hasSelection}
                   availableFunctions={macroFunctions}

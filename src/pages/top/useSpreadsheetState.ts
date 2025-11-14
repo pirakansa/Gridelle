@@ -1,6 +1,12 @@
 // File Header: Custom hook composing spreadsheet data and interaction controllers.
 import React from 'react'
-import { createCell, type TableRow, type TableSheet, type CellFunctionConfig } from '../../services/workbookService'
+import {
+  createCell,
+  deriveColumns,
+  type TableRow,
+  type TableSheet,
+  type CellFunctionConfig,
+} from '../../services/workbookService'
 import { useSpreadsheetDataController } from './hooks/useSpreadsheetDataController'
 import { useSpreadsheetInteractionController } from './hooks/useSpreadsheetInteractionController'
 import { generateNextColumnKey } from './hooks/internal/spreadsheetDataUtils'
@@ -98,6 +104,7 @@ type UseSpreadsheetState = {
   loadedMacroModules: LoadedWasmModule[]
   loadWasmModule: (_params: { moduleId: string; url: string }) => Promise<void>
   applySelectionFunction: (_config: CellFunctionConfig | null) => void
+  sheetColumns: Record<string, string[]>
 }
 
 const createSeedRow = (entries: Record<string, string>): TableRow =>
@@ -159,6 +166,13 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     [registeredFunctions],
   )
   const activeSheetName = sheets[activeSheetIndex]?.name ?? 'Sheet 1'
+  const sheetColumns = React.useMemo(() => {
+    const map: Record<string, string[]> = {}
+    sheets.forEach((sheet) => {
+      map[sheet.name] = deriveColumns(sheet.rows)
+    })
+    return map
+  }, [sheets])
   const computedRows = React.useMemo(() => {
     void macroRegistrySignature
     return applyCellFunctions(rows, columns, { workbook: sheets, sheetName: activeSheetName })
@@ -545,5 +559,6 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     loadedMacroModules: loadedModules,
     loadWasmModule,
     applySelectionFunction,
+    sheetColumns,
   }
 }
