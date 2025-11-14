@@ -98,6 +98,9 @@ describe('applyCellFunctions', () => {
     const multiplyEntry = functions.find((entry) => entry.id === 'multiply')
     expect(multiplyEntry).toBeTruthy()
     expect(multiplyEntry?.source).toBe('builtin')
+    const colorEntry = functions.find((entry) => entry.id === 'color_if')
+    expect(colorEntry).toBeTruthy()
+    expect(colorEntry?.source).toBe('builtin')
   })
 
   it('resolves flexible targets including axis and column ranges', () => {
@@ -221,5 +224,51 @@ describe('applyCellFunctions', () => {
     const evaluated = applyCellFunctions(rows, ['A'])
     expect(evaluated[0]?.A?.value).toBe('42')
     expect(evaluated[0]?.A?.bgColor).toBe('#ff0000')
+  })
+
+  it('applies color_if to highlight cells when the condition matches', () => {
+    const rows: TableRow[] = [
+      {
+        status: {
+          value: 'DONE',
+          func: {
+            name: 'color_if',
+            args: {
+              operator: 'eq',
+              value: 'DONE',
+              color: '#a7f3d0',
+            },
+          },
+        },
+      },
+    ]
+
+    const evaluated = applyCellFunctions(rows, ['status'])
+    expect(evaluated[0]?.status?.value).toBe('DONE')
+    expect(evaluated[0]?.status?.bgColor).toBe('#a7f3d0')
+  })
+
+  it('clears the background color when color_if does not match and elseColor is null', () => {
+    const rows: TableRow[] = [
+      {
+        status: {
+          value: 'READY',
+          bgColor: '#fed7aa',
+          func: {
+            name: 'color_if',
+            args: {
+              operator: 'eq',
+              value: 'DONE',
+              color: '#a7f3d0',
+              elseColor: null,
+            },
+          },
+        },
+      },
+    ]
+
+    const evaluated = applyCellFunctions(rows, ['status'])
+    expect(evaluated[0]?.status?.value).toBe('READY')
+    expect(evaluated[0]?.status?.bgColor).toBeUndefined()
   })
 })

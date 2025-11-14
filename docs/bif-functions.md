@@ -55,6 +55,18 @@ rows:
 ### シートをまたぐ参照
 `cells[].sheet` にシート名を入れると、アクティブシート以外の値も読み取れます。演算は常に「セルが置かれているシート」単位で行われるため、例えば `バックログ` シートにある関数はそのシートだけで再計算されます。別シートの値を参照した場合でも、ソースシートを編集してから対象シートに戻ると最新値が反映されます。
 
+### 条件演算子（`color_if` で使用）
+`color_if` は以下のパラメータで条件を定義します。
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `operator` | string | `eq` / `neq` / `gt` / `gte` / `lt` / `lte` / `includes` / `empty` / `not_empty` をサポート。既定は `eq`。 |
+| `value` / `values` | string \| number \| array | 比較対象。`values` で複数候補を列挙可能。 |
+| `caseInsensitive` | boolean | true の場合は大文字小文字を無視。既定は false。 |
+| `mode` | string | `any`（既定）か `all`。`cells` に複数セルを渡した際の真偽判定方法です。 |
+| `color` | string | 条件が真だったときに設定する背景色。指定が無い場合は `#fef3c7`。 |
+| `elseColor` | string \| null | 条件が偽だったときに適用する背景色。`null` を渡すと背景色をクリアします。 |
+
 ## 関数一覧
 
 ### `sum`
@@ -95,6 +107,39 @@ func:
         key: effort
       - sheet: "完了済み"
         row: 1
+        key: effort
+```
+
+### `color_if`
+- **用途**: 指定したセルの値が条件に一致した場合に背景色を変更します。値自体はそのまま維持されます。
+- **戻り値**: 文字列は変更せず、`styles.bgColor` のみを更新します。
+- **ユースケース**: ステータス列が `DONE` の場合だけ淡い緑でハイライトする／数値がしきい値を超えたら赤にする 等。
+
+**例: 自セルを判定して背景色を切り替える**
+
+```yaml
+value: "DONE"
+func:
+  name: color_if
+  args:
+    operator: eq
+    value: "DONE"
+    color: "#a7f3d0"
+    elseColor: null
+```
+
+**例: 別セルを参照し、60 を超えたら赤背景にする**
+
+```yaml
+value: ""
+func:
+  name: color_if
+  args:
+    operator: gt
+    value: 60
+    color: "#fecaca"
+    cells:
+      - row: 2
         key: effort
 ```
 
