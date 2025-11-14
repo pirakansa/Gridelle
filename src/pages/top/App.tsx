@@ -281,6 +281,7 @@ export default function App(): React.ReactElement {
         onClearSelectionStyles={spreadsheet.clearSelectionStyles}
         onApplySelectionFunction={spreadsheet.applySelectionFunction}
         canDeleteSheet={spreadsheet.canDeleteSheet}
+        selectionRange={spreadsheet.selection}
         macroFunctions={spreadsheet.macroFunctions}
         loadedMacroModules={spreadsheet.loadedMacroModules}
         onLoadWasmModule={spreadsheet.loadWasmModule}

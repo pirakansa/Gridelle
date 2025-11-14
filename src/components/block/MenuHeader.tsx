@@ -1,6 +1,6 @@
 // File Header: Application menu combining global controls with spreadsheet utilities.
 import React from 'react'
-import type { Notice } from '../../pages/top/types'
+import type { Notice, SelectionRange } from '../../pages/top/types'
 import type { LoginMode } from '../../services/auth'
 import { layoutTheme } from '../../utils/Theme'
 import MenuTabs, { type MenuSectionId } from './menu/MenuTabs'
@@ -57,6 +57,7 @@ type Props = {
   onClearSelectionStyles: () => void
   onApplySelectionFunction: (_config: CellFunctionConfig | null) => void
   canDeleteSheet: boolean
+  selectionRange: SelectionRange | null
   macroFunctions: RegisteredFunctionMeta[]
   loadedMacroModules: LoadedWasmModule[]
   onLoadWasmModule: (_params: { moduleId: string; url: string }) => Promise<void>
@@ -109,6 +110,7 @@ export default function MenuHeader({
   onClearSelectionStyles,
   onApplySelectionFunction,
   canDeleteSheet,
+  selectionRange,
   macroFunctions,
   loadedMacroModules,
   onLoadWasmModule,
@@ -328,6 +330,7 @@ export default function MenuHeader({
               {activeMenuSection === 'macro' && (
                 <MacroSection
                   columns={columns}
+                  selectionRange={selectionRange}
                   hasSelection={hasSelection}
                   availableFunctions={macroFunctions}
                   loadedModules={loadedMacroModules}
