@@ -8,7 +8,7 @@ type WasmSectionProps = {
   onLoadModule: (_params: { moduleId: string; url: string }) => Promise<void>
 }
 
-const SAMPLE_MODULE_ID = 'sample_macros'
+const SAMPLE_MODULE_ID = 'macros'
 const SAMPLE_URL = '/macros/sample_macros.wasm'
 
 type LocalizedMessage = {
@@ -74,7 +74,7 @@ export default function WasmSection({ loadedModules, onLoadModule }: WasmSection
               value={moduleId}
               onChange={(event) => setModuleId(event.target.value)}
               className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              placeholder="sample_macros"
+              placeholder="macros"
             />
           </label>
           <label className="block text-xs font-semibold text-slate-700">
