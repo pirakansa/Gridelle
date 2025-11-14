@@ -28,8 +28,6 @@ function createMessage(ja: string, en: string): LocalizedMessage {
   return { ja, en }
 }
 
-type InputMode = 'range' | 'cells'
-
 type CellReferenceDraft = {
   id: string
   row: string
@@ -50,16 +48,11 @@ export default function MacroSection({
   const [moduleId, setModuleId] = React.useState<string>(SAMPLE_MODULE_ID)
   const [wasmUrl, setWasmUrl] = React.useState<string>(SAMPLE_URL)
   const [selectedFunctionId, setSelectedFunctionId] = React.useState<string>('')
-  const [targetColumn, setTargetColumn] = React.useState<string>(columns[0] ?? '')
-  const [rowStart, setRowStart] = React.useState<string>('')
-  const [rowEnd, setRowEnd] = React.useState<string>('')
-  const [inputMode, setInputMode] = React.useState<InputMode>('range')
   const cellRefSequence = React.useRef<number>(0)
   const [cellReferences, setCellReferences] = React.useState<CellReferenceDraft[]>([])
   const [status, setStatus] = React.useState<LocalizedMessage | null>(null)
   const [error, setError] = React.useState<LocalizedMessage | null>(null)
   const [isLoading, setLoading] = React.useState<boolean>(false)
-  const inputModeFieldName = React.useId()
 
   const createCellReference = React.useCallback(
     (overrides?: Partial<Pick<CellReferenceDraft, 'row' | 'columnKey'>>): CellReferenceDraft => {
@@ -95,7 +88,6 @@ export default function MacroSection({
 
   const handleAddCellReference = React.useCallback(() => {
     setCellReferences((prev) => [...prev, createCellReference()])
-    setInputMode('cells')
   }, [createCellReference])
 
   const handleRemoveCellReference = React.useCallback((id: string): void => {
@@ -168,7 +160,6 @@ export default function MacroSection({
       return
     }
     setCellReferences((prev) => [...prev, ...deduped])
-    setInputMode('cells')
     setStatus(
       createMessage(
         '入力セルとして範囲を追加しました。結果を書き込むセルを再度選択してから適用してください。',
@@ -182,18 +173,6 @@ export default function MacroSection({
       setSelectedFunctionId(availableFunctions[0]?.id ?? '')
     }
   }, [availableFunctions, selectedFunctionId])
-
-  React.useEffect(() => {
-    if (!columns.length) {
-      setTargetColumn('')
-      return
-    }
-    if (!targetColumn) {
-      setTargetColumn(columns[0] ?? '')
-    } else if (!columns.includes(targetColumn)) {
-      setTargetColumn(columns[0] ?? '')
-    }
-  }, [columns, targetColumn])
 
   const handleLoadModule = async (): Promise<void> => {
     setStatus(null)
@@ -226,88 +205,47 @@ export default function MacroSection({
       setError(createMessage('適用する関数を選択してください。', 'Choose a function to apply.'))
       return
     }
-    if (inputMode === 'cells') {
-      if (!cellReferences.length) {
-        setError(
-          createMessage('入力セルを最低1つ追加してください。', 'Add at least one input cell before applying.'),
-        )
-        return
-      }
-      let hasInvalidReference = false
-      const normalizedCells = cellReferences
-        .map((reference) => {
-          const columnKey = reference.columnKey?.trim()
-          const parsedRow = Number(reference.row)
-          if (!columnKey || !Number.isFinite(parsedRow) || parsedRow < 1) {
-            hasInvalidReference = true
-            return null
-          }
-          return {
-            row: Math.round(parsedRow),
-            key: columnKey,
-          }
-        })
-        .filter((entry): entry is { row: number; key: string } => entry !== null)
-
-      if (!normalizedCells.length) {
-        setError(
-          createMessage('入力セルを最低1つ追加してください。', 'Add at least one input cell before applying.'),
-        )
-        return
-      }
-
-      if (hasInvalidReference) {
-        setError(
-          createMessage(
-            '入力セルの行番号と列を確認してください。',
-            'Check the row numbers and columns for the input cells.',
-          ),
-        )
-        return
-      }
-
-      onApplyFunction({
-        name: selectedFunctionId,
-        args: {
-          cells: normalizedCells,
-        },
+    if (!cellReferences.length) {
+      setError(createMessage('入力セルを最低1つ追加してください。', 'Add at least one input cell before applying.'))
+      return
+    }
+    let hasInvalidReference = false
+    const normalizedCells = cellReferences
+      .map((reference) => {
+        const columnKey = reference.columnKey?.trim()
+        const parsedRow = Number(reference.row)
+        if (!columnKey || !Number.isFinite(parsedRow) || parsedRow < 1) {
+          hasInvalidReference = true
+          return null
+        }
+        return {
+          row: Math.round(parsedRow),
+          key: columnKey,
+        }
       })
+      .filter((entry): entry is { row: number; key: string } => entry !== null)
+
+    if (!normalizedCells.length) {
+      setError(createMessage('入力セルを最低1つ追加してください。', 'Add at least one input cell before applying.'))
       return
     }
 
-    if (!targetColumn) {
-      setError(createMessage('対象となる列を選択してください。', 'Select a target column.'))
+    if (hasInvalidReference) {
+      setError(
+        createMessage(
+          '入力セルの行番号と列を確認してください。',
+          'Check the row numbers and columns for the input cells.',
+        ),
+      )
       return
     }
-    const args: Record<string, unknown> = { key: targetColumn }
-    const rowsConfig: Record<string, number> = {}
 
-    if (rowStart.trim()) {
-      const parsed = Number(rowStart)
-      if (!Number.isFinite(parsed)) {
-        setError(createMessage('開始行には数値を入力してください。', 'Enter a numeric start row.'))
-        return
-      }
-      rowsConfig.start = parsed
-    }
-    if (rowEnd.trim()) {
-      const parsed = Number(rowEnd)
-      if (!Number.isFinite(parsed)) {
-        setError(createMessage('終了行には数値を入力してください。', 'Enter a numeric end row.'))
-        return
-      }
-      rowsConfig.end = parsed
-    }
-
-    if (Object.keys(rowsConfig).length) {
-      args.rows = rowsConfig
-    }
-
-    const config: CellFunctionConfig = {
+    onApplyFunction({
       name: selectedFunctionId,
-      ...(Object.keys(args).length ? { args } : {}),
-    }
-    onApplyFunction(config)
+      args: {
+        cells: normalizedCells,
+      },
+    })
   }
 
   const handleClearFunction = (): void => {
@@ -400,8 +338,8 @@ export default function MacroSection({
           </h3>
           <p className="mt-2 text-sm text-slate-600">
             {select(
-              '結果を書き込むセルを先に選択してから設定します。列方向の集計か、特定セルの参照かを切り替えて操作できます。',
-              'Select the destination cells first, then decide whether to aggregate a range or reference explicit cells.',
+              '結果を書き込むセルを先に選択してから、参照したいセルをすべて登録してください。',
+              'Select the destination cells first, then list every input cell the macro should read.',
             )}
           </p>
           <div className="mt-4 space-y-4">
@@ -423,179 +361,99 @@ export default function MacroSection({
                 ))}
               </select>
             </label>
-            <fieldset>
-              <legend className="text-xs font-semibold text-slate-700">
-                {select('入力タイプ', 'Input mode')}
-              </legend>
-              <div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-700">
-                <label className="inline-flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name={inputModeFieldName}
-                    value="range"
-                    checked={inputMode === 'range'}
-                    onChange={() => setInputMode('range')}
-                  />
-                  {select('列や行の範囲を集計', 'Aggregate a column or range')}
-                </label>
-                <label className="inline-flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name={inputModeFieldName}
-                    value="cells"
-                    checked={inputMode === 'cells'}
-                    onChange={() => setInputMode('cells')}
-                  />
-                  {select('個別セルを参照', 'Reference explicit cells')}
-                </label>
-              </div>
-            </fieldset>
-            {inputMode === 'range' ? (
-              <div className="space-y-4">
-                <p className="text-xs text-slate-500">
-                  {select(
-                    '列全体または行範囲をまとめて計算する場合はこちらを利用します。',
-                    'Use this mode when applying aggregate macros across a column or row range.',
-                  )}
-                </p>
-                <label className="block text-xs font-semibold text-slate-700">
-                  {select('対象列', 'Target column')}
-                  <select
-                    value={targetColumn}
-                    onChange={(event) => setTargetColumn(event.target.value)}
-                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                    data-testid="macro-column-select"
-                  >
-                    {columns.length === 0 && <option value="">{select('列がありません', 'No columns')}</option>}
-                    {columns.map((column) => (
-                      <option key={column} value={column}>
-                        {column}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <label className="block text-xs font-semibold text-slate-700">
-                    {select('開始行（任意）', 'Start row (optional)')}
-                    <input
-                      type="number"
-                      min={1}
-                      value={rowStart}
-                      onChange={(event) => setRowStart(event.target.value)}
-                      className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                      placeholder="1"
-                    />
-                  </label>
-                  <label className="block text-xs font-semibold text-slate-700">
-                    {select('終了行（任意）', 'End row (optional)')}
-                    <input
-                      type="number"
-                      min={1}
-                      value={rowEnd}
-                      onChange={(event) => setRowEnd(event.target.value)}
-                      className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                      placeholder="10"
-                    />
-                  </label>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-xs text-slate-500">
-                  {select(
-                    '特定のセル同士を掛け算するなど、参照元を細かく指定したい場合はこちらを利用します。',
-                    'Use this mode to reference explicit cells (e.g., multiply column A and B cells).',
-                  )}
-                </p>
-                {cellReferences.length === 0 ? (
-                  <p className="text-xs text-slate-500">
-                    {select(
-                      '入力セルが未設定です。「セルを追加」または「選択セルを入力に追加」を押してください。',
-                      'No input cells configured yet. Use "Add a cell" or "Add selection as inputs".',
-                    )}
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {cellReferences.map((reference, index) => (
-                      <div
-                        key={reference.id}
-                        className="flex flex-wrap items-end gap-3 rounded border border-slate-200 p-3"
-                      >
-                        <div className="flex flex-1 flex-wrap gap-3">
-                          <label className="block text-xs font-semibold text-slate-700">
-                            {select('行番号', 'Row number')}
-                            <input
-                              type="number"
-                              min={1}
-                              value={reference.row}
-                              onChange={(event) => handleChangeCellReferenceRow(reference.id, event.target.value)}
-                              className="mt-1 w-32 rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                              placeholder={String(index + 1)}
-                            />
-                          </label>
-                          <label className="block text-xs font-semibold text-slate-700">
-                            {select('列', 'Column')}
-                            <select
-                              value={reference.columnKey}
-                              onChange={(event) =>
-                                handleChangeCellReferenceColumn(reference.id, event.target.value)
-                              }
-                              className="mt-1 min-w-[8rem] rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                            >
-                              {columns.length === 0 && <option value="">{select('列がありません', 'No columns')}</option>}
-                              {columns.map((column) => (
-                                <option key={column} value={column}>
-                                  {column}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        </div>
-                        <button
-                          type="button"
-                          className="rounded border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                          onClick={() => handleRemoveCellReference(reference.id)}
-                        >
-                          {select('削除', 'Remove')}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+            <div className="space-y-4">
+              <p className="text-xs text-slate-500">
+                {select(
+                  '集計でも演算でも、参照元のセルをすべてここに並べてください。選択範囲をそのまま取り込むこともできます。',
+                  'List every input cell here (aggregations and formulas alike). You can import the current selection directly.',
                 )}
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className="rounded border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                    onClick={handleAddCellReference}
-                    disabled={!columns.length}
-                  >
-                    {select('セルを追加', 'Add a cell')}
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
-                    onClick={handleImportSelectionAsInputs}
-                    disabled={!selectionRange || !columns.length}
-                  >
-                    {select('選択セルを入力に追加', 'Add selection as inputs')}
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                    onClick={handleClearCellReferences}
-                    disabled={!cellReferences.length}
-                  >
-                    {select('入力セルをクリア', 'Clear input cells')}
-                  </button>
-                </div>
+              </p>
+              {cellReferences.length === 0 ? (
                 <p className="text-xs text-slate-500">
                   {select(
-                    '入力セルを追加した後は、もう一度結果を書き込むセルを選択してから「選択セルに適用」を押してください。',
-                    'After adding input cells, reselect the destination cells before applying the function.',
+                    '入力セルが未設定です。「セルを追加」または「選択セルを入力に追加」を押してください。',
+                    'No input cells configured yet. Use "Add a cell" or "Add selection as inputs".',
                   )}
                 </p>
+              ) : (
+                <div className="space-y-3">
+                  {cellReferences.map((reference, index) => (
+                    <div
+                      key={reference.id}
+                      className="flex flex-wrap items-end gap-3 rounded border border-slate-200 p-3"
+                    >
+                      <div className="flex flex-1 flex-wrap gap-3">
+                        <label className="block text-xs font-semibold text-slate-700">
+                          {select('行番号', 'Row number')}
+                          <input
+                            type="number"
+                            min={1}
+                            value={reference.row}
+                            onChange={(event) => handleChangeCellReferenceRow(reference.id, event.target.value)}
+                            className="mt-1 w-32 rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            placeholder={String(index + 1)}
+                          />
+                        </label>
+                        <label className="block text-xs font-semibold text-slate-700">
+                          {select('列', 'Column')}
+                          <select
+                            value={reference.columnKey}
+                            onChange={(event) => handleChangeCellReferenceColumn(reference.id, event.target.value)}
+                            className="mt-1 min-w-[8rem] rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                          >
+                            {columns.length === 0 && <option value="">{select('列がありません', 'No columns')}</option>}
+                            {columns.map((column) => (
+                              <option key={column} value={column}>
+                                {column}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                      <button
+                        type="button"
+                        className="rounded border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                        onClick={() => handleRemoveCellReference(reference.id)}
+                      >
+                        {select('削除', 'Remove')}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  onClick={handleAddCellReference}
+                  disabled={!columns.length}
+                >
+                  {select('セルを追加', 'Add a cell')}
+                </button>
+                <button
+                  type="button"
+                  className="rounded border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                  onClick={handleImportSelectionAsInputs}
+                  disabled={!selectionRange || !columns.length}
+                >
+                  {select('選択セルを入力に追加', 'Add selection as inputs')}
+                </button>
+                <button
+                  type="button"
+                  className="rounded border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  onClick={handleClearCellReferences}
+                  disabled={!cellReferences.length}
+                >
+                  {select('入力セルをクリア', 'Clear input cells')}
+                </button>
               </div>
-            )}
+              <p className="text-xs text-slate-500">
+                {select(
+                  '入力セルを追加した後は、もう一度結果を書き込むセルを選択してから「選択セルに適用」を押してください。',
+                  'After adding input cells, reselect the destination cells before applying the function.',
+                )}
+              </p>
+            </div>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
