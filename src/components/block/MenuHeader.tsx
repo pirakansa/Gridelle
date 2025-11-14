@@ -4,11 +4,16 @@ import type { Notice, SelectionRange } from '../../pages/top/types'
 import type { LoginMode } from '../../services/auth'
 import { layoutTheme } from '../../utils/Theme'
 import MenuTabs, { type MenuSectionId } from './menu/MenuTabs'
-import SheetSection from './menu/SheetSection'
 import StructureSection from './menu/StructureSection'
 import SelectionSection from './menu/SelectionSection'
 import MacroSection from './menu/MacroSection'
 import WasmSection from './menu/WasmSection'
+
+const SectionPlaceholder = ({ title }: { title: string }) => (
+  <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
+    {title}
+  </div>
+)
 import HelpSection from './menu/HelpSection'
 import UserSection from './menu/UserSection'
 import FileSection from './menu/FileSection'
@@ -23,13 +28,8 @@ type Props = {
   onGithubIntegrationClick: () => void
   notice: Notice | null
   sheetNames: string[]
-  activeSheetIndex: number
-  onSelectSheet: (_index: number) => void
   currentSheetName: string
   columns: string[]
-  onRenameSheet: (_name: string) => void
-  onAddSheet: () => void
-  onDeleteSheet: () => void
   onAddRow: () => void
   onInsertRowBelowSelection: () => void
   onMoveSelectedRowsUp: () => void
@@ -57,7 +57,6 @@ type Props = {
   onApplySelectionBackgroundColor: (_color: string | null) => void
   onClearSelectionStyles: () => void
   onApplySelectionFunction: (_config: CellFunctionConfig | null) => void
-  canDeleteSheet: boolean
   selectionRange: SelectionRange | null
   macroFunctions: RegisteredFunctionMeta[]
   loadedMacroModules: LoadedWasmModule[]
@@ -77,13 +76,8 @@ export default function MenuHeader({
   onGithubIntegrationClick,
   notice,
   sheetNames,
-  activeSheetIndex,
-  onSelectSheet,
   currentSheetName,
   columns,
-  onRenameSheet,
-  onAddSheet,
-  onDeleteSheet,
   onAddRow,
   onInsertRowBelowSelection,
   onMoveSelectedRowsUp,
@@ -111,7 +105,6 @@ export default function MenuHeader({
   onApplySelectionBackgroundColor,
   onClearSelectionStyles,
   onApplySelectionFunction,
-  canDeleteSheet,
   selectionRange,
   macroFunctions,
   loadedMacroModules,
@@ -128,66 +121,7 @@ export default function MenuHeader({
   const menuPanelId = React.useId()
   const [isMenuCollapsed, setMenuCollapsed] = React.useState<boolean>(false)
   const [activeMenuSection, setActiveMenuSection] = React.useState<MenuSectionId>('sheet')
-  const [sheetNameDraft, setSheetNameDraft] = React.useState<string>(currentSheetName)
-  const [renamingSheetIndex, setRenamingSheetIndex] = React.useState<number | null>(null)
   const headerRef = React.useRef<HTMLElement | null>(null)
-
-  React.useEffect(() => {
-    if (renamingSheetIndex === null) {
-      setSheetNameDraft(currentSheetName)
-    }
-  }, [currentSheetName, renamingSheetIndex])
-
-  React.useEffect(() => {
-    if (renamingSheetIndex !== null && renamingSheetIndex >= sheetNames.length) {
-      setRenamingSheetIndex(null)
-      setSheetNameDraft(currentSheetName)
-    }
-  }, [renamingSheetIndex, sheetNames, currentSheetName])
-
-  const commitSheetName = React.useCallback(() => {
-    const trimmed = sheetNameDraft.trim()
-    if (renamingSheetIndex === null) {
-      return
-    }
-
-    const originalName = sheetNames[renamingSheetIndex] ?? ''
-    if (!trimmed) {
-      setSheetNameDraft(originalName)
-      return
-    }
-
-    if (trimmed !== originalName) {
-      if (renamingSheetIndex !== activeSheetIndex) {
-        onSelectSheet(renamingSheetIndex)
-      }
-      onRenameSheet(trimmed)
-    }
-    setRenamingSheetIndex(null)
-  }, [sheetNameDraft, renamingSheetIndex, sheetNames, activeSheetIndex, onSelectSheet, onRenameSheet])
-
-  const cancelSheetRename = React.useCallback(() => {
-    if (renamingSheetIndex === null) {
-      return
-    }
-    const originalName = sheetNames[renamingSheetIndex] ?? currentSheetName
-    setSheetNameDraft(originalName)
-    setRenamingSheetIndex(null)
-  }, [renamingSheetIndex, sheetNames, currentSheetName])
-
-  const startSheetRename = React.useCallback(
-    (index: number) => {
-      if (renamingSheetIndex === index) {
-        return
-      }
-      setRenamingSheetIndex(index)
-      setSheetNameDraft(sheetNames[index] ?? '')
-      if (index !== activeSheetIndex) {
-        onSelectSheet(index)
-      }
-    },
-    [renamingSheetIndex, sheetNames, activeSheetIndex, onSelectSheet],
-  )
 
   const toggleMenu = React.useCallback(() => {
     setMenuCollapsed((prev) => !prev)
@@ -280,20 +214,7 @@ export default function MenuHeader({
                 />
               )}
               {activeMenuSection === 'sheet' && (
-                <SheetSection
-                  sheetNames={sheetNames}
-                  activeSheetIndex={activeSheetIndex}
-                  onSelectSheet={onSelectSheet}
-                  onAddSheet={onAddSheet}
-                  onDeleteSheet={onDeleteSheet}
-                  renamingSheetIndex={renamingSheetIndex}
-                  onStartSheetRename={startSheetRename}
-                  sheetNameDraft={sheetNameDraft}
-                  onSheetNameDraftChange={setSheetNameDraft}
-                  onCommitSheetName={commitSheetName}
-                  onCancelSheetRename={cancelSheetRename}
-                  canDeleteSheet={canDeleteSheet}
-                />
+                <SectionPlaceholder title={select('シートを下部で管理してください。', 'Manage sheets via the bottom tabs.')} />
               )}
               {activeMenuSection === 'structure' && (
                 <StructureSection

@@ -239,7 +239,7 @@ describe('App', () => {
     render(<App />)
     expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('テーブル編集')
     expect(screen.getByTestId('cell-display-1-feature')).toHaveTextContent('YAML Export')
-    expect(screen.getByTestId('sheet-tab-0')).toHaveTextContent('バックログ')
+    expect(within(screen.getByTestId('sheet-tab-0')).getByRole('button', { name: 'バックログ' })).toBeInTheDocument()
   })
 
   it('設定メニューのヘッダーを表示する', () => {
@@ -310,11 +310,10 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'YAMLを反映' }))
 
-    await user.click(screen.getByTestId('menu-tab-sheet'))
-
     expect(await screen.findByTestId('cell-display-0-feature')).toHaveTextContent('新規カード')
   expect(screen.getByTestId('cell-display-0-owner')).toHaveTextContent('Carol')
-    expect(await screen.findByTestId('sheet-tab-0')).toHaveTextContent('新シート')
+    const firstTab = await screen.findByTestId('sheet-tab-0')
+    expect(within(firstTab).getByRole('button', { name: '新シート' })).toBeInTheDocument()
   })
 
   it('YAMLを新規作成ボタンでテンプレートを挿入できる', async () => {
@@ -349,7 +348,6 @@ describe('App', () => {
     )
 
     await user.click(screen.getByRole('button', { name: 'YAMLを反映' }))
-    await user.click(screen.getByTestId('menu-tab-sheet'))
 
     const metricCell = await screen.findByTestId('cell-display-2-metric')
     await waitFor(() => {
@@ -1081,23 +1079,24 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByTestId('sheet-tab-1'))
+    const secondTab = screen.getByTestId('sheet-tab-1')
+    await user.click(within(secondTab).getByRole('button', { name: '完了済み' }))
 
     expect(screen.getByTestId('cell-display-0-feature')).toHaveTextContent('リリースノート作成')
-    expect(screen.getByTestId('sheet-tab-1')).toHaveTextContent('完了済み')
+    expect(within(secondTab).getByRole('button', { name: '完了済み' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('シート名を変更できる', async () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByTestId('menu-tab-sheet'))
     await user.dblClick(screen.getByTestId('sheet-tab-0'))
     const renameInput = await screen.findByTestId('sheet-name-input')
     await user.clear(renameInput)
     await user.type(renameInput, 'メインシート{enter}')
 
-    expect(screen.getByTestId('sheet-tab-0')).toHaveTextContent('メインシート')
+    const firstTab = screen.getByTestId('sheet-tab-0')
+    expect(within(firstTab).getByRole('button', { name: 'メインシート' })).toBeInTheDocument()
     expect(await screen.findByText('シート名を「メインシート」に更新しました。')).toBeInTheDocument()
   })
 
@@ -1110,8 +1109,8 @@ describe('App', () => {
       expect(screen.getByTestId('sheet-tab-2')).toBeInTheDocument()
     })
     const newSheetTab = screen.getByTestId('sheet-tab-2')
-    expect(newSheetTab).toHaveTextContent('Sheet 3')
-    expect(newSheetTab).toHaveAttribute('aria-pressed', 'true')
+    const newSheetButton = within(newSheetTab).getByRole('button', { name: 'Sheet 3' })
+    expect(newSheetButton).toHaveAttribute('aria-pressed', 'true')
     expect(await screen.findByText('表示するデータがありません。')).toBeInTheDocument()
   })
 
@@ -1119,7 +1118,7 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    const deleteButton = screen.getByTestId('delete-sheet-button')
+    const deleteButton = screen.getByTestId('delete-sheet-button-0')
     expect(deleteButton).toBeEnabled()
 
     await user.click(deleteButton)
@@ -1127,7 +1126,8 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('sheet-tab-1')).not.toBeInTheDocument()
     })
-    expect(screen.getByTestId('sheet-tab-0')).toHaveTextContent('完了済み')
-    expect(screen.getByTestId('delete-sheet-button')).toBeDisabled()
+    const remainingTab = screen.getByTestId('sheet-tab-0')
+    expect(within(remainingTab).getByRole('button', { name: '完了済み' })).toBeInTheDocument()
+    expect(screen.getByTestId('delete-sheet-button-0')).toBeDisabled()
   })
 })

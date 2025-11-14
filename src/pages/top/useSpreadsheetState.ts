@@ -52,8 +52,8 @@ type UseSpreadsheetState = {
   canMoveSelectedRowsDown: boolean
   handleDeleteSelectedRows: () => void
   handleAddSheet: () => void
-    handleDeleteSheet: () => void
-  handleRenameSheet: (_name: string) => void
+  handleDeleteSheet: (_index: number) => void
+  handleRenameSheet: (_index: number, _name: string) => void
   canDeleteSheet: boolean
   moveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   applyYamlBuffer: () => void
@@ -148,7 +148,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleAddRow,
     handleAddColumn,
     handleAddSheet,
-    handleDeleteSheet,
+    handleDeleteSheet: deleteSheet,
     handleRenameSheet,
     moveColumn,
     applyYamlBuffer,
@@ -488,6 +488,13 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     })
   }, [selection, rows, updateRows, clearSelection, setNotice])
 
+  const handleDeleteSheetByIndex = React.useCallback(
+    (index: number) => {
+      deleteSheet(index)
+    },
+    [deleteSheet],
+  )
+
   return {
     notice,
     yamlBuffer,
@@ -514,7 +521,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleDeleteSelectedColumns,
     handleDeleteSelectedRows,
     handleAddSheet,
-    handleDeleteSheet,
+    handleDeleteSheet: handleDeleteSheetByIndex,
     handleRenameSheet,
     moveColumn,
     applyYamlBuffer,

@@ -247,13 +247,8 @@ export default function App(): React.ReactElement {
         onGithubIntegrationClick={openGithubIntegration}
         notice={spreadsheet.notice}
         sheetNames={spreadsheet.sheets.map((sheet) => sheet.name)}
-        activeSheetIndex={spreadsheet.activeSheetIndex}
-        onSelectSheet={spreadsheet.handleSelectSheet}
         currentSheetName={spreadsheet.currentSheetName}
         columns={spreadsheet.columns}
-        onRenameSheet={spreadsheet.handleRenameSheet}
-        onAddSheet={spreadsheet.handleAddSheet}
-        onDeleteSheet={spreadsheet.handleDeleteSheet}
         onAddRow={spreadsheet.handleAddRow}
         onInsertRowBelowSelection={spreadsheet.handleInsertRowBelowSelection}
         onMoveSelectedRowsUp={spreadsheet.handleMoveSelectedRowsUp}
@@ -281,7 +276,6 @@ export default function App(): React.ReactElement {
         onApplySelectionBackgroundColor={spreadsheet.applySelectionBackgroundColor}
         onClearSelectionStyles={spreadsheet.clearSelectionStyles}
         onApplySelectionFunction={spreadsheet.applySelectionFunction}
-        canDeleteSheet={spreadsheet.canDeleteSheet}
         selectionRange={spreadsheet.selection}
         macroFunctions={spreadsheet.macroFunctions}
         loadedMacroModules={spreadsheet.loadedMacroModules}
@@ -321,6 +315,8 @@ export default function App(): React.ReactElement {
           activeSheetIndex={spreadsheet.activeSheetIndex}
           onSelectSheet={spreadsheet.handleSelectSheet}
           onAddSheet={spreadsheet.handleAddSheet}
+          onDeleteSheet={spreadsheet.handleDeleteSheet}
+          onRenameSheet={spreadsheet.handleRenameSheet}
         />
       </main>
       {isYamlInputOpen && (

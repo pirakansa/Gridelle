@@ -40,8 +40,8 @@ type UseSpreadsheetDataController = {
   handleAddRow: () => void
   handleAddColumn: () => void
   handleAddSheet: () => void
-  handleDeleteSheet: () => void
-  handleRenameSheet: (_name: string) => void
+  handleDeleteSheet: (_index?: number) => void
+  handleRenameSheet: (_index: number, _name: string) => void
   moveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   applyYamlBuffer: () => void
   ingestYamlContent: (
