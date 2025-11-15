@@ -199,6 +199,38 @@ describe('applyCellFunctions', () => {
     expect(evaluated[0]?.result?.value).toBe('10')
   })
 
+  it('retains data from earlier sheets when names are duplicated', () => {
+    const analysisRows: TableRow[] = [
+      {
+        input: createCell('2'),
+        result: {
+          value: '',
+          func: {
+            name: 'sum',
+            args: {
+              cells: [
+                { row: 1, key: 'input' },
+                { row: 1, key: 'input', sheet: 'Data' },
+              ],
+            },
+          },
+        },
+      },
+    ]
+    const workbook: TableSheet[] = [
+      { name: 'Analysis', rows: analysisRows },
+      { name: 'Data', rows: [{ input: createCell('5') }] },
+      { name: 'Data', rows: [{ input: createCell('11') }] },
+    ]
+
+    const evaluated = applyCellFunctions(analysisRows, ['input', 'result'], {
+      workbook,
+      sheetName: 'Analysis',
+    })
+
+    expect(evaluated[0]?.result?.value).toBe('7')
+  })
+
   it('applies style directives without overriding values when handlers return structured output', () => {
     const fnName = 'style-directive-test'
     registerCellFunction(fnName, () => ({

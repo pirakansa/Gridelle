@@ -113,9 +113,25 @@ type SheetEvaluationState = {
   cache: Map<string, EvaluationCacheEntry>
 }
 
+type SheetStateCollection = {
+  states: Map<string, SheetEvaluationState>
+  nameIndex: Map<string, string[]>
+  activeSheetKey: string
+  activeSheetName: string
+}
+
 type WorkbookResolver = {
   getCellValue: (_rowIndex: number, _columnKey: string, _options?: { sheetName?: string }) => string
   resolveColumnKey: (_columnIndex: number, _sheetName?: string) => string | undefined
+}
+
+const registerSheetIndex = (index: Map<string, string[]>, sheetName: string, key: string): void => {
+  const existing = index.get(sheetName)
+  if (existing) {
+    existing.push(key)
+    return
+  }
+  index.set(sheetName, [key])
 }
 
 const buildSheetStateMap = (
@@ -123,38 +139,90 @@ const buildSheetStateMap = (
   columns: string[],
   workbook: TableSheet[] | undefined,
   activeSheetName: string,
-): Map<string, SheetEvaluationState> => {
+): SheetStateCollection => {
   const states = new Map<string, SheetEvaluationState>()
-  workbook?.forEach((sheet) => {
-    states.set(sheet.name, {
+  const nameIndex = new Map<string, string[]>()
+  let activeSheetKey: string | null = null
+
+  workbook?.forEach((sheet, index) => {
+    const key = `sheet-${index}`
+    states.set(key, {
       name: sheet.name,
       rows: sheet.rows,
       columns: deriveColumns(sheet.rows),
       cache: new Map<string, EvaluationCacheEntry>(),
     })
+    registerSheetIndex(nameIndex, sheet.name, key)
+    if (!activeSheetKey && sheet.rows === rows) {
+      activeSheetKey = key
+    }
   })
-  const activeState = states.get(activeSheetName)
-  if (activeState) {
-    activeState.rows = rows
-    activeState.columns = columns
-  } else {
-    states.set(activeSheetName, {
+
+  if (activeSheetKey) {
+    const state = states.get(activeSheetKey)
+    if (state) {
+      state.rows = rows
+      state.columns = columns
+    }
+  }
+
+  if (!activeSheetKey) {
+    const matchingKeys = nameIndex.get(activeSheetName)
+    if (matchingKeys?.length) {
+      activeSheetKey = matchingKeys[0]
+      const state = states.get(activeSheetKey)
+      if (state) {
+        state.rows = rows
+        state.columns = columns
+      }
+    }
+  }
+
+  if (!activeSheetKey) {
+    const fallbackKey = `active-${activeSheetName}`
+    states.set(fallbackKey, {
       name: activeSheetName,
       rows,
       columns,
       cache: new Map<string, EvaluationCacheEntry>(),
     })
+    registerSheetIndex(nameIndex, activeSheetName, fallbackKey)
+    activeSheetKey = fallbackKey
+  } else if (!nameIndex.has(activeSheetName)) {
+    registerSheetIndex(nameIndex, activeSheetName, activeSheetKey)
   }
-  return states
+
+  return {
+    states,
+    nameIndex,
+    activeSheetKey,
+    activeSheetName,
+  }
 }
 
-const createWorkbookResolver = (
-  sheetStates: Map<string, SheetEvaluationState>,
-  defaultSheetName: string,
-): WorkbookResolver => {
+const createWorkbookResolver = (sheetStates: SheetStateCollection): WorkbookResolver => {
+  const { states, nameIndex, activeSheetKey, activeSheetName } = sheetStates
   const stack = new Set<string>()
-  const getSheetState = (sheetName?: string): SheetEvaluationState | undefined =>
-    sheetStates.get(sheetName ?? defaultSheetName)
+  const getSheetState = (sheetName?: string): SheetEvaluationState | undefined => {
+    const defaultState = states.get(activeSheetKey)
+    if (!sheetName || sheetName === activeSheetName) {
+      return defaultState
+    }
+    const candidates = nameIndex.get(sheetName)
+    if (!candidates?.length) {
+      return undefined
+    }
+    for (const key of candidates) {
+      if (key === activeSheetKey) {
+        continue
+      }
+      const candidate = states.get(key)
+      if (candidate) {
+        return candidate
+      }
+    }
+    return defaultState
+  }
 
   const resolveColumnKey = (columnIndex: number, sheetName?: string): string | undefined => {
     const sheet = getSheetState(sheetName)
@@ -168,7 +236,7 @@ const createWorkbookResolver = (
   }
 
   const getCellValue = (rowIndex: number, columnKey: string, options?: { sheetName?: string }): string => {
-    const targetSheetName = options?.sheetName ?? defaultSheetName
+    const targetSheetName = options?.sheetName ?? activeSheetName
     const sheet = getSheetState(targetSheetName)
     if (!sheet) {
       return ''
@@ -309,8 +377,8 @@ export function applyCellFunctions(rows: TableRow[], columns: string[], options?
 
   const activeSheetName = options?.sheetName ?? 'Sheet 1'
   const sheetStates = buildSheetStateMap(rows, columns, options?.workbook, activeSheetName)
-  const resolver = createWorkbookResolver(sheetStates, activeSheetName)
-  const activeSheetState = sheetStates.get(activeSheetName)
+  const resolver = createWorkbookResolver(sheetStates)
+  const activeSheetState = sheetStates.states.get(sheetStates.activeSheetKey)
   if (!activeSheetState) {
     return rows
   }
