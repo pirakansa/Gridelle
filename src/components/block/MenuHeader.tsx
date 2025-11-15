@@ -8,12 +8,6 @@ import StructureSection from './menu/StructureSection'
 import SelectionSection from './menu/SelectionSection'
 import MacroSection from './menu/MacroSection'
 import WasmSection from './menu/WasmSection'
-
-const SectionPlaceholder = ({ title }: { title: string }) => (
-  <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
-    {title}
-  </div>
-)
 import HelpSection from './menu/HelpSection'
 import UserSection from './menu/UserSection'
 import FileSection from './menu/FileSection'
@@ -120,7 +114,7 @@ export default function MenuHeader({
   const { select } = useI18n()
   const menuPanelId = React.useId()
   const [isMenuCollapsed, setMenuCollapsed] = React.useState<boolean>(false)
-  const [activeMenuSection, setActiveMenuSection] = React.useState<MenuSectionId>('sheet')
+  const [activeMenuSection, setActiveMenuSection] = React.useState<MenuSectionId>('file')
   const headerRef = React.useRef<HTMLElement | null>(null)
 
   const toggleMenu = React.useCallback(() => {
@@ -212,9 +206,6 @@ export default function MenuHeader({
                   loginMode={loginMode}
                   onGithubActionsClick={onGithubIntegrationClick}
                 />
-              )}
-              {activeMenuSection === 'sheet' && (
-                <SectionPlaceholder title={select('シートを下部で管理してください。', 'Manage sheets via the bottom tabs.')} />
               )}
               {activeMenuSection === 'structure' && (
                 <StructureSection

@@ -5,7 +5,6 @@ import { useI18n } from '../../../utils/i18n'
 
 export type MenuSectionId =
   | 'file'
-  | 'sheet'
   | 'structure'
   | 'selection'
   | 'macro'
@@ -48,7 +47,6 @@ export default function MenuTabs({
         {(
           [
             { id: 'file' as const, labelJa: 'ファイル', labelEn: 'File' },
-            { id: 'sheet' as const, labelJa: 'シート', labelEn: 'Sheets' },
             { id: 'structure' as const, labelJa: '行列', labelEn: 'Rows & Columns' },
             { id: 'selection' as const, labelJa: '選択', labelEn: 'Selection' },
             { id: 'macro' as const, labelJa: '関数', labelEn: 'Functions' },
