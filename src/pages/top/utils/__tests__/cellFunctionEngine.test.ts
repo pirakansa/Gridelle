@@ -231,6 +231,38 @@ describe('applyCellFunctions', () => {
     expect(evaluated[0]?.result?.value).toBe('7')
   })
 
+  it('allows explicit duplicate name lookups to target a different sheet than the active one', () => {
+    const secondaryRows: TableRow[] = [
+      {
+        value: createCell('2'),
+        total: {
+          value: '',
+          func: {
+            name: 'sum',
+            args: {
+              cells: [
+                { row: 1, key: 'value' },
+                { row: 1, key: 'value', sheet: 'Data' },
+              ],
+            },
+          },
+        },
+      },
+    ]
+
+    const workbook: TableSheet[] = [
+      { name: 'Data', rows: [{ value: createCell('3') }] },
+      { name: 'Data', rows: secondaryRows },
+    ]
+
+    const evaluated = applyCellFunctions(secondaryRows, ['value', 'total'], {
+      workbook,
+      sheetName: 'Data',
+    })
+
+    expect(evaluated[0]?.total?.value).toBe('5')
+  })
+
   it('applies style directives without overriding values when handlers return structured output', () => {
     const fnName = 'style-directive-test'
     registerCellFunction(fnName, () => ({

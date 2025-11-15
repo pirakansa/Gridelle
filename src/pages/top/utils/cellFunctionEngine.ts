@@ -201,43 +201,40 @@ const buildSheetStateMap = (
 }
 
 const createWorkbookResolver = (sheetStates: SheetStateCollection): WorkbookResolver => {
-  const { states, nameIndex, activeSheetKey, activeSheetName } = sheetStates
+  const { states, nameIndex, activeSheetKey } = sheetStates
   const stack = new Set<string>()
-  const getSheetState = (sheetName?: string): SheetEvaluationState | undefined => {
-    const defaultState = states.get(activeSheetKey)
-    if (!sheetName || sheetName === activeSheetName) {
-      return defaultState
+
+  const resolveSheetKey = (
+    requestedName: string | undefined,
+    baseKey: string,
+    explicit: boolean,
+  ): string | null => {
+    const baseSheet = states.get(baseKey)
+    if (!baseSheet) {
+      return null
     }
-    const candidates = nameIndex.get(sheetName)
+    if (!requestedName) {
+      return baseKey
+    }
+    const candidates = nameIndex.get(requestedName)
     if (!candidates?.length) {
-      return undefined
+      return explicit ? null : baseKey
     }
-    for (const key of candidates) {
-      if (key === activeSheetKey) {
-        continue
-      }
-      const candidate = states.get(key)
-      if (candidate) {
-        return candidate
+    if (!explicit && requestedName === baseSheet.name && candidates.includes(baseKey)) {
+      return baseKey
+    }
+    if (explicit) {
+      for (const candidateKey of candidates) {
+        if (candidateKey !== baseKey) {
+          return candidateKey
+        }
       }
     }
-    return defaultState
+    return candidates.includes(baseKey) ? baseKey : candidates[0]
   }
 
-  const resolveColumnKey = (columnIndex: number, sheetName?: string): string | undefined => {
-    const sheet = getSheetState(sheetName)
-    if (!sheet) {
-      return undefined
-    }
-    if (columnIndex < 0 || columnIndex >= sheet.columns.length) {
-      return undefined
-    }
-    return sheet.columns[columnIndex]
-  }
-
-  const getCellValue = (rowIndex: number, columnKey: string, options?: { sheetName?: string }): string => {
-    const targetSheetName = options?.sheetName ?? activeSheetName
-    const sheet = getSheetState(targetSheetName)
+  const evaluateCell = (sheetKey: string, rowIndex: number, columnKey: string): string => {
+    const sheet = states.get(sheetKey)
     if (!sheet) {
       return ''
     }
@@ -259,10 +256,10 @@ const createWorkbookResolver = (sheetStates: SheetStateCollection): WorkbookReso
       sheet.cache.set(cacheKey, entry)
       return fallbackValue
     }
-    const stackKey = `${targetSheetName}:${cacheKey}`
+    const stackKey = `${sheetKey}:${cacheKey}`
     if (stack.has(stackKey)) {
       console.warn(
-        `セル関数の循環参照を検出しました: sheet=${targetSheetName}, row=${rowIndex + 1}, column=${columnKey}`,
+        `セル関数の循環参照を検出しました: sheet=${sheet.name}, row=${rowIndex + 1}, column=${columnKey}`,
       )
       sheet.cache.set(cacheKey, { value: '' })
       return ''
@@ -276,18 +273,15 @@ const createWorkbookResolver = (sheetStates: SheetStateCollection): WorkbookReso
     stack.add(stackKey)
     let entry: EvaluationCacheEntry = { value: '' }
     try {
+      const localResolver = createSheetResolver(sheetKey)
       const output = handler(cell.func.args, {
         rows: sheet.rows,
         columns: sheet.columns,
         rowIndex,
         columnKey,
-        sheetName: targetSheetName,
-        getCellValue: (nextRowIndex, nextColumnKey, nextOptions) =>
-          getCellValue(nextRowIndex, nextColumnKey, {
-            sheetName: nextOptions?.sheetName ?? targetSheetName,
-          }),
-        resolveColumnKey: (columnIndex, requestedSheet) =>
-          resolveColumnKey(columnIndex, requestedSheet ?? targetSheetName),
+        sheetName: sheet.name,
+        getCellValue: localResolver.getCellValue,
+        resolveColumnKey: localResolver.resolveColumnKey,
       })
       entry = normalizeFunctionOutput(output, fallbackValue)
     } catch (error) {
@@ -299,10 +293,31 @@ const createWorkbookResolver = (sheetStates: SheetStateCollection): WorkbookReso
     return entry.value
   }
 
-  return {
-    getCellValue,
-    resolveColumnKey,
-  }
+  const createSheetResolver = (baseSheetKey: string): WorkbookResolver => ({
+    getCellValue: (rowIndex, columnKey, options) => {
+      const targetKey = resolveSheetKey(options?.sheetName, baseSheetKey, typeof options?.sheetName === 'string')
+      if (!targetKey) {
+        return ''
+      }
+      return evaluateCell(targetKey, rowIndex, columnKey)
+    },
+    resolveColumnKey: (columnIndex, sheetName) => {
+      const targetKey = resolveSheetKey(sheetName, baseSheetKey, typeof sheetName === 'string')
+      if (!targetKey) {
+        return undefined
+      }
+      const sheet = states.get(targetKey)
+      if (!sheet) {
+        return undefined
+      }
+      if (columnIndex < 0 || columnIndex >= sheet.columns.length) {
+        return undefined
+      }
+      return sheet.columns[columnIndex]
+    },
+  })
+
+  return createSheetResolver(activeSheetKey)
 }
 
 const normalizeColorDirective = (value: unknown): string | null | undefined => {
@@ -394,7 +409,7 @@ export function applyCellFunctions(rows: TableRow[], columns: string[], options?
         }
         return
       }
-      const computedValue = resolver.getCellValue(rowIndex, columnKey, { sheetName: activeSheetName })
+      const computedValue = resolver.getCellValue(rowIndex, columnKey)
       const cacheKey = `${rowIndex}:${columnKey}`
       const computedEntry = activeSheetState.cache.get(cacheKey)
       if (!nextRow) {
@@ -619,9 +634,14 @@ const resolveExplicitCells = (
     return null
   }
   const unique = new Map<string, ResolvedCellTarget>()
+  const duplicateCounts = new Map<string, number>()
   targets.forEach((target) => {
     const sheetKey = target.sheetName ?? context.sheetName ?? '__current__'
-    unique.set(`${sheetKey}:${target.rowIndex}:${target.columnKey}`, target)
+    const baseKey = `${sheetKey}:${target.rowIndex}:${target.columnKey}`
+    const occurrence = duplicateCounts.get(baseKey) ?? 0
+    duplicateCounts.set(baseKey, occurrence + 1)
+    const dedupeKey = occurrence === 0 ? baseKey : `${baseKey}:${occurrence}`
+    unique.set(dedupeKey, target)
   })
   return Array.from(unique.values())
 }
@@ -682,9 +702,14 @@ export const resolveFunctionTargets = (args: CellFunctionArgs, context: CellFunc
   }
 
   const unique = new Map<string, ResolvedCellTarget>()
+  const duplicateCounts = new Map<string, number>()
   targets.forEach((target) => {
     const sheetKey = target.sheetName ?? context.sheetName ?? '__current__'
-    unique.set(`${sheetKey}:${target.rowIndex}:${target.columnKey}`, target)
+    const baseKey = `${sheetKey}:${target.rowIndex}:${target.columnKey}`
+    const occurrence = duplicateCounts.get(baseKey) ?? 0
+    duplicateCounts.set(baseKey, occurrence + 1)
+    const dedupeKey = occurrence === 0 ? baseKey : `${baseKey}:${occurrence}`
+    unique.set(dedupeKey, target)
   })
   return Array.from(unique.values())
 }
