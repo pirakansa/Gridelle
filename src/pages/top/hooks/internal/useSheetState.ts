@@ -29,8 +29,8 @@ export type UseSheetStateResult = {
   addRow: () => void
   addColumn: () => void
   addSheet: () => void
-  deleteSheet: () => void
-  renameSheet: (_name: string) => void
+  deleteSheet: (_index?: number) => void
+  renameSheet: (_index: number, _name: string) => void
   moveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   replaceSheets: (_next: SheetState[]) => void
 }
@@ -150,7 +150,7 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
     })
   }, [setNotice])
 
-  const deleteSheet = React.useCallback((): void => {
+  const deleteSheet = React.useCallback((target?: number): void => {
     setSheets((current) => {
       if (!current.length) {
         setNotice({
@@ -166,7 +166,11 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
         })
         return current
       }
-      const targetIndex = Math.min(activeSheetIndex, current.length - 1)
+      const resolvedIndex =
+        typeof target === 'number'
+          ? Math.max(0, Math.min(target, current.length - 1))
+          : Math.min(activeSheetIndex, current.length - 1)
+      const targetIndex = resolvedIndex
       const targetSheet = current[targetIndex]
       const next = current.filter((_, index) => index !== targetIndex)
       const nextActiveIndex = Math.min(targetIndex, next.length - 1)
@@ -180,7 +184,7 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
   }, [activeSheetIndex, setActiveSheetIndex, setNotice])
 
   const renameSheet = React.useCallback(
-    (name: string): void => {
+    (index: number, name: string): void => {
       const trimmed = name.trim()
       if (!trimmed) {
         setNotice({
@@ -193,7 +197,7 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
         if (!current.length) {
           return current
         }
-        const targetIndex = Math.min(activeSheetIndex, current.length - 1)
+        const targetIndex = Math.max(0, Math.min(index, current.length - 1))
         const next = current.map((sheet, index) =>
           index === targetIndex
             ? {
@@ -209,7 +213,7 @@ export function useSheetState({ initialSheets, setNotice }: UseSheetStateOptions
         return next
       })
     },
-    [activeSheetIndex, setNotice],
+    [setNotice],
   )
 
   const moveColumn = React.useCallback(

@@ -1,5 +1,5 @@
 // File Header: Evaluates YAML-defined cell functions and provides a registry for macro handlers.
-import type { TableRow } from '../../../services/workbookService'
+import { deriveColumns, type TableRow, type TableSheet } from '../../../services/workbookService'
 
 export type CellFunctionArgs = Record<string, unknown> | undefined
 
@@ -8,7 +8,9 @@ export type CellFunctionContext = {
   columns: string[]
   rowIndex: number
   columnKey: string
-  getCellValue: (_rowIndex: number, _columnKey: string) => string
+  sheetName: string
+  getCellValue: (_rowIndex: number, _columnKey: string, _options?: { sheetName?: string }) => string
+  resolveColumnKey?: (_columnIndex: number, _sheetName?: string) => string | undefined
 }
 
 export type CellStyleDirectives = {
@@ -31,6 +33,7 @@ export type CellFunctionHandler = (_args: CellFunctionArgs, _context: CellFuncti
 export type ResolvedCellTarget = {
   rowIndex: number
   columnKey: string
+  sheetName?: string
 }
 
 export type RegisteredFunctionMeta = {
@@ -103,11 +106,218 @@ type EvaluationCacheEntry = {
   styles?: CellStyleDirectives
 }
 
-type EvaluationEnv = {
+type SheetEvaluationState = {
+  name: string
   rows: TableRow[]
   columns: string[]
   cache: Map<string, EvaluationCacheEntry>
-  stack: Set<string>
+}
+
+type SheetStateCollection = {
+  states: Map<string, SheetEvaluationState>
+  nameIndex: Map<string, string[]>
+  activeSheetKey: string
+  activeSheetName: string
+}
+
+type WorkbookResolver = {
+  getCellValue: (_rowIndex: number, _columnKey: string, _options?: { sheetName?: string }) => string
+  resolveColumnKey: (_columnIndex: number, _sheetName?: string) => string | undefined
+}
+
+const registerSheetIndex = (index: Map<string, string[]>, sheetName: string, key: string): void => {
+  const existing = index.get(sheetName)
+  if (existing) {
+    existing.push(key)
+    return
+  }
+  index.set(sheetName, [key])
+}
+
+const buildSheetStateMap = (
+  rows: TableRow[],
+  columns: string[],
+  workbook: TableSheet[] | undefined,
+  activeSheetName: string,
+): SheetStateCollection => {
+  const states = new Map<string, SheetEvaluationState>()
+  const nameIndex = new Map<string, string[]>()
+  let activeSheetKey: string | null = null
+
+  workbook?.forEach((sheet, index) => {
+    const key = `sheet-${index}`
+    states.set(key, {
+      name: sheet.name,
+      rows: sheet.rows,
+      columns: deriveColumns(sheet.rows),
+      cache: new Map<string, EvaluationCacheEntry>(),
+    })
+    registerSheetIndex(nameIndex, sheet.name, key)
+    if (!activeSheetKey && sheet.rows === rows) {
+      activeSheetKey = key
+    }
+  })
+
+  if (activeSheetKey) {
+    const state = states.get(activeSheetKey)
+    if (state) {
+      state.rows = rows
+      state.columns = columns
+    }
+  }
+
+  if (!activeSheetKey) {
+    const matchingKeys = nameIndex.get(activeSheetName)
+    if (matchingKeys?.length) {
+      activeSheetKey = matchingKeys[0]
+      const state = states.get(activeSheetKey)
+      if (state) {
+        state.rows = rows
+        state.columns = columns
+      }
+    }
+  }
+
+  if (!activeSheetKey) {
+    const fallbackKey = `active-${activeSheetName}`
+    states.set(fallbackKey, {
+      name: activeSheetName,
+      rows,
+      columns,
+      cache: new Map<string, EvaluationCacheEntry>(),
+    })
+    registerSheetIndex(nameIndex, activeSheetName, fallbackKey)
+    activeSheetKey = fallbackKey
+  } else if (!nameIndex.has(activeSheetName)) {
+    registerSheetIndex(nameIndex, activeSheetName, activeSheetKey)
+  }
+
+  return {
+    states,
+    nameIndex,
+    activeSheetKey,
+    activeSheetName,
+  }
+}
+
+const createWorkbookResolver = (sheetStates: SheetStateCollection): WorkbookResolver => {
+  const { states, nameIndex, activeSheetKey } = sheetStates
+  const stack = new Set<string>()
+
+  const resolveSheetKey = (
+    requestedName: string | undefined,
+    baseKey: string,
+    explicit: boolean,
+  ): string | null => {
+    const baseSheet = states.get(baseKey)
+    if (!baseSheet) {
+      return null
+    }
+    if (!requestedName) {
+      return baseKey
+    }
+    const candidates = nameIndex.get(requestedName)
+    if (!candidates?.length) {
+      return explicit ? null : baseKey
+    }
+    if (!explicit && requestedName === baseSheet.name && candidates.includes(baseKey)) {
+      return baseKey
+    }
+    if (explicit) {
+      for (const candidateKey of candidates) {
+        if (candidateKey !== baseKey) {
+          return candidateKey
+        }
+      }
+    }
+    return candidates.includes(baseKey) ? baseKey : candidates[0]
+  }
+
+  const evaluateCell = (sheetKey: string, rowIndex: number, columnKey: string): string => {
+    const sheet = states.get(sheetKey)
+    if (!sheet) {
+      return ''
+    }
+    const cacheKey = `${rowIndex}:${columnKey}`
+    const cached = sheet.cache.get(cacheKey)
+    if (cached) {
+      return cached.value
+    }
+    if (rowIndex < 0 || rowIndex >= sheet.rows.length) {
+      const entry: EvaluationCacheEntry = { value: '' }
+      sheet.cache.set(cacheKey, entry)
+      return ''
+    }
+    const row = sheet.rows[rowIndex]
+    const cell = row?.[columnKey]
+    const fallbackValue = cell?.value ?? ''
+    if (!cell || !cell.func) {
+      const entry: EvaluationCacheEntry = { value: fallbackValue }
+      sheet.cache.set(cacheKey, entry)
+      return fallbackValue
+    }
+    const stackKey = `${sheetKey}:${cacheKey}`
+    if (stack.has(stackKey)) {
+      console.warn(
+        `セル関数の循環参照を検出しました: sheet=${sheet.name}, row=${rowIndex + 1}, column=${columnKey}`,
+      )
+      sheet.cache.set(cacheKey, { value: '' })
+      return ''
+    }
+    const handler = getCellFunctionHandler(cell.func.name)
+    if (!handler) {
+      console.warn(`未対応のセル関数です: ${cell.func.name}`)
+      sheet.cache.set(cacheKey, { value: '' })
+      return ''
+    }
+    stack.add(stackKey)
+    let entry: EvaluationCacheEntry = { value: '' }
+    try {
+      const localResolver = createSheetResolver(sheetKey)
+      const output = handler(cell.func.args, {
+        rows: sheet.rows,
+        columns: sheet.columns,
+        rowIndex,
+        columnKey,
+        sheetName: sheet.name,
+        getCellValue: localResolver.getCellValue,
+        resolveColumnKey: localResolver.resolveColumnKey,
+      })
+      entry = normalizeFunctionOutput(output, fallbackValue)
+    } catch (error) {
+      console.error(`セル関数「${cell.func.name}」の評価に失敗しました。`, error)
+      entry = { value: '' }
+    }
+    stack.delete(stackKey)
+    sheet.cache.set(cacheKey, entry)
+    return entry.value
+  }
+
+  const createSheetResolver = (baseSheetKey: string): WorkbookResolver => ({
+    getCellValue: (rowIndex, columnKey, options) => {
+      const targetKey = resolveSheetKey(options?.sheetName, baseSheetKey, typeof options?.sheetName === 'string')
+      if (!targetKey) {
+        return ''
+      }
+      return evaluateCell(targetKey, rowIndex, columnKey)
+    },
+    resolveColumnKey: (columnIndex, sheetName) => {
+      const targetKey = resolveSheetKey(sheetName, baseSheetKey, typeof sheetName === 'string')
+      if (!targetKey) {
+        return undefined
+      }
+      const sheet = states.get(targetKey)
+      if (!sheet) {
+        return undefined
+      }
+      if (columnIndex < 0 || columnIndex >= sheet.columns.length) {
+        return undefined
+      }
+      return sheet.columns[columnIndex]
+    },
+  })
+
+  return createSheetResolver(activeSheetKey)
 }
 
 const normalizeColorDirective = (value: unknown): string | null | undefined => {
@@ -169,69 +379,25 @@ const normalizeFunctionOutput = (output: CellFunctionResult, fallbackValue: stri
   return { value: fallbackValue }
 }
 
-const createCellValueResolver = (env: EvaluationEnv) => {
-  const resolve = (rowIndex: number, columnKey: string): string => {
-    if (rowIndex < 0 || rowIndex >= env.rows.length) {
-      return ''
-    }
-    const cacheKey = `${rowIndex}:${columnKey}`
-    const cached = env.cache.get(cacheKey)
-    if (cached) {
-      return cached.value
-    }
-    const row = env.rows[rowIndex]
-    const cell = row?.[columnKey]
-    const fallbackValue = cell?.value ?? ''
-    if (!cell || !cell.func) {
-      const baseEntry: EvaluationCacheEntry = { value: fallbackValue }
-      env.cache.set(cacheKey, baseEntry)
-      return fallbackValue
-    }
-
-    if (env.stack.has(cacheKey)) {
-      console.warn(`セル関数の循環参照を検出しました: row=${rowIndex + 1}, column=${columnKey}`)
-      env.cache.set(cacheKey, { value: '' })
-      return ''
-    }
-
-    const handler = getCellFunctionHandler(cell.func.name)
-    if (!handler) {
-      console.warn(`未対応のセル関数です: ${cell.func.name}`)
-      env.cache.set(cacheKey, { value: '' })
-      return ''
-    }
-
-    env.stack.add(cacheKey)
-    let entry: EvaluationCacheEntry = { value: '' }
-    try {
-      const output = handler(cell.func.args, {
-        rows: env.rows,
-        columns: env.columns,
-        rowIndex,
-        columnKey,
-        getCellValue: resolve,
-      })
-      entry = normalizeFunctionOutput(output, fallbackValue)
-    } catch (error) {
-      console.error(`セル関数「${cell.func.name}」の評価に失敗しました。`, error)
-      entry = { value: '' }
-    }
-    env.stack.delete(cacheKey)
-    env.cache.set(cacheKey, entry)
-    return entry.value
-  }
-  return resolve
+type ApplyCellFunctionOptions = {
+  workbook?: TableSheet[]
+  sheetName?: string
 }
 
 // Function Header: Applies registered cell functions to produce display-ready rows.
-export function applyCellFunctions(rows: TableRow[], columns: string[]): TableRow[] {
+export function applyCellFunctions(rows: TableRow[], columns: string[], options?: ApplyCellFunctionOptions): TableRow[] {
   if (!rows.length) {
     return rows
   }
 
-  const cache = new Map<string, EvaluationCacheEntry>()
-  const stack = new Set<string>()
-  const getCellValue = createCellValueResolver({ rows, columns, cache, stack })
+  const activeSheetName = options?.sheetName ?? 'Sheet 1'
+  const sheetStates = buildSheetStateMap(rows, columns, options?.workbook, activeSheetName)
+  const resolver = createWorkbookResolver(sheetStates)
+  const activeSheetState = sheetStates.states.get(sheetStates.activeSheetKey)
+  if (!activeSheetState) {
+    return rows
+  }
+
   let didMutate = false
 
   const evaluatedRows = rows.map((row, rowIndex) => {
@@ -243,9 +409,9 @@ export function applyCellFunctions(rows: TableRow[], columns: string[]): TableRo
         }
         return
       }
-      const computedValue = getCellValue(rowIndex, columnKey)
+      const computedValue = resolver.getCellValue(rowIndex, columnKey)
       const cacheKey = `${rowIndex}:${columnKey}`
-      const computedEntry = cache.get(cacheKey)
+      const computedEntry = activeSheetState.cache.get(cacheKey)
       if (!nextRow) {
         nextRow = { ...row }
       }
@@ -275,10 +441,16 @@ export function applyCellFunctions(rows: TableRow[], columns: string[]): TableRo
   return didMutate ? evaluatedRows : rows
 }
 
-const parseRowIndex = (value: unknown, totalRows: number): number | null => {
+const parseRowIndex = (value: unknown, totalRows?: number): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     const normalized = Math.round(value) - 1
-    return normalized >= 0 && normalized < totalRows ? normalized : null
+    if (normalized < 0) {
+      return null
+    }
+    if (typeof totalRows === 'number' && normalized >= totalRows) {
+      return null
+    }
+    return normalized
   }
   if (typeof value === 'string' && value.trim().length > 0) {
     const parsed = Number(value)
@@ -286,7 +458,13 @@ const parseRowIndex = (value: unknown, totalRows: number): number | null => {
       return null
     }
     const normalized = Math.round(parsed) - 1
-    return normalized >= 0 && normalized < totalRows ? normalized : null
+    if (normalized < 0) {
+      return null
+    }
+    if (typeof totalRows === 'number' && normalized >= totalRows) {
+      return null
+    }
+    return normalized
   }
   return null
 }
@@ -329,10 +507,16 @@ const resolveRowIndexes = (candidate: unknown, totalRows: number): number[] | nu
   return null
 }
 
-const parseColumnIndex = (value: unknown, totalColumns: number): number | null => {
+const parseColumnIndex = (value: unknown, totalColumns?: number): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     const normalized = Math.round(value) - 1
-    return normalized >= 0 && normalized < totalColumns ? normalized : null
+    if (normalized < 0) {
+      return null
+    }
+    if (typeof totalColumns === 'number' && normalized >= totalColumns) {
+      return null
+    }
+    return normalized
   }
   if (typeof value === 'string' && value.trim().length > 0) {
     const parsed = Number(value)
@@ -340,7 +524,13 @@ const parseColumnIndex = (value: unknown, totalColumns: number): number | null =
       return null
     }
     const normalized = Math.round(parsed) - 1
-    return normalized >= 0 && normalized < totalColumns ? normalized : null
+    if (normalized < 0) {
+      return null
+    }
+    if (typeof totalColumns === 'number' && normalized >= totalColumns) {
+      return null
+    }
+    return normalized
   }
   return null
 }
@@ -398,7 +588,14 @@ const resolveExplicitCells = (
       return
     }
     const record = entry as Record<string, unknown>
-    const rowIndex = parseRowIndex(record.row ?? record.r ?? record.rowIndex, totalRows)
+    const sheetCandidate =
+      typeof record.sheet === 'string'
+        ? record.sheet.trim()
+        : typeof record.sheetName === 'string'
+          ? record.sheetName.trim()
+          : ''
+    const sheetName = sheetCandidate.length ? sheetCandidate : undefined
+    const rowIndex = parseRowIndex(record.row ?? record.r ?? record.rowIndex, sheetName ? undefined : totalRows)
     if (rowIndex === null) {
       return
     }
@@ -409,25 +606,42 @@ const resolveExplicitCells = (
           ? record.column.trim()
           : ''
     if (keyCandidate) {
-      targets.push({ rowIndex, columnKey: keyCandidate })
+      targets.push({
+        rowIndex,
+        columnKey: keyCandidate,
+        ...(sheetName ? { sheetName } : {}),
+      })
       return
     }
     const columnIndex =
-      parseColumnIndex(record.column ?? record.col ?? record.columnIndex, totalColumns) ?? null
+      parseColumnIndex(record.column ?? record.col ?? record.columnIndex, sheetName ? undefined : totalColumns) ?? null
     if (columnIndex === null) {
       return
     }
-    const columnKey = context.columns[columnIndex]
+    const columnKey =
+      sheetName && context.resolveColumnKey
+        ? context.resolveColumnKey(columnIndex, sheetName)
+        : context.columns[columnIndex]
     if (columnKey) {
-      targets.push({ rowIndex, columnKey })
+      targets.push({
+        rowIndex,
+        columnKey,
+        ...(sheetName ? { sheetName } : {}),
+      })
     }
   })
   if (!targets.length) {
     return null
   }
   const unique = new Map<string, ResolvedCellTarget>()
+  const duplicateCounts = new Map<string, number>()
   targets.forEach((target) => {
-    unique.set(`${target.rowIndex}:${target.columnKey}`, target)
+    const sheetKey = target.sheetName ?? context.sheetName ?? '__current__'
+    const baseKey = `${sheetKey}:${target.rowIndex}:${target.columnKey}`
+    const occurrence = duplicateCounts.get(baseKey) ?? 0
+    duplicateCounts.set(baseKey, occurrence + 1)
+    const dedupeKey = occurrence === 0 ? baseKey : `${baseKey}:${occurrence}`
+    unique.set(dedupeKey, target)
   })
   return Array.from(unique.values())
 }
@@ -488,8 +702,14 @@ export const resolveFunctionTargets = (args: CellFunctionArgs, context: CellFunc
   }
 
   const unique = new Map<string, ResolvedCellTarget>()
+  const duplicateCounts = new Map<string, number>()
   targets.forEach((target) => {
-    unique.set(`${target.rowIndex}:${target.columnKey}`, target)
+    const sheetKey = target.sheetName ?? context.sheetName ?? '__current__'
+    const baseKey = `${sheetKey}:${target.rowIndex}:${target.columnKey}`
+    const occurrence = duplicateCounts.get(baseKey) ?? 0
+    duplicateCounts.set(baseKey, occurrence + 1)
+    const dedupeKey = occurrence === 0 ? baseKey : `${baseKey}:${occurrence}`
+    unique.set(dedupeKey, target)
   })
   return Array.from(unique.values())
 }
@@ -497,15 +717,20 @@ export const resolveFunctionTargets = (args: CellFunctionArgs, context: CellFunc
 const sumFunctionHandler: CellFunctionHandler = (args, context) => {
   const targets = resolveFunctionTargets(args, context)
   const scopedTargets = targets.filter(
-    (target) => !(target.rowIndex === context.rowIndex && target.columnKey === context.columnKey),
+    (target) =>
+      !(
+        target.rowIndex === context.rowIndex &&
+        target.columnKey === context.columnKey &&
+        (target.sheetName ?? context.sheetName) === context.sheetName
+      ),
   )
   const effectiveTargets = scopedTargets.length ? scopedTargets : targets
   if (!effectiveTargets.length) {
     return ''
   }
   let total = 0
-  effectiveTargets.forEach(({ rowIndex, columnKey }) => {
-    const rawValue = context.getCellValue(rowIndex, columnKey)
+  effectiveTargets.forEach(({ rowIndex, columnKey, sheetName }) => {
+    const rawValue = context.getCellValue(rowIndex, columnKey, { sheetName })
     const numericValue = Number(rawValue)
     if (!Number.isNaN(numericValue)) {
       total += numericValue
@@ -518,4 +743,40 @@ registerCellFunction('sum', sumFunctionHandler, {
   label: 'BIF: sum',
   source: 'builtin',
   description: '指定したセル範囲の値を合計します。',
+})
+
+const multiplyFunctionHandler: CellFunctionHandler = (args, context) => {
+  const targets = resolveFunctionTargets(args, context)
+  const scopedTargets = targets.filter(
+    (target) =>
+      !(
+        target.rowIndex === context.rowIndex &&
+        target.columnKey === context.columnKey &&
+        (target.sheetName ?? context.sheetName) === context.sheetName
+      ),
+  )
+  const effectiveTargets = scopedTargets.length ? scopedTargets : targets
+  if (!effectiveTargets.length) {
+    return ''
+  }
+  let product = 1
+  let hasNumeric = false
+  effectiveTargets.forEach(({ rowIndex, columnKey, sheetName }) => {
+    const rawValue = context.getCellValue(rowIndex, columnKey, { sheetName })
+    const numericValue = Number(rawValue)
+    if (!Number.isNaN(numericValue)) {
+      product *= numericValue
+      hasNumeric = true
+    }
+  })
+  if (!hasNumeric) {
+    return ''
+  }
+  return product.toString()
+}
+
+registerCellFunction('multiply', multiplyFunctionHandler, {
+  label: 'BIF: multiply',
+  source: 'builtin',
+  description: '指定したセル範囲の値を掛け合わせます。',
 })

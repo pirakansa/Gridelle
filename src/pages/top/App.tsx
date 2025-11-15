@@ -8,6 +8,7 @@ import SpreadsheetTable from '../../components/block/SpreadsheetTable'
 import MenuHeader from '../../components/block/MenuHeader'
 import YamlPanel from '../../components/block/YamlPanel'
 import SettingsOverlay from '../../components/block/SettingsOverlay'
+import SheetTabsBar from '../../components/block/SheetTabsBar'
 import GithubIntegrationPanel, {
   type GithubIntegrationLoadedFileInfo,
   type GithubIntegrationSaveNotice,
@@ -246,13 +247,8 @@ export default function App(): React.ReactElement {
         onGithubIntegrationClick={openGithubIntegration}
         notice={spreadsheet.notice}
         sheetNames={spreadsheet.sheets.map((sheet) => sheet.name)}
-        activeSheetIndex={spreadsheet.activeSheetIndex}
-        onSelectSheet={spreadsheet.handleSelectSheet}
         currentSheetName={spreadsheet.currentSheetName}
         columns={spreadsheet.columns}
-        onRenameSheet={spreadsheet.handleRenameSheet}
-        onAddSheet={spreadsheet.handleAddSheet}
-        onDeleteSheet={spreadsheet.handleDeleteSheet}
         onAddRow={spreadsheet.handleAddRow}
         onInsertRowBelowSelection={spreadsheet.handleInsertRowBelowSelection}
         onMoveSelectedRowsUp={spreadsheet.handleMoveSelectedRowsUp}
@@ -280,10 +276,11 @@ export default function App(): React.ReactElement {
         onApplySelectionBackgroundColor={spreadsheet.applySelectionBackgroundColor}
         onClearSelectionStyles={spreadsheet.clearSelectionStyles}
         onApplySelectionFunction={spreadsheet.applySelectionFunction}
-        canDeleteSheet={spreadsheet.canDeleteSheet}
+        selectionRange={spreadsheet.selection}
         macroFunctions={spreadsheet.macroFunctions}
         loadedMacroModules={spreadsheet.loadedMacroModules}
         onLoadWasmModule={spreadsheet.loadWasmModule}
+        sheetColumns={spreadsheet.sheetColumns}
         loginMode={loginMode}
         userEmail={currentUser?.email ?? null}
         onLogout={handleLogout}
@@ -312,6 +309,14 @@ export default function App(): React.ReactElement {
           onPaste={spreadsheet.handlePaste}
           onCellEditorBlur={spreadsheet.handleCellEditorBlur}
           onCellEditorKeyDown={spreadsheet.handleCellEditorKeyDown}
+        />
+        <SheetTabsBar
+          sheetNames={spreadsheet.sheets.map((sheet) => sheet.name)}
+          activeSheetIndex={spreadsheet.activeSheetIndex}
+          onSelectSheet={spreadsheet.handleSelectSheet}
+          onAddSheet={spreadsheet.handleAddSheet}
+          onDeleteSheet={spreadsheet.handleDeleteSheet}
+          onRenameSheet={spreadsheet.handleRenameSheet}
         />
       </main>
       {isYamlInputOpen && (

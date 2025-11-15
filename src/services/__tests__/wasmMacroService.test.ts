@@ -13,11 +13,11 @@ describe('wasmMacroService', () => {
   })
 
   it('loads a WASM module and registers exported functions', async () => {
-    const wasmPath = path.resolve(__dirname, '../../../public/macros/sample_sum.wasm')
+    const wasmPath = path.resolve(__dirname, '../../../public/macros/sample_macros.wasm')
     const bytes = await fs.readFile(wasmPath)
     global.fetch = vi.fn(async () => new Response(bytes.slice(0)))
 
-    await loadWasmMacroModule({ moduleId: 'test-sample', url: '/macros/sample_sum.wasm' })
+    await loadWasmMacroModule({ moduleId: 'test-sample', url: '/macros/sample_macros.wasm' })
 
     const functions = listRegisteredFunctions()
     expect(functions.some((fn) => fn.id === 'wasm:test-sample.sumRange')).toBe(true)

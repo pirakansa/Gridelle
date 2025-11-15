@@ -1,6 +1,12 @@
 // File Header: Custom hook composing spreadsheet data and interaction controllers.
 import React from 'react'
-import { createCell, type TableRow, type TableSheet, type CellFunctionConfig } from '../../services/workbookService'
+import {
+  createCell,
+  deriveColumns,
+  type TableRow,
+  type TableSheet,
+  type CellFunctionConfig,
+} from '../../services/workbookService'
 import { useSpreadsheetDataController } from './hooks/useSpreadsheetDataController'
 import { useSpreadsheetInteractionController } from './hooks/useSpreadsheetInteractionController'
 import { generateNextColumnKey } from './hooks/internal/spreadsheetDataUtils'
@@ -46,8 +52,8 @@ type UseSpreadsheetState = {
   canMoveSelectedRowsDown: boolean
   handleDeleteSelectedRows: () => void
   handleAddSheet: () => void
-    handleDeleteSheet: () => void
-  handleRenameSheet: (_name: string) => void
+  handleDeleteSheet: (_index: number) => void
+  handleRenameSheet: (_index: number, _name: string) => void
   canDeleteSheet: boolean
   moveColumn: (_columnKey: string, _direction: 'left' | 'right') => void
   applyYamlBuffer: () => void
@@ -98,6 +104,7 @@ type UseSpreadsheetState = {
   loadedMacroModules: LoadedWasmModule[]
   loadWasmModule: (_params: { moduleId: string; url: string }) => Promise<void>
   applySelectionFunction: (_config: CellFunctionConfig | null) => void
+  sheetColumns: Record<string, string[]>
 }
 
 const createSeedRow = (entries: Record<string, string>): TableRow =>
@@ -141,7 +148,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleAddRow,
     handleAddColumn,
     handleAddSheet,
-    handleDeleteSheet,
+    handleDeleteSheet: deleteSheet,
     handleRenameSheet,
     moveColumn,
     applyYamlBuffer,
@@ -154,7 +161,22 @@ export function useSpreadsheetState(): UseSpreadsheetState {
 
   const [bulkValue, setBulkValue] = React.useState<string>('')
   const { registeredFunctions, loadedModules, loadWasmModule } = useMacroManager()
-  const computedRows = React.useMemo(() => applyCellFunctions(rows, columns), [rows, columns])
+  const macroRegistrySignature = React.useMemo(
+    () => registeredFunctions.map((fn) => `${fn.id}:${fn.moduleId ?? ''}`).join('|'),
+    [registeredFunctions],
+  )
+  const activeSheetName = sheets[activeSheetIndex]?.name ?? 'Sheet 1'
+  const sheetColumns = React.useMemo(() => {
+    const map: Record<string, string[]> = {}
+    sheets.forEach((sheet) => {
+      map[sheet.name] = deriveColumns(sheet.rows)
+    })
+    return map
+  }, [sheets])
+  const computedRows = React.useMemo(() => {
+    void macroRegistrySignature
+    return applyCellFunctions(rows, columns, { workbook: sheets, sheetName: activeSheetName })
+  }, [rows, columns, macroRegistrySignature, sheets, activeSheetName])
 
   const {
     selection,
@@ -466,6 +488,13 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     })
   }, [selection, rows, updateRows, clearSelection, setNotice])
 
+  const handleDeleteSheetByIndex = React.useCallback(
+    (index: number) => {
+      deleteSheet(index)
+    },
+    [deleteSheet],
+  )
+
   return {
     notice,
     yamlBuffer,
@@ -478,7 +507,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
       clearSelection()
       setActiveSheetIndex(index)
     },
-    currentSheetName: sheets[activeSheetIndex]?.name ?? '',
+    currentSheetName: activeSheetName,
     rows: computedRows,
     columns,
     handleAddRow,
@@ -492,7 +521,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     handleDeleteSelectedColumns,
     handleDeleteSelectedRows,
     handleAddSheet,
-    handleDeleteSheet,
+    handleDeleteSheet: handleDeleteSheetByIndex,
     handleRenameSheet,
     moveColumn,
     applyYamlBuffer,
@@ -537,5 +566,6 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     loadedMacroModules: loadedModules,
     loadWasmModule,
     applySelectionFunction,
+    sheetColumns,
   }
 }

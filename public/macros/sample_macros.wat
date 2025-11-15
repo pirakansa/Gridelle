@@ -29,4 +29,24 @@
     )
     (return (local.get $sum))
   )
+
+  ;; color_if(ptr: i32, len: i32, stylePtr: i32) -> f64
+  ;; Highlights the first value if it is greater than zero and returns it.
+  (func (export "color_if") (param $ptr i32) (param $len i32) (param $style i32) (result f64)
+    (local $value f64)
+    (if (result f64) (i32.eqz (local.get $len))
+      (then (f64.const 0))
+      (else
+        (local.set $value (f64.load (local.get $ptr)))
+        (if (f64.gt (local.get $value) (f64.const 0))
+          (then
+            ;; Flag background color (bit 1) and set #a7f3d0 (0x00A7F3D0).
+            (i32.store (local.get $style) (i32.const 2))
+            (i32.store (i32.add (local.get $style) (i32.const 8)) (i32.const 0x00a7f3d0))
+          )
+        )
+        (local.get $value)
+      )
+    )
+  )
 )

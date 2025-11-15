@@ -3,7 +3,15 @@ import React from 'react'
 import IconButton from '../../atom/IconButton'
 import { useI18n } from '../../../utils/i18n'
 
-export type MenuSectionId = 'file' | 'sheet' | 'structure' | 'selection' | 'macro' | 'user' | 'help'
+export type MenuSectionId =
+  | 'file'
+  | 'sheet'
+  | 'structure'
+  | 'selection'
+  | 'macro'
+  | 'wasm'
+  | 'user'
+  | 'help'
 
 type MenuTabsProps = {
   activeSection: MenuSectionId
@@ -44,6 +52,7 @@ export default function MenuTabs({
             { id: 'structure' as const, labelJa: '行列', labelEn: 'Rows & Columns' },
             { id: 'selection' as const, labelJa: '選択', labelEn: 'Selection' },
             { id: 'macro' as const, labelJa: '関数', labelEn: 'Functions' },
+            { id: 'wasm' as const, labelJa: 'WASM', labelEn: 'WASM' },
             { id: 'user' as const, labelJa: 'ユーザー', labelEn: 'Account' },
             { id: 'help' as const, labelJa: 'ヘルプ', labelEn: 'Help' },
           ] satisfies Array<{ id: MenuSectionId; labelJa: string; labelEn: string }>
