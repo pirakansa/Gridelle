@@ -109,18 +109,73 @@ type UseSpreadsheetState = {
   sheetColumns: Record<string, string[]>
 }
 
-const createSeedRow = (entries: Record<string, string>): TableRow =>
-  Object.fromEntries(Object.entries(entries).map(([key, value]) => [key, createCell(value)]))
+type SeedCellConfig = {
+  value: string
+  color?: string
+  bgColor?: string
+  func?: CellFunctionConfig
+}
+
+const createSeedRow = (entries: Record<string, string | SeedCellConfig>): TableRow =>
+  Object.fromEntries(
+    Object.entries(entries).map(([key, cell]) =>
+      typeof cell === 'string'
+        ? [key, createCell(cell)]
+        : [key, createCell(cell.value, cell.color, cell.bgColor, cell.func)],
+    ),
+  )
+
+const STATUS_STYLES = {
+  ready: { color: '#166534', bgColor: '#dcfce7' },
+  review: { color: '#92400e', bgColor: '#ffedd5' },
+  backlog: { color: '#1f2937', bgColor: '#e5e7eb' },
+  doing: { color: '#1d4ed8', bgColor: '#dbeafe' },
+} as const
 
 const DEFAULT_SHEETS: TableSheet[] = [
   {
     name: 'バックログ',
     rows: [
-      createSeedRow({ feature: 'テーブル編集', owner: 'Alice', status: 'READY', effort: '3' }),
-      createSeedRow({ feature: 'YAML Export', owner: 'Bob', status: 'REVIEW', effort: '5' }),
-      createSeedRow({ feature: 'CSVインポート', owner: 'Carol', status: 'BACKLOG', effort: '2' }),
-      createSeedRow({ feature: '権限管理', owner: 'Dave', status: 'DOING', effort: '8' }),
-      createSeedRow({ feature: '操作ガイド作成', owner: 'Eve', status: 'DONE', effort: '1' }),
+      createSeedRow({
+        feature: 'テーブル編集',
+        owner: 'Alice',
+        status: { value: 'READY', ...STATUS_STYLES.ready },
+        effort: '3',
+      }),
+      createSeedRow({
+        feature: 'YAML Export',
+        owner: 'Bob',
+        status: { value: 'REVIEW', ...STATUS_STYLES.review },
+        effort: '5',
+      }),
+      createSeedRow({
+        feature: 'CSVインポート',
+        owner: 'Carol',
+        status: { value: 'BACKLOG', ...STATUS_STYLES.backlog },
+        effort: '2',
+      }),
+      createSeedRow({
+        feature: '権限管理',
+        owner: 'Dave',
+        status: { value: 'DOING', ...STATUS_STYLES.doing },
+        effort: '8',
+      }),
+      createSeedRow({
+        feature: { value: 'ストーリーポイント合計', color: '#6b21a8' },
+        owner: { value: 'Fx sum', color: '#6b21a8' },
+        status: { value: '自動計算', color: '#6b21a8', bgColor: '#f5d0fe' },
+        effort: {
+          value: '',
+          color: '#6b21a8',
+          func: {
+            name: 'sum',
+            args: {
+              rows: { start: 1, end: 4 },
+              key: 'effort',
+            },
+          },
+        },
+      }),
     ],
   },
   {
