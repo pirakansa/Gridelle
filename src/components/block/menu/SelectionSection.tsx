@@ -2,7 +2,6 @@
 import React from 'react'
 import Button from '../../atom/Button'
 import TextAreaField from '../../atom/TextAreaField'
-import TextInput from '../../atom/TextInput'
 import MenuSectionCard from './MenuSectionCard'
 import { useI18n } from '../../../utils/i18n'
 
@@ -41,8 +40,6 @@ export default function SelectionSection({
   onPasteSelectionFunction,
 }: SelectionSectionProps): React.ReactElement {
   const { select } = useI18n()
-  const [textColorDraft, setTextColorDraft] = React.useState<string>(selectionTextColor)
-  const [backgroundColorDraft, setBackgroundColorDraft] = React.useState<string>(selectionBackgroundColor)
   const [activeTool, setActiveTool] = React.useState<'bulk' | 'style' | null>(null)
   const [isToolManuallyChosen, setIsToolManuallyChosen] = React.useState<boolean>(false)
   const textColorPresets = React.useMemo(
@@ -53,14 +50,6 @@ export default function SelectionSection({
     () => ['#e2e8f0', '#dbeafe', '#fee2e2', '#dcfce7', '#fef3c7', '#ede9fe'],
     [],
   )
-
-  React.useEffect(() => {
-    setTextColorDraft(selectionTextColor)
-  }, [selectionTextColor])
-
-  React.useEffect(() => {
-    setBackgroundColorDraft(selectionBackgroundColor)
-  }, [selectionBackgroundColor])
 
   const trimmedBulkValue = React.useMemo(() => bulkValue.trim(), [bulkValue])
 
@@ -107,27 +96,12 @@ export default function SelectionSection({
     return select('背景色を適用', 'Background color set')
   }, [select, selectionBackgroundColor, selectionTextColor])
 
-  const handleApplyTextColor = React.useCallback(() => {
-    const trimmed = textColorDraft.trim()
-    onApplyTextColor(trimmed ? trimmed : null)
-    setTextColorDraft(trimmed)
-  }, [onApplyTextColor, textColorDraft])
-
-  const handleApplyBackgroundColor = React.useCallback(() => {
-    const trimmed = backgroundColorDraft.trim()
-    onApplyBackgroundColor(trimmed ? trimmed : null)
-    setBackgroundColorDraft(trimmed)
-  }, [backgroundColorDraft, onApplyBackgroundColor])
-
   const handleClearStyles = React.useCallback(() => {
     onClearSelectionStyles()
-    setTextColorDraft('')
-    setBackgroundColorDraft('')
   }, [onClearSelectionStyles])
 
   const handleSelectPresetTextColor = React.useCallback(
     (color: string) => {
-      setTextColorDraft(color)
       onApplyTextColor(color)
     },
     [onApplyTextColor],
@@ -135,7 +109,6 @@ export default function SelectionSection({
 
   const handleSelectPresetBackgroundColor = React.useCallback(
     (color: string) => {
-      setBackgroundColorDraft(color)
       onApplyBackgroundColor(color)
     },
     [onApplyBackgroundColor],
@@ -154,7 +127,7 @@ export default function SelectionSection({
 
   const bulkButtonClass = React.useMemo(
     () =>
-      `flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+      `flex-1 rounded-xl px-3 py-1.5 text-xs md:text-sm font-semibold transition ${
         activeTool === 'bulk'
           ? 'bg-slate-900 text-white shadow-sm'
           : 'bg-white text-slate-600 shadow-sm'
@@ -164,7 +137,7 @@ export default function SelectionSection({
 
   const styleButtonClass = React.useMemo(
     () =>
-      `flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+      `flex-1 rounded-xl px-3 py-1.5 text-xs md:text-sm font-semibold transition ${
         activeTool === 'style'
           ? 'bg-slate-900 text-white shadow-sm'
           : 'bg-white text-slate-600 shadow-sm'
@@ -237,7 +210,7 @@ export default function SelectionSection({
                   aria-pressed={showStyle}
                   disabled={!hasSelection}
                 >
-                  {select('セルのスタイル', 'Cell styles')}
+                  {select('スタイル', 'Styles')}
                 </button>
               </div>
             </div>
@@ -282,56 +255,6 @@ export default function SelectionSection({
                   <p className="text-xs text-slate-400" aria-live="polite">
                     {select('現在のスタイル', 'Current styles')}: {stylePreview}
                   </p>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="selection-text-color" className="text-xs font-semibold text-slate-600">
-                        {select('文字色', 'Text color')}
-                      </label>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <TextInput
-                          id="selection-text-color"
-                          value={textColorDraft}
-                          onChange={(event) => setTextColorDraft(event.target.value)}
-                          placeholder={select('例: #334155', 'e.g., #334155')}
-                          className="min-w-[8rem] flex-1"
-                          onPointerDown={(event) => event.stopPropagation()}
-                        />
-                        <span
-                          className="inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded border border-slate-200 px-2 text-xs font-semibold"
-                          aria-hidden="true"
-                          style={{ color: textColorDraft || undefined }}
-                        >
-                          Aa
-                        </span>
-                        <Button type="button" variant="ghost" onClick={handleApplyTextColor} disabled={!hasSelection}>
-                          {select('文字色を適用', 'Apply text color')}
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="selection-background-color" className="text-xs font-semibold text-slate-600">
-                        {select('背景色', 'Background color')}
-                      </label>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <TextInput
-                          id="selection-background-color"
-                          value={backgroundColorDraft}
-                          onChange={(event) => setBackgroundColorDraft(event.target.value)}
-                          placeholder={select('例: rgba(59,130,246,0.2)', 'e.g., rgba(59,130,246,0.2)')}
-                          className="min-w-[10rem] flex-1"
-                          onPointerDown={(event) => event.stopPropagation()}
-                        />
-                        <span
-                          className="h-8 w-10 rounded border border-slate-200"
-                          aria-hidden="true"
-                          style={{ backgroundColor: backgroundColorDraft || 'transparent' }}
-                        />
-                        <Button type="button" variant="ghost" onClick={handleApplyBackgroundColor} disabled={!hasSelection}>
-                          {select('背景色を適用', 'Apply background color')}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="flex flex-col gap-2">
                       <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500">
@@ -382,8 +305,8 @@ export default function SelectionSection({
                     </Button>
                     <span>
                       {select(
-                        'CSSカラー値（例: #1f2937, rgba(15,23,42,0.6)）を入力できます。',
-                        'Enter CSS color values (for example: #1f2937, rgba(15,23,42,0.6)).',
+                        'その他の色を設定する場合は YAML を編集してください。',
+                        'Edit the YAML directly for any colors outside of these presets.',
                       )}
                     </span>
                   </div>
