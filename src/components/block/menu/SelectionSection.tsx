@@ -19,6 +19,8 @@ type SelectionSectionProps = {
   onApplyTextColor: (_color: string | null) => void
   onApplyBackgroundColor: (_color: string | null) => void
   onClearSelectionStyles: () => void
+  onCopySelectionFunction: () => void
+  onPasteSelectionFunction: () => void
 }
 
 // Function Header: Shows current selection summary and allows clearing it.
@@ -35,6 +37,8 @@ export default function SelectionSection({
   onApplyTextColor,
   onApplyBackgroundColor,
   onClearSelectionStyles,
+  onCopySelectionFunction,
+  onPasteSelectionFunction,
 }: SelectionSectionProps): React.ReactElement {
   const { select } = useI18n()
   const [textColorDraft, setTextColorDraft] = React.useState<string>(selectionTextColor)
@@ -105,6 +109,32 @@ export default function SelectionSection({
             <Button type="button" variant="subtle" onClick={onClearSelection} disabled={!hasSelection}>
               {select('選択をクリア', 'Clear selection')}
             </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <Button
+              type="button"
+              variant="subtle"
+              onClick={onCopySelectionFunction}
+              disabled={!hasSelection}
+              data-testid="copy-function-config"
+            >
+              {select('関数設定をコピー', 'Copy function config')}
+            </Button>
+            <Button
+              type="button"
+              variant="subtle"
+              onClick={onPasteSelectionFunction}
+              disabled={!hasSelection}
+              data-testid="paste-function-config"
+            >
+              {select('関数設定を貼り付け', 'Paste function config')}
+            </Button>
+            <span>
+              {select(
+                'YAMLで設定した関数メタデータをコピー＆ペーストできます。',
+                'Copy the YAML-defined function metadata between selections.',
+              )}
+            </span>
           </div>
           <div className="flex flex-wrap items-center gap-2 md:gap-3 md:ml-auto">
             <TextAreaField

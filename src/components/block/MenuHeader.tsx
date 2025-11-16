@@ -51,6 +51,8 @@ type Props = {
   onApplySelectionBackgroundColor: (_color: string | null) => void
   onClearSelectionStyles: () => void
   onApplySelectionFunction: (_config: CellFunctionConfig | null) => void
+  onCopySelectionFunction: () => void
+  onPasteSelectionFunction: () => void
   selectionRange: SelectionRange | null
   macroFunctions: RegisteredFunctionMeta[]
   loadedMacroModules: LoadedWasmModule[]
@@ -99,6 +101,8 @@ export default function MenuHeader({
   onApplySelectionBackgroundColor,
   onClearSelectionStyles,
   onApplySelectionFunction,
+  onCopySelectionFunction,
+  onPasteSelectionFunction,
   selectionRange,
   macroFunctions,
   loadedMacroModules,
@@ -240,6 +244,8 @@ export default function MenuHeader({
                   onApplyTextColor={onApplySelectionTextColor}
                   onApplyBackgroundColor={onApplySelectionBackgroundColor}
                   onClearSelectionStyles={onClearSelectionStyles}
+                  onCopySelectionFunction={onCopySelectionFunction}
+                  onPasteSelectionFunction={onPasteSelectionFunction}
                 />
               )}
               {activeMenuSection === 'macro' && (
