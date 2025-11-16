@@ -276,6 +276,8 @@ export default function App(): React.ReactElement {
         onApplySelectionBackgroundColor={spreadsheet.applySelectionBackgroundColor}
         onClearSelectionStyles={spreadsheet.clearSelectionStyles}
         onApplySelectionFunction={spreadsheet.applySelectionFunction}
+        onCopySelectionFunction={spreadsheet.copySelectionFunctionConfig}
+        onPasteSelectionFunction={spreadsheet.pasteSelectionFunctionConfig}
         selectionRange={spreadsheet.selection}
         macroFunctions={spreadsheet.macroFunctions}
         loadedMacroModules={spreadsheet.loadedMacroModules}

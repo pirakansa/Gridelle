@@ -363,6 +363,37 @@ describe('App', () => {
     })
   })
 
+  it('関数設定をコピーして別セルへ貼り付けできる', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByTestId('menu-tab-file'))
+    await user.click(screen.getByRole('button', { name: 'YAML入力 / プレビュー' }))
+    const textarea = (await screen.findByTestId('yaml-textarea')) as HTMLTextAreaElement
+    await user.clear(textarea)
+    await user.type(
+      textarea,
+      '- name: 集計{enter}  rows:{enter}    - metric: 5{enter}      total: ""{enter}    - metric: 7{enter}      total: ""{enter}' +
+        '    - metric: 0{enter}      total:{enter}        value: ""{enter}        func:{enter}          name: sum{enter}          key: metric',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'YAMLを反映' }))
+
+    const sourceCell = await screen.findByTestId('cell-box-2-total')
+    await user.click(sourceCell)
+    await user.click(screen.getByTestId('menu-tab-selection'))
+    await user.click(screen.getByTestId('copy-function-config'))
+
+    const targetCell = screen.getByTestId('cell-box-0-total')
+    await user.click(targetCell)
+    await user.click(screen.getByTestId('paste-function-config'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('cell-box-0-total')).toHaveAttribute('data-has-function', 'true')
+      expect(screen.getByTestId('cell-display-0-total')).toHaveTextContent('12')
+    })
+  })
+
   it('セルに複数行のテキストを入力できる', async () => {
     render(<App />)
 

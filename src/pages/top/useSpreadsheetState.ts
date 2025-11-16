@@ -104,6 +104,8 @@ type UseSpreadsheetState = {
   loadedMacroModules: LoadedWasmModule[]
   loadWasmModule: (_params: { moduleId: string; url: string }) => Promise<void>
   applySelectionFunction: (_config: CellFunctionConfig | null) => void
+  copySelectionFunctionConfig: () => void
+  pasteSelectionFunctionConfig: () => void
   sheetColumns: Record<string, string[]>
 }
 
@@ -194,6 +196,8 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     applySelectionBackgroundColor,
     clearSelectionStyles,
     applySelectionFunction,
+    copySelectionFunctionConfig,
+    pasteSelectionFunctionConfig,
     handleCellPointerDown,
     handleCellPointerEnter,
     handleCellClick,
@@ -537,6 +541,9 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     applySelectionTextColor,
     applySelectionBackgroundColor,
     clearSelectionStyles,
+    applySelectionFunction,
+    copySelectionFunctionConfig,
+    pasteSelectionFunctionConfig,
     handleRowNumberClick,
     handleColumnHeaderClick,
     canMoveSelectedRowsUp,
@@ -565,7 +572,6 @@ export function useSpreadsheetState(): UseSpreadsheetState {
     macroFunctions: registeredFunctions,
     loadedMacroModules: loadedModules,
     loadWasmModule,
-    applySelectionFunction,
     sheetColumns,
   }
 }

@@ -16,6 +16,8 @@ type Result = {
   applySelectionBackgroundColor: (_color: string | null) => void
   clearSelectionStyles: () => void
   applySelectionFunction: (_config: CellFunctionConfig | null) => void
+  copySelectionFunctionConfig: () => void
+  pasteSelectionFunctionConfig: () => void
 }
 
 // Function Header: Returns memoized helpers for updating selection formatting and functions.
@@ -78,6 +80,31 @@ export function useSelectionStyling({
     },
     [columns, rows, selection, setNotice, updateRows],
   )
+
+  const functionClipboardRef = React.useRef<CellFunctionConfig | null>(null)
+
+  const getAnchorCellFunction = React.useCallback((): CellFunctionConfig | null => {
+    if (!selection || !columns.length || !rows.length) {
+      return null
+    }
+    const maxRowIndex = rows.length - 1
+    const maxColIndex = columns.length - 1
+    if (maxRowIndex < 0 || maxColIndex < 0) {
+      return null
+    }
+    const anchorRowIndex = clampIndex(selection.startRow, maxRowIndex)
+    const anchorColIndex = clampIndex(selection.startCol, maxColIndex)
+    const columnKey = columns[anchorColIndex]
+    if (!columnKey) {
+      return null
+    }
+    const targetCell = rows[anchorRowIndex]?.[columnKey]
+    if (!targetCell?.func) {
+      return null
+    }
+    const cloned = cloneCell(targetCell)
+    return cloned.func ?? null
+  }, [columns, rows, selection])
 
   const applySelectionTextColor = React.useCallback(
     (color: string | null): void => {
@@ -214,10 +241,64 @@ export function useSelectionStyling({
     [setNotice, updateSelectionCells],
   )
 
+  const copySelectionFunctionConfig = React.useCallback((): void => {
+    if (!selection) {
+      setNotice({
+        text: createLocalizedText('関数をコピーするセルを選択してください。', 'Select a cell to copy the function from.'),
+        tone: 'error',
+      })
+      return
+    }
+    const func = getAnchorCellFunction()
+    if (!func) {
+      setNotice({
+        text: createLocalizedText('コピーできる関数設定がありません。', 'The selection does not contain a function to copy.'),
+        tone: 'error',
+      })
+      return
+    }
+    functionClipboardRef.current = func
+    setNotice({
+      text: createLocalizedText('選択セルの関数設定をコピーしました。', 'Copied the function configuration from the selection.'),
+      tone: 'success',
+    })
+  }, [getAnchorCellFunction, selection, setNotice])
+
+  const pasteSelectionFunctionConfig = React.useCallback((): void => {
+    if (!selection) {
+      setNotice({
+        text: createLocalizedText('関数を貼り付けるセルを選択してください。', 'Select cells before pasting the function.'),
+        tone: 'error',
+      })
+      return
+    }
+    const cached = functionClipboardRef.current
+    if (!cached) {
+      setNotice({
+        text: createLocalizedText('先に関数設定をコピーしてください。', 'Copy a function configuration before pasting.'),
+        tone: 'error',
+      })
+      return
+    }
+    applySelectionFunction({
+      name: cached.name,
+      ...(cached.args ? { args: { ...cached.args } } : {}),
+    })
+  }, [applySelectionFunction, selection, setNotice])
+
   return {
     applySelectionTextColor,
     applySelectionBackgroundColor,
     clearSelectionStyles,
     applySelectionFunction,
+    copySelectionFunctionConfig,
+    pasteSelectionFunctionConfig,
   }
+}
+
+function clampIndex(target: number, max: number): number {
+  if (Number.isNaN(target)) {
+    return 0
+  }
+  return Math.min(Math.max(target, 0), Math.max(max, 0))
 }

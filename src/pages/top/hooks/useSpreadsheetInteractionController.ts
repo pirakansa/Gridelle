@@ -40,6 +40,8 @@ type UseSpreadsheetInteractionController = {
   applySelectionBackgroundColor: (_color: string | null) => void
   clearSelectionStyles: () => void
   applySelectionFunction: (_config: CellFunctionConfig | null) => void
+  copySelectionFunctionConfig: () => void
+  pasteSelectionFunctionConfig: () => void
   handleRowNumberClick: (_rowIndex: number, _extend: boolean) => void
   handleColumnHeaderClick: (_columnIndex: number, _extend: boolean) => void
   handleCellPointerDown: (
@@ -122,6 +124,8 @@ export const useSpreadsheetInteractionController = ({
     applySelectionBackgroundColor,
     clearSelectionStyles,
     applySelectionFunction,
+    copySelectionFunctionConfig,
+    pasteSelectionFunctionConfig,
   } = useSelectionStyling({
     selection,
     columns,
@@ -303,6 +307,8 @@ export const useSpreadsheetInteractionController = ({
     applySelectionBackgroundColor,
     clearSelectionStyles,
     applySelectionFunction,
+    copySelectionFunctionConfig,
+    pasteSelectionFunctionConfig,
     handleRowNumberClick,
     handleColumnHeaderClick,
     handleCellPointerDown,
