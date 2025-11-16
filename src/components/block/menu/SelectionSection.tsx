@@ -127,7 +127,7 @@ export default function SelectionSection({
 
   const bulkButtonClass = React.useMemo(
     () =>
-      `flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+      `flex-1 rounded-xl px-3 py-1.5 text-xs md:text-sm font-semibold transition ${
         activeTool === 'bulk'
           ? 'bg-slate-900 text-white shadow-sm'
           : 'bg-white text-slate-600 shadow-sm'
@@ -137,7 +137,7 @@ export default function SelectionSection({
 
   const styleButtonClass = React.useMemo(
     () =>
-      `flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+      `flex-1 rounded-xl px-3 py-1.5 text-xs md:text-sm font-semibold transition ${
         activeTool === 'style'
           ? 'bg-slate-900 text-white shadow-sm'
           : 'bg-white text-slate-600 shadow-sm'
@@ -210,7 +210,7 @@ export default function SelectionSection({
                   aria-pressed={showStyle}
                   disabled={!hasSelection}
                 >
-                  {select('セルのスタイル', 'Cell styles')}
+                  {select('スタイル', 'Styles')}
                 </button>
               </div>
             </div>
