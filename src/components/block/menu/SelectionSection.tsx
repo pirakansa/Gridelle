@@ -45,14 +45,6 @@ export default function SelectionSection({
   const [backgroundColorDraft, setBackgroundColorDraft] = React.useState<string>(selectionBackgroundColor)
   const [activeTool, setActiveTool] = React.useState<'bulk' | 'style' | null>(null)
   const [isToolManuallyChosen, setIsToolManuallyChosen] = React.useState<boolean>(false)
-  const textColorPresets = React.useMemo(
-    () => ['#0f172a', '#1d4ed8', '#dc2626', '#16a34a', '#7c3aed', '#f97316'],
-    [],
-  )
-  const backgroundColorPresets = React.useMemo(
-    () => ['#e2e8f0', '#dbeafe', '#fee2e2', '#dcfce7', '#fef3c7', '#ede9fe'],
-    [],
-  )
 
   React.useEffect(() => {
     setTextColorDraft(selectionTextColor)
@@ -124,22 +116,6 @@ export default function SelectionSection({
     setTextColorDraft('')
     setBackgroundColorDraft('')
   }, [onClearSelectionStyles])
-
-  const handleSelectPresetTextColor = React.useCallback(
-    (color: string) => {
-      setTextColorDraft(color)
-      onApplyTextColor(color)
-    },
-    [onApplyTextColor],
-  )
-
-  const handleSelectPresetBackgroundColor = React.useCallback(
-    (color: string) => {
-      setBackgroundColorDraft(color)
-      onApplyBackgroundColor(color)
-    },
-    [onApplyBackgroundColor],
-  )
 
   const toggleTool = React.useCallback(
     (tool: 'bulk' | 'style') => {
@@ -329,50 +305,6 @@ export default function SelectionSection({
                         <Button type="button" variant="ghost" onClick={handleApplyBackgroundColor} disabled={!hasSelection}>
                           {select('背景色を適用', 'Apply background color')}
                         </Button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="flex flex-col gap-2">
-                      <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500">
-                        {select('文字色プリセット', 'Text color presets')}
-                      </span>
-                      <div className="flex flex-wrap gap-2">
-                        {textColorPresets.map((color) => (
-                          <button
-                            key={color}
-                            type="button"
-                            className={`h-7 w-7 rounded-full border border-slate-200 transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-400 ${
-                              !hasSelection ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
-                            }`}
-                            style={{ backgroundColor: color }}
-                            onClick={() => hasSelection && handleSelectPresetTextColor(color)}
-                            aria-label={select('文字色プリセット', 'Text color preset') + ` ${color}`}
-                            onPointerDown={(event) => event.stopPropagation()}
-                            disabled={!hasSelection}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500">
-                        {select('背景色プリセット', 'Background color presets')}
-                      </span>
-                      <div className="flex flex-wrap gap-2">
-                        {backgroundColorPresets.map((color) => (
-                          <button
-                            key={color}
-                            type="button"
-                            className={`h-7 w-7 rounded border border-slate-200 transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-400 ${
-                              !hasSelection ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
-                            }`}
-                            style={{ backgroundColor: color }}
-                            onClick={() => hasSelection && handleSelectPresetBackgroundColor(color)}
-                            aria-label={select('背景色プリセット', 'Background color preset') + ` ${color}`}
-                            onPointerDown={(event) => event.stopPropagation()}
-                            disabled={!hasSelection}
-                          />
-                        ))}
                       </div>
                     </div>
                   </div>
