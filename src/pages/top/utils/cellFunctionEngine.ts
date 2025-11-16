@@ -441,13 +441,24 @@ export function applyCellFunctions(rows: TableRow[], columns: string[], options?
   return didMutate ? evaluatedRows : rows
 }
 
-const parseRowIndex = (value: unknown, totalRows?: number): number | null => {
+const SELF_REFERENCE_TOKEN = '@self'
+
+const isSelfReferenceToken = (value: unknown): boolean =>
+  typeof value === 'string' && value.trim().toLowerCase() === SELF_REFERENCE_TOKEN
+
+const parseRowIndex = (
+  value: unknown,
+  options?: { totalRows?: number; selfIndex?: number },
+): number | null => {
+  if (isSelfReferenceToken(value)) {
+    return typeof options?.selfIndex === 'number' ? options.selfIndex : null
+  }
   if (typeof value === 'number' && Number.isFinite(value)) {
     const normalized = Math.round(value) - 1
     if (normalized < 0) {
       return null
     }
-    if (typeof totalRows === 'number' && normalized >= totalRows) {
+    if (typeof options?.totalRows === 'number' && normalized >= options.totalRows) {
       return null
     }
     return normalized
@@ -461,7 +472,7 @@ const parseRowIndex = (value: unknown, totalRows?: number): number | null => {
     if (normalized < 0) {
       return null
     }
-    if (typeof totalRows === 'number' && normalized >= totalRows) {
+    if (typeof options?.totalRows === 'number' && normalized >= options.totalRows) {
       return null
     }
     return normalized
@@ -469,15 +480,19 @@ const parseRowIndex = (value: unknown, totalRows?: number): number | null => {
   return null
 }
 
-const resolveRowIndexes = (candidate: unknown, totalRows: number): number[] | null => {
+const resolveRowIndexes = (
+  candidate: unknown,
+  totalRows: number,
+  selfIndex: number,
+): number[] | null => {
   if (typeof candidate === 'number' || typeof candidate === 'string') {
-    const index = parseRowIndex(candidate, totalRows)
+    const index = parseRowIndex(candidate, { totalRows, selfIndex })
     return index === null ? null : [index]
   }
 
   if (Array.isArray(candidate)) {
     const indexes = candidate
-      .map((entry) => parseRowIndex(entry, totalRows))
+      .map((entry) => parseRowIndex(entry, { totalRows, selfIndex }))
       .filter((index): index is number => index !== null)
     if (!indexes.length) {
       return null
@@ -487,8 +502,8 @@ const resolveRowIndexes = (candidate: unknown, totalRows: number): number[] | nu
 
   if (candidate && typeof candidate === 'object') {
     const record = candidate as Record<string, unknown>
-    const start = parseRowIndex(record.start, totalRows)
-    const end = parseRowIndex(record.end, totalRows)
+    const start = parseRowIndex(record.start, { totalRows, selfIndex })
+    const end = parseRowIndex(record.end, { totalRows, selfIndex })
     if (start === null && end === null) {
       return null
     }
@@ -507,13 +522,19 @@ const resolveRowIndexes = (candidate: unknown, totalRows: number): number[] | nu
   return null
 }
 
-const parseColumnIndex = (value: unknown, totalColumns?: number): number | null => {
+const parseColumnIndex = (
+  value: unknown,
+  options?: { totalColumns?: number; selfIndex?: number },
+): number | null => {
+  if (isSelfReferenceToken(value)) {
+    return typeof options?.selfIndex === 'number' ? options.selfIndex : null
+  }
   if (typeof value === 'number' && Number.isFinite(value)) {
     const normalized = Math.round(value) - 1
     if (normalized < 0) {
       return null
     }
-    if (typeof totalColumns === 'number' && normalized >= totalColumns) {
+    if (typeof options?.totalColumns === 'number' && normalized >= options.totalColumns) {
       return null
     }
     return normalized
@@ -527,7 +548,7 @@ const parseColumnIndex = (value: unknown, totalColumns?: number): number | null 
     if (normalized < 0) {
       return null
     }
-    if (typeof totalColumns === 'number' && normalized >= totalColumns) {
+    if (typeof options?.totalColumns === 'number' && normalized >= options.totalColumns) {
       return null
     }
     return normalized
@@ -535,15 +556,19 @@ const parseColumnIndex = (value: unknown, totalColumns?: number): number | null 
   return null
 }
 
-const resolveColumnIndexes = (candidate: unknown, totalColumns: number): number[] | null => {
+const resolveColumnIndexes = (
+  candidate: unknown,
+  totalColumns: number,
+  selfIndex: number | null,
+): number[] | null => {
   if (typeof candidate === 'number' || typeof candidate === 'string') {
-    const index = parseColumnIndex(candidate, totalColumns)
+    const index = parseColumnIndex(candidate, { totalColumns, selfIndex: selfIndex ?? undefined })
     return index === null ? null : [index]
   }
 
   if (Array.isArray(candidate)) {
     const indexes = candidate
-      .map((entry) => parseColumnIndex(entry, totalColumns))
+      .map((entry) => parseColumnIndex(entry, { totalColumns, selfIndex: selfIndex ?? undefined }))
       .filter((index): index is number => index !== null)
     if (!indexes.length) {
       return null
@@ -553,8 +578,8 @@ const resolveColumnIndexes = (candidate: unknown, totalColumns: number): number[
 
   if (candidate && typeof candidate === 'object') {
     const record = candidate as Record<string, unknown>
-    const start = parseColumnIndex(record.start, totalColumns)
-    const end = parseColumnIndex(record.end, totalColumns)
+    const start = parseColumnIndex(record.start, { totalColumns, selfIndex: selfIndex ?? undefined })
+    const end = parseColumnIndex(record.end, { totalColumns, selfIndex: selfIndex ?? undefined })
     if (start === null && end === null) {
       return null
     }
@@ -582,6 +607,7 @@ const resolveExplicitCells = (
   }
   const totalRows = context.rows.length
   const totalColumns = context.columns.length
+  const selfColumnIndex = context.columns.findIndex((columnKey) => columnKey === context.columnKey)
   const targets: ResolvedCellTarget[] = []
   candidate.forEach((entry) => {
     if (!entry || typeof entry !== 'object') {
@@ -595,7 +621,10 @@ const resolveExplicitCells = (
           ? record.sheetName.trim()
           : ''
     const sheetName = sheetCandidate.length ? sheetCandidate : undefined
-    const rowIndex = parseRowIndex(record.row ?? record.r ?? record.rowIndex, sheetName ? undefined : totalRows)
+    const rowIndex = parseRowIndex(record.row ?? record.r ?? record.rowIndex, {
+      totalRows: sheetName ? undefined : totalRows,
+      selfIndex: context.rowIndex,
+    })
     if (rowIndex === null) {
       return
     }
@@ -606,15 +635,21 @@ const resolveExplicitCells = (
           ? record.column.trim()
           : ''
     if (keyCandidate) {
-      targets.push({
-        rowIndex,
-        columnKey: keyCandidate,
-        ...(sheetName ? { sheetName } : {}),
-      })
-      return
+      const resolvedKey = isSelfReferenceToken(keyCandidate) ? context.columnKey : keyCandidate
+      if (resolvedKey) {
+        targets.push({
+          rowIndex,
+          columnKey: resolvedKey,
+          ...(sheetName ? { sheetName } : {}),
+        })
+        return
+      }
     }
     const columnIndex =
-      parseColumnIndex(record.column ?? record.col ?? record.columnIndex, sheetName ? undefined : totalColumns) ?? null
+      parseColumnIndex(record.column ?? record.col ?? record.columnIndex, {
+        totalColumns: sheetName ? undefined : totalColumns,
+        selfIndex: selfColumnIndex >= 0 ? selfColumnIndex : undefined,
+      }) ?? null
     if (columnIndex === null) {
       return
     }
@@ -656,19 +691,29 @@ export const resolveFunctionTargets = (args: CellFunctionArgs, context: CellFunc
   const axis = record.axis === 'row' ? 'row' : 'column'
   const totalRows = context.rows.length
   const totalColumns = context.columns.length
+  const selfColumnIndex = context.columns.findIndex((columnKey) => columnKey === context.columnKey)
 
   const keyCandidate = typeof record.key === 'string' ? record.key.trim() : ''
+  const resolvedKeyCandidate = isSelfReferenceToken(keyCandidate) ? context.columnKey : keyCandidate
   const keysCandidate = Array.isArray(record.keys)
-    ? (record.keys.map((entry) => (typeof entry === 'string' ? entry.trim() : '')).filter(
-        (value) => value.length > 0,
-      ) as string[])
+    ? (record.keys
+        .map((entry) => {
+          if (typeof entry !== 'string') {
+            return ''
+          }
+          const trimmed = entry.trim()
+          return isSelfReferenceToken(trimmed) ? context.columnKey : trimmed
+        })
+        .filter((value) => value.length > 0) as string[])
     : []
-  const columnRange = record.columns ? resolveColumnIndexes(record.columns, totalColumns) : null
+  const columnRange = record.columns
+    ? resolveColumnIndexes(record.columns, totalColumns, selfColumnIndex >= 0 ? selfColumnIndex : null)
+    : null
 
   const targetColumns = (() => {
     const viaKeys = [...keysCandidate]
-    if (keyCandidate) {
-      viaKeys.unshift(keyCandidate)
+    if (resolvedKeyCandidate) {
+      viaKeys.unshift(resolvedKeyCandidate)
     }
     if (viaKeys.length) {
       return Array.from(new Set(viaKeys))
@@ -685,7 +730,7 @@ export const resolveFunctionTargets = (args: CellFunctionArgs, context: CellFunc
   })()
 
   const rowIndexes =
-    (record.rows ? resolveRowIndexes(record.rows, totalRows) : null) ??
+    (record.rows ? resolveRowIndexes(record.rows, totalRows, context.rowIndex) : null) ??
     (axis === 'row'
       ? [context.rowIndex]
       : Array.from({ length: totalRows }, (_, index) => index))
