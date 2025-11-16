@@ -96,15 +96,17 @@ export default function SelectionSection({
 
   return (
     <MenuSectionCard>
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-3 md:gap-4">
-          <p data-testid="selection-summary" className="text-sm font-medium text-slate-700">
-            {selectionSummary}
-          </p>
-          <p data-testid="selection-function-summary" className="text-xs text-slate-500">
-            {selectionFunctionSummary}
-          </p>
-          <div className="flex items-center gap-3 text-xs text-slate-500">
+      <div className="flex flex-col gap-6">
+        <section className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+          <div className="flex flex-col gap-1">
+            <p data-testid="selection-summary" className="text-sm font-semibold text-slate-800">
+              {selectionSummary}
+            </p>
+            <p data-testid="selection-function-summary" className="text-xs text-slate-500">
+              {selectionFunctionSummary}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
             <span>{select('⌘/Ctrl+V で貼り付け / Escape で選択解除', '⌘/Ctrl+V to paste / Escape to clear selection')}</span>
             <Button type="button" variant="subtle" onClick={onClearSelection} disabled={!hasSelection}>
               {select('選択をクリア', 'Clear selection')}
@@ -129,137 +131,154 @@ export default function SelectionSection({
             >
               {select('関数設定を貼り付け', 'Paste function config')}
             </Button>
-            <span>
-              {select(
-                'YAMLで設定した関数メタデータをコピー＆ペーストできます。',
-                'Copy the YAML-defined function metadata between selections.',
-              )}
-            </span>
           </div>
-          <div className="flex flex-wrap items-center gap-2 md:gap-3 md:ml-auto">
+        </section>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <section className="flex flex-col gap-3 rounded-2xl border border-slate-100 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-sm font-semibold text-slate-700">
+                  {select('一括入力', 'Bulk edit')}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {select('選択セルに同じ値をまとめて入力します。', 'Fill the selected cells with the same value.')}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onBulkApply}
+                disabled={!hasSelection}
+                data-testid="bulk-apply"
+              >
+                {select('一括入力する', 'Apply to selection')}
+              </Button>
+            </div>
             <TextAreaField
               placeholder={select('選択セルへ一括入力', 'Bulk fill the selected cells')}
               value={bulkValue}
               onChange={(event) => onBulkValueChange(event.target.value)}
               data-testid="bulk-input"
               onPointerDown={(event) => event.stopPropagation()}
-              className="w-56 resize-y sm:w-72 md:w-80 lg:w-96"
+              className="min-h-24 w-full resize-y"
               minRows={1}
             />
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onBulkApply}
-              disabled={!hasSelection}
-              data-testid="bulk-apply"
-            >
-              {select('一括入力する', 'Apply to selection')}
-            </Button>
-          </div>
-        </div>
-        <div className="flex flex-col gap-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {select('セルのスタイル', 'Cell styles')}
-          </h3>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-2 md:gap-3">
-              <label htmlFor="selection-text-color" className="text-xs font-semibold text-slate-600">
-                {select('文字色', 'Text color')}
-              </label>
-              <TextInput
-                id="selection-text-color"
-                value={textColorDraft}
-                onChange={(event) => setTextColorDraft(event.target.value)}
-                placeholder={select('例: #334155', 'e.g., #334155')}
-                className="w-32"
-                onPointerDown={(event) => event.stopPropagation()}
-              />
-              <span
-                className="inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded border border-slate-200 px-2 text-xs font-semibold"
-                aria-hidden="true"
-                style={{ color: textColorDraft || undefined }}
-              >
-                Aa
-              </span>
-              <Button type="button" variant="ghost" onClick={handleApplyTextColor} disabled={!hasSelection}>
-                {select('文字色を適用', 'Apply text color')}
-              </Button>
+          </section>
+          <section className="flex flex-col gap-4 rounded-2xl border border-slate-100 p-4">
+            <div className="flex flex-col gap-1">
+              <h3 className="text-sm font-semibold text-slate-700">
+                {select('セルのスタイル', 'Cell styles')}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {select('色を指定してテキストや背景を整えます。', 'Adjust the text and background colors for the selection.')}
+              </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[0.7rem] font-medium uppercase tracking-wide text-slate-500">
-                {select('プリセット', 'Presets')}
-              </span>
-              <div className="flex items-center gap-2">
-                {textColorPresets.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    className={`h-7 w-7 rounded-full border border-slate-200 transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-400 ${
-                      !hasSelection ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => hasSelection && handleSelectPresetTextColor(color)}
-                    aria-label={select('文字色プリセット', 'Text color preset') + ` ${color}`}
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="selection-text-color" className="text-xs font-semibold text-slate-600">
+                  {select('文字色', 'Text color')}
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <TextInput
+                    id="selection-text-color"
+                    value={textColorDraft}
+                    onChange={(event) => setTextColorDraft(event.target.value)}
+                    placeholder={select('例: #334155', 'e.g., #334155')}
+                    className="min-w-[8rem] flex-1"
                     onPointerDown={(event) => event.stopPropagation()}
-                    disabled={!hasSelection}
                   />
-                ))}
+                  <span
+                    className="inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded border border-slate-200 px-2 text-xs font-semibold"
+                    aria-hidden="true"
+                    style={{ color: textColorDraft || undefined }}
+                  >
+                    Aa
+                  </span>
+                  <Button type="button" variant="ghost" onClick={handleApplyTextColor} disabled={!hasSelection}>
+                    {select('文字色を適用', 'Apply text color')}
+                  </Button>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="selection-background-color" className="text-xs font-semibold text-slate-600">
+                  {select('背景色', 'Background color')}
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <TextInput
+                    id="selection-background-color"
+                    value={backgroundColorDraft}
+                    onChange={(event) => setBackgroundColorDraft(event.target.value)}
+                    placeholder={select('例: rgba(59,130,246,0.2)', 'e.g., rgba(59,130,246,0.2)')}
+                    className="min-w-[10rem] flex-1"
+                    onPointerDown={(event) => event.stopPropagation()}
+                  />
+                  <span
+                    className="h-8 w-10 rounded border border-slate-200"
+                    aria-hidden="true"
+                    style={{ backgroundColor: backgroundColorDraft || 'transparent' }}
+                  />
+                  <Button type="button" variant="ghost" onClick={handleApplyBackgroundColor} disabled={!hasSelection}>
+                    {select('背景色を適用', 'Apply background color')}
+                  </Button>
+                </div>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 md:gap-3">
-              <label htmlFor="selection-background-color" className="text-xs font-semibold text-slate-600">
-                {select('背景色', 'Background color')}
-              </label>
-              <TextInput
-                id="selection-background-color"
-                value={backgroundColorDraft}
-                onChange={(event) => setBackgroundColorDraft(event.target.value)}
-                placeholder={select('例: rgba(59,130,246,0.2)', 'e.g., rgba(59,130,246,0.2)')}
-                className="w-40"
-                onPointerDown={(event) => event.stopPropagation()}
-              />
-              <span
-                className="h-8 w-10 rounded border border-slate-200"
-                aria-hidden="true"
-                style={{ backgroundColor: backgroundColorDraft || 'transparent' }}
-              />
-              <Button type="button" variant="ghost" onClick={handleApplyBackgroundColor} disabled={!hasSelection}>
-                {select('背景色を適用', 'Apply background color')}
-              </Button>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[0.7rem] font-medium uppercase tracking-wide text-slate-500">
-                {select('プリセット', 'Presets')}
-              </span>
-              <div className="flex items-center gap-2">
-                {backgroundColorPresets.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    className={`h-7 w-7 rounded border border-slate-200 transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-400 ${
-                      !hasSelection ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => hasSelection && handleSelectPresetBackgroundColor(color)}
-                    aria-label={select('背景色プリセット', 'Background color preset') + ` ${color}`}
-                    onPointerDown={(event) => event.stopPropagation()}
-                    disabled={!hasSelection}
-                  />
-                ))}
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500">
+                  {select('文字色プリセット', 'Text color presets')}
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {textColorPresets.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={`h-7 w-7 rounded-full border border-slate-200 transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-400 ${
+                        !hasSelection ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      onClick={() => hasSelection && handleSelectPresetTextColor(color)}
+                      aria-label={select('文字色プリセット', 'Text color preset') + ` ${color}`}
+                      onPointerDown={(event) => event.stopPropagation()}
+                      disabled={!hasSelection}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500">
+                  {select('背景色プリセット', 'Background color presets')}
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {backgroundColorPresets.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={`h-7 w-7 rounded border border-slate-200 transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-400 ${
+                        !hasSelection ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      onClick={() => hasSelection && handleSelectPresetBackgroundColor(color)}
+                      aria-label={select('背景色プリセット', 'Background color preset') + ` ${color}`}
+                      onPointerDown={(event) => event.stopPropagation()}
+                      disabled={!hasSelection}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-            <Button type="button" variant="subtle" onClick={handleClearStyles} disabled={!hasSelection}>
-              {select('スタイルをクリア', 'Clear styles')}
-            </Button>
-            <span>
-              {select(
-                'CSSカラー値（例: #1f2937, rgba(15,23,42,0.6)）を入力できます。',
-                'Enter CSS color values (for example: #1f2937, rgba(15,23,42,0.6)).',
-              )}
-            </span>
-          </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+              <Button type="button" variant="subtle" onClick={handleClearStyles} disabled={!hasSelection}>
+                {select('スタイルをクリア', 'Clear styles')}
+              </Button>
+              <span>
+                {select(
+                  'CSSカラー値（例: #1f2937, rgba(15,23,42,0.6)）を入力できます。',
+                  'Enter CSS color values (for example: #1f2937, rgba(15,23,42,0.6)).',
+                )}
+              </span>
+            </div>
+          </section>
         </div>
       </div>
     </MenuSectionCard>
