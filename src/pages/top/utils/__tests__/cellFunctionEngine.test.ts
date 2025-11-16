@@ -150,6 +150,47 @@ describe('applyCellFunctions', () => {
     ])
   })
 
+  it('supports @self references for rows and columns', () => {
+    const columns = ['A', 'B', 'C']
+    const context = {
+      rows: [
+        { A: createCell('1'), B: createCell('2'), C: createCell('3') },
+        { A: createCell('4'), B: createCell('5'), C: createCell('6') },
+        { A: createCell('7'), B: createCell('8'), C: createCell('9') },
+      ],
+      columns,
+      rowIndex: 1,
+      columnKey: 'B',
+      sheetName: 'Main',
+      getCellValue: () => '',
+      resolveColumnKey: (index: number) => columns[index],
+    }
+    const columnScoped = resolveFunctionTargets({ key: '@self', rows: '@self' }, context)
+    expect(columnScoped).toEqual([{ rowIndex: 1, columnKey: 'B' }])
+
+    const rowScoped = resolveFunctionTargets(
+      { axis: 'row', columns: { start: '@self', end: '@self' } },
+      context,
+    )
+    expect(rowScoped).toEqual([{ rowIndex: 1, columnKey: 'B' }])
+
+    const explicitSelfCells = resolveFunctionTargets(
+      {
+        cells: [
+          { row: '@self', key: 'C' },
+          { row: '@self', key: '@self' },
+          { row: 2, columnIndex: '@self' },
+        ],
+      },
+      context,
+    )
+    expect(explicitSelfCells).toEqual([
+      { rowIndex: 1, columnKey: 'C' },
+      { rowIndex: 1, columnKey: 'B' },
+      { rowIndex: 1, columnKey: 'B' },
+    ])
+  })
+
   it('attaches sheet metadata when explicit cells specify a sheet', () => {
     const columns = ['A']
     const context = {
