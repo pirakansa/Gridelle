@@ -5,6 +5,27 @@ import type { RegisteredFunctionMeta } from '../../../pages/top/utils/cellFuncti
 import type { SelectionRange } from '../../../pages/top/types'
 import { useI18n } from '../../../utils/i18n'
 
+const SELF_REFERENCE_TOKEN = '@self'
+
+const matchesSelfReferenceToken = (value: string | undefined): boolean =>
+  typeof value === 'string' && value.trim().toLowerCase() === SELF_REFERENCE_TOKEN
+
+const normalizeRowInput = (
+  rawValue: string,
+): number | typeof SELF_REFERENCE_TOKEN | null => {
+  if (!rawValue || rawValue.trim().length === 0) {
+    return null
+  }
+  if (matchesSelfReferenceToken(rawValue)) {
+    return SELF_REFERENCE_TOKEN
+  }
+  const parsed = Number(rawValue)
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return null
+  }
+  return Math.round(parsed)
+}
+
 type MacroSectionProps = {
   columns: string[]
   sheetNames: string[]
@@ -81,7 +102,7 @@ export default function MacroSection({
       return {
         id,
         row: '',
-        columnKey: availableColumns[0] ?? '',
+        columnKey: availableColumns[0] ?? SELF_REFERENCE_TOKEN,
         sheetName: defaultSheet,
         ...overrides,
       }
@@ -103,14 +124,19 @@ export default function MacroSection({
       let didChange = false
       const next = prev.map((ref) => {
         const available = getColumnsForSheet(ref.sheetName || currentSheetName)
+        const isSelfReferenceColumn = matchesSelfReferenceToken(ref.columnKey)
         if (!available.length) {
-          if (ref.columnKey) {
+          if (!isSelfReferenceColumn) {
             didChange = true
-            return { ...ref, columnKey: '' }
+            return { ...ref, columnKey: SELF_REFERENCE_TOKEN }
           }
           return ref
         }
-        if (!available.includes(ref.columnKey)) {
+        if (!ref.columnKey) {
+          didChange = true
+          return { ...ref, columnKey: available[0] }
+        }
+        if (!available.includes(ref.columnKey) && !isSelfReferenceColumn) {
           didChange = true
           return { ...ref, columnKey: available[0] }
         }
@@ -240,9 +266,9 @@ export default function MacroSection({
     const normalizedCells = cellReferences
       .map((reference) => {
         const columnKey = reference.columnKey?.trim()
-        const parsedRow = Number(reference.row)
         const sheetName = reference.sheetName?.trim() || currentSheetName
-        if (!columnKey || !Number.isFinite(parsedRow) || parsedRow < 1 || !sheetName) {
+        const normalizedRow = normalizeRowInput(reference.row)
+        if (!columnKey || normalizedRow === null || !sheetName) {
           hasInvalidReference = true
           return null
         }
@@ -251,12 +277,14 @@ export default function MacroSection({
           return null
         }
         return {
-          row: Math.round(parsedRow),
+          row: normalizedRow,
           key: columnKey,
           sheet: sheetName,
         }
       })
-      .filter((entry): entry is { row: number; key: string; sheet: string } => entry !== null)
+      .filter(
+        (entry): entry is { row: number | typeof SELF_REFERENCE_TOKEN; key: string; sheet: string } => entry !== null,
+      )
 
     if (!normalizedCells.length) {
       setError(createMessage('入力セルを最低1つ追加してください。', 'Add at least one input cell before applying.'))
@@ -363,12 +391,16 @@ export default function MacroSection({
                   {cellReferences.map((reference, index) => {
                     const sheetKey = reference.sheetName || currentSheetName
                     const availableColumns = getColumnsForSheet(sheetKey)
+                    const columnOptions = [
+                      SELF_REFERENCE_TOKEN,
+                      ...availableColumns.filter((column) => column !== SELF_REFERENCE_TOKEN),
+                    ]
                     return (
                       <tr key={reference.id} className="border-t border-slate-100">
                         <td className="px-2 py-1.5">
                           <input
-                            type="number"
-                            min={1}
+                            type="text"
+                            inputMode="numeric"
                             value={reference.row}
                             onChange={(event) => handleChangeCellReferenceRow(reference.id, event.target.value)}
                             className="w-20 rounded border border-slate-300 px-2 py-1 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
@@ -381,8 +413,7 @@ export default function MacroSection({
                             onChange={(event) => handleChangeCellReferenceColumn(reference.id, event.target.value)}
                             className="min-w-[7rem] rounded border border-slate-300 px-2 py-1 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                           >
-                            {availableColumns.length === 0 && <option value="">{select('列がありません', 'No columns')}</option>}
-                            {availableColumns.map((column) => (
+                            {columnOptions.map((column) => (
                               <option key={column} value={column}>
                                 {column}
                               </option>
