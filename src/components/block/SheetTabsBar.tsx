@@ -48,19 +48,25 @@ export default function SheetTabsBar({
         <div className="flex min-w-max items-center gap-2">
           {sheetNames.map((name, index) => {
             const isActive = index === activeSheetIndex
+            const isEditing = editingIndex === index
+            const baseClasses =
+              'group flex min-w-[8rem] select-none items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition focus-within:ring-2 focus-within:ring-blue-200'
+            const colorClasses = isEditing
+              ? 'bg-white text-slate-900 shadow ring ring-blue-200'
+              : isActive
+                ? 'bg-slate-900 text-white shadow'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             return (
               <div
                 key={name}
                 data-testid={`sheet-tab-${index}`}
                 onDoubleClick={() => beginRename(index)}
-                className={`group flex min-w-[8rem] select-none items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition focus-within:ring-2 focus-within:ring-blue-200 ${
-                  isActive ? 'bg-slate-900 text-white shadow' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
+                className={`${baseClasses} ${colorClasses}`}
               >
-                {editingIndex === index ? (
+                {isEditing ? (
                   <input
                     data-testid="sheet-name-input"
-                    className="flex-1 rounded border border-slate-200 px-2 py-0.5 text-slate-900 focus:border-blue-500 focus:outline-none"
+                    className="flex-1 rounded border border-slate-200 bg-white px-2 py-0.5 text-slate-900 focus:border-blue-500 focus:outline-none"
                     value={nameDraft}
                     autoFocus
                     onChange={(event) => setNameDraft(event.target.value)}
