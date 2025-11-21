@@ -3,9 +3,8 @@ import { defineConfig } from 'vite'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { VitePWA } from 'vite-plugin-pwa'
 import react from '@vitejs/plugin-react'
-import tailwindcss from 'tailwindcss'
+import tailwindcss from '@tailwindcss/postcss'
 import autoprefixer from 'autoprefixer'
-import tailwindConfig from './tailwind.config'
 import vitePwaConfig from './vite-pwa.config'
 
 const ROOT_DIR = resolve(__dirname, 'src')
@@ -19,7 +18,7 @@ export default defineConfig({
   css: {
     postcss: {
       plugins: [
-        tailwindcss(tailwindConfig),
+        tailwindcss(),
         autoprefixer(),
       ],
     },

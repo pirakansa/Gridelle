@@ -1,16 +1,9 @@
-// Tailwind CSS configuration describing theme behavior and content scanning targets.
+// Tailwind CSS configuration describing scan targets for class usage.
 import type { Config } from 'tailwindcss'
 
-const tailwindConfig: Config = {
+export default {
   darkMode: 'class',
   content: [
-    './src/*.{html,tsx}',
     './src/**/*.{ts,tsx,html,scss}',
   ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}
-
-export default tailwindConfig
+} satisfies Config
