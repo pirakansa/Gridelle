@@ -1,6 +1,5 @@
 // File Header: Global stylesheet initializing Tailwind layers and shared utilities.
-@config '../../tailwind.config.ts';
-@import 'tailwindcss';
+@use 'tailwindcss' as *;
 
 @layer theme {
   @theme gridelle {
