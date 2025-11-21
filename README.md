@@ -8,7 +8,7 @@ Gridelle is a Vite + React application that lets you review and edit YAML workbo
 
 ## Live sandbox
 
-- [http://gridelle.piradn.com/](http://gridelle.piradn.com/)
+- [https://gridelle.piradn.com/](https://gridelle.piradn.com/)
 
 ## Feature overview
 
