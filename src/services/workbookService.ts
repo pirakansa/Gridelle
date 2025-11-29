@@ -15,9 +15,17 @@ export type TableCell = {
 
 export type TableRow = Record<string, TableCell>
 
+export type SheetLayout = 'row-major' | 'column-major'
+
+export type SheetMeta = {
+  layout?: SheetLayout
+  rowKey?: string
+}
+
 export type TableSheet = {
   name: string
   rows: TableRow[]
+  meta?: SheetMeta
 }
 
 // Function Header: Parses a YAML workbook string into sheets and rows.
@@ -60,10 +68,16 @@ export function stringifyWorkbook(sheets: TableSheet[]): string {
 
   const normalizedSheets = sheets.map((sheet, index) => {
     const name = sheet.name.trim() ? sheet.name : `Sheet ${index + 1}`
-    return {
+    const meta = sanitizeSheetMeta(sheet.meta)
+    const rowKey = meta?.rowKey ?? 'rows'
+    const serializedSheet: Record<string, unknown> = {
       name,
-      rows: sheet.rows.map((row) => serializeRow(row)),
+      [rowKey]: sheet.rows.map((row) => serializeRow(row)),
     }
+    if (meta) {
+      serializedSheet.meta = meta
+    }
+    return serializedSheet
   })
 
   const yamlText = dump(normalizedSheets, {
@@ -89,11 +103,11 @@ function normalizeSheet(entry: unknown, index: number): TableSheet {
   if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
     const record = entry as Record<string, unknown>
     const nameRaw = record.name
-    const rowsRaw = record.rows
     const name = typeof nameRaw === 'string' && nameRaw.trim().length > 0 ? nameRaw : `Sheet ${index + 1}`
-    const rowsSource = Array.isArray(rowsRaw) ? rowsRaw : []
+    const meta = normalizeSheetMeta(record.meta)
+    const { rowsSource, resolvedMeta } = resolveRowsSource(record, meta)
     const rows = rowsSource.map((rowEntry, rowIndex) => normalizeRow(rowEntry, rowIndex))
-    return { name, rows }
+    return resolvedMeta ? { name, rows, meta: resolvedMeta } : { name, rows }
   }
 
   if (Array.isArray(entry)) {
@@ -305,4 +319,60 @@ function serializeCellFunction(func: CellFunctionConfig): string | Record<string
     name: func.name,
     ...func.args,
   }
+}
+
+function resolveRowsSource(
+  record: Record<string, unknown>,
+  meta: SheetMeta | undefined,
+): { rowsSource: unknown[]; resolvedMeta?: SheetMeta } {
+  const candidateRowKey = sanitizeRowKey(meta?.rowKey)
+  const aliasCandidates = [candidateRowKey, 'rows', 'items']
+  const resolvedKey = aliasCandidates.find((key) => {
+    if (!key) {
+      return false
+    }
+    return Array.isArray(record[key])
+  })
+
+  const rowsSource = resolvedKey ? (record[resolvedKey] as unknown[]) : []
+  const nextMeta = sanitizeSheetMeta({
+    ...meta,
+    ...(resolvedKey && resolvedKey !== 'rows' ? { rowKey: resolvedKey } : {}),
+  })
+
+  return { rowsSource, resolvedMeta: nextMeta }
+}
+
+function sanitizeRowKey(rowKey: unknown): string | undefined {
+  if (typeof rowKey !== 'string') {
+    return undefined
+  }
+  const trimmed = rowKey.trim()
+  return trimmed || undefined
+}
+
+function normalizeSheetMeta(meta: unknown): SheetMeta | undefined {
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) {
+    return undefined
+  }
+  const record = meta as Record<string, unknown>
+  const normalized: SheetMeta = {}
+
+  if (record.layout === 'row-major' || record.layout === 'column-major') {
+    normalized.layout = record.layout
+  }
+
+  const rowKey = sanitizeRowKey(record.rowKey)
+  if (rowKey) {
+    normalized.rowKey = rowKey
+  }
+
+  return Object.keys(normalized).length ? normalized : undefined
+}
+
+function sanitizeSheetMeta(meta: SheetMeta | undefined): SheetMeta | undefined {
+  if (!meta) {
+    return undefined
+  }
+  return normalizeSheetMeta({ ...meta })
 }
