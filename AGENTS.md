@@ -25,19 +25,18 @@ Rule of thumb:
 ## Setup Steps
 
 * Recommended: VS Code Dev Container / GitHub Codespaces (use the `.devcontainer/` image).
-* On the first run, execute `npm install` at the project root to make sure dependencies are intact.
-* Task runner: `npm` (CI uses the `npm` targets described later).
+* On the first run, execute `vorbere run install` at the project root to make sure dependencies are intact.
+* Task runner: `vorbere` (CI uses the `vorbere` tasks described later).
 
 ---
 
 ## Build & Run
 
-* Build: `npm run build`
-* Type check : `npm run type-check`
-* Lint: `npm run lint`
-* Test: `npm run test`
-* Run during development: `npm run dev`
-* Cleanup: remove build artifacts (such as `./dist/`) with `rm -rf ./dist/` (equivalent to `npm run clean`).
+* Build: `vorbere run build`
+* Lint (includes type check): `vorbere run lint`
+* Test: `vorbere run test`
+* Run during development: `vorbere run dev`
+* Cleanup: remove build artifacts (such as `./dist/`) with `rm -rf ./dist/` (equivalent to `vorbere run clean`).
 
 ---
 
@@ -87,15 +86,15 @@ We follow the project layout.
 ### Agent-Specific Rules
 
 * Place new files according to the directory guidelines above; avoid introducing unnecessary top-level directories.
-* When modifying existing functions, add or update unit tests and confirm `npm run test` passes.
+* When modifying existing functions, add or update unit tests and confirm `vorbere run test` passes.
 * When writing files or accessing external resources, use temporary directories so existing test data is not overwritten.
 
 ---
 
 ## Coding Standards
 
-* Always run `npm run lint` to ensure code passes lint checks and is properly formatted.
-* Run `npm run lint` for static checks and ensure there are no warnings (CI requirement).
+* Always run `vorbere run lint` to ensure code passes lint checks and is properly formatted.
+* Run `vorbere run lint` for static checks and ensure there are no warnings (CI requirement).
 * Do not silently discard errors.. Prefer `console.error` for user-facing messages.
 * Extract magic numbers and hard-coded URLs into constants with meaningful names within the module.
 * Avoid large, unrelated refactors and keep the impact of changes minimal.
@@ -108,13 +107,12 @@ We follow the project layout.
 
 ## Testing & Verification
 
-* Unit tests: `npm run test`
+* Unit tests: `vorbere run test`
 * When command behavior changes, keep usage examples in `README.md` and fixtures under `test` consistent.
 
 ### Static Analysis / Lint / Vulnerability Scanning
 
-* Static analysis: `npm run type-check`
-* Code quality: `npm run lint`
+* Static analysis + code quality: `vorbere run lint` (runs TypeScript `--noEmit` and ESLint)
 * Vulnerability scanning: `npm audit`
 
 ---
@@ -123,12 +121,11 @@ We follow the project layout.
 
 GitHub Actions (`.github/workflows/static.yml`) runs the following:
 
-* `npm run type-check`
-* `npm run lint`
-* `npm run test`
-* `npm run build`
+* `vorbere run lint`
+* `vorbere run test`
+* `vorbere run build`
 
-Confirm `npm run type-check` / `npm run lint` / `npm run test` / `npm run build` succeed locally before opening a PR. If they fail, format and validate locally, then rerun.
+Confirm `vorbere run lint` / `vorbere run test` / `vorbere run build` succeed locally before opening a PR. If they fail, format and validate locally, then rerun.
 
 ---
 
@@ -145,7 +142,7 @@ Confirm `npm run type-check` / `npm run lint` / `npm run test` / `npm run build`
 
 * If multiple `AGENTS.md` files exist, reference the one closest to your working directory (this repository only has the top-level file).
 * When instructions conflict, prioritize explicit user prompts and clarify any uncertainties.
-* Before and after your work, confirm `npm run type-check`, `npm run lint`, `npm run test` and `npm run build` succeed. If they fail, report the cause and mitigation.
+* Before and after your work, confirm `vorbere run lint`, `vorbere run test` and `vorbere run build` succeed. If they fail, report the cause and mitigation.
 
 ---
 
@@ -251,7 +248,6 @@ For structured authoring (template, checklist), use the skill: `pr-description-a
 
 ## Checklist
 
-* [ ] `npm run type-check`
-* [ ] `npm run lint`
-* [ ] `npm run test`
-* [ ] `npm run build`
+* [ ] `vorbere run lint`
+* [ ] `vorbere run test`
+* [ ] `vorbere run build`

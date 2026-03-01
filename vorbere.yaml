@@ -1,0 +1,31 @@
+version: 1
+tasks:
+  install:
+    run: "npm ci"
+    desc: install dependencies using lockfile
+  dev:
+    run: "npm run dev"
+    desc: start Vite development server
+  build:
+    run: "npm run build"
+    desc: create production build
+  build-dev:
+    run: "npm run build-dev"
+    desc: create debug-friendly build
+  lint:
+    run: "npm run type-check && npm run lint"
+    desc: run static analysis (TypeScript + ESLint)
+  test:
+    run: "npm run test"
+    desc: run unit tests
+  clean:
+    run: "npm run clean"
+    desc: remove build artifacts
+  check-deps:
+    run: "npm run check-deps"
+    desc: detect unused dependencies
+  generate-large-sample:
+    run: "npm run generate-large-sample"
+    desc: generate a large sample YAML file
+  ci:
+    depends_on: [lint, test, build]

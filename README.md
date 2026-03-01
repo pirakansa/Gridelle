@@ -55,52 +55,50 @@ Gridelle is a Vite + React application that lets you review and edit YAML workbo
 
 ### Install dependencies
 ```bash
-npm install
+vorbere run install
 ```
 
 ### Local development
 ```bash
-npm run dev
+vorbere run dev
 ```
 This launches Vite on all interfaces so you can test from multiple devices.
 
 ### Production build & preview
 ```bash
 # Production bundle
-npm run build
+vorbere run build
 
 # Debug-friendly bundle with source maps
-npm run build-dev
+vorbere run build-dev
 
 # Preview the production output on localhost
-npm run preview
+vorbere run preview
 ```
 
 ### Quality gates
 Run the same checks enforced in CI before opening a PR.
 ```bash
-npm run type-check
-npm run lint
-npm run test
-npm run build
+vorbere run lint
+vorbere run test
+vorbere run build
 ```
 
-### Available npm scripts
+### Available vorbere tasks
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Start the Vite development server. |
-| `npm run build` | Produce an optimized production build. |
-| `npm run build-dev` | Build without minification for easier debugging. |
-| `npm run preview` | Serve the production build locally. |
-| `npm run type-check` | Execute TypeScript in `--noEmit` mode. |
-| `npm run lint` | Run ESLint with zero-warning tolerance. |
-| `npm run test` | Execute the Vitest unit suite. |
-| `npm run clean` | Remove the `dist/` directory. |
-| `npm run check-deps` | Detect unused dependencies via `depcheck`. |
-| `npm run generate-large-sample` | Produce a large sample YAML file under `docs/`. |
+| `vorbere run dev` | Start the Vite development server. |
+| `vorbere run build` | Produce an optimized production build. |
+| `vorbere run build-dev` | Build without minification for easier debugging. |
+| `vorbere run preview` | Serve the production build locally. |
+| `vorbere run lint` | Run static analysis (TypeScript `--noEmit` + ESLint with zero-warning tolerance). |
+| `vorbere run test` | Execute the Vitest unit suite. |
+| `vorbere run clean` | Remove the `dist/` directory. |
+| `vorbere run check-deps` | Detect unused dependencies via `depcheck`. |
+| `vorbere run generate-large-sample` | Produce a large sample YAML file under `docs/`. |
 
-All commands are defined in `package.json` and require no global installs.
+Commands are defined in `package.json` and routed via `vorbere.yaml`; no global npm packages are required.
 
 ## Configuration & authentication
 
@@ -130,10 +128,10 @@ Login bundles follow the naming convention `src/pages/login/App.<variant>.tsx` a
 
 ```bash
 # Default Firebase login
-npm run build
+vorbere run build
 
 # Offline mode with GitHub personal access tokens
-VITE_LOGIN_APP=offline npm run build
+VITE_LOGIN_APP=offline vorbere run build
 ```
 
 Offline mode exposes a guest button and an input for GitHub PATs so you can unlock repository features without contacting external identity providers.

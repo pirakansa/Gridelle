@@ -41,20 +41,22 @@ jobs:
           node-version: 22
           cache: "npm"
 
-      - name: Install dependency
-        run: npm ci
+      - name: Install vorbere
+        uses: pirakansa/vorbere@v0
+        with:
+          version: latest
 
-      - name: Type-check
-        run: npm run type-check
+      - name: Install dependency
+        run: vorbere run install
 
       - name: Lint
-        run: npm run lint
+        run: vorbere run lint
 
       - name: Test
-        run: npm run test
+        run: vorbere run test
 
       - name: Build
-        run: npm run build
+        run: vorbere run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
