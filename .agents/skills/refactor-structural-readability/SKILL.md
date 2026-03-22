@@ -11,14 +11,14 @@ Improve readability and maintainability while preserving behavior.
 ## Inputs
 - Target files and related modules/components
 - Current constraints (public API stability, compatibility, coding style)
-- Validation commands (`vorbere run lint`, `vorbere run test`, `vorbere run build`)
+- Validation commands (`vorbere run check`, `vorbere run test`, `vorbere run build`)
 
 ## Outputs
 - Smaller responsibility-focused files/functions
 - Consistent meaning-based naming
 - Centralized duplicated logic (single source of truth)
 - Reduced unnecessary public surface area
-- Passing tests/lint/build
+- Passing check/tests/build
 
 ## Workflow
 1. Baseline first
@@ -40,7 +40,7 @@ Improve readability and maintainability while preserving behavior.
    - Expose one high-level API when callers should not know implementation details.
 6. Validate continuously
    - Format modified files.
-   - Run lint, tests, and build.
+   - Run check, tests, and build.
    - Fix only issues related to refactor scope.
 
 ## Safety Rules
@@ -54,7 +54,7 @@ Improve readability and maintainability while preserving behavior.
 - Duplicated decision logic is consolidated.
 - Naming is consistent and self-explanatory.
 - Public API surface is minimal and intentional.
-- `vorbere run lint && vorbere run test && vorbere run build` succeeds.
+- `vorbere run check && vorbere run test && vorbere run build` succeeds.
 
 ## Quick Checklist
 - [ ] Responsibility split applied

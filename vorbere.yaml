@@ -1,6 +1,6 @@
 version: 1
 tasks:
-  install:
+  setup:
     run: "npm ci"
     desc: install dependencies using lockfile
   dev:
@@ -12,7 +12,7 @@ tasks:
   build-dev:
     run: "npm run build-dev"
     desc: create debug-friendly build
-  lint:
+  check:
     run: "npm run type-check && npm run lint"
     desc: run static analysis (TypeScript + ESLint)
   test:
@@ -28,4 +28,4 @@ tasks:
     run: "npm run generate-large-sample"
     desc: generate a large sample YAML file
   ci:
-    depends_on: [lint, test, build]
+    depends_on: [check, test, build]

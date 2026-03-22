@@ -55,7 +55,7 @@ Gridelle is a Vite + React application that lets you review and edit YAML workbo
 
 ### Install dependencies
 ```bash
-vorbere run install
+vorbere run setup
 ```
 
 ### Local development
@@ -79,7 +79,7 @@ vorbere run preview
 ### Quality gates
 Run the same checks enforced in CI before opening a PR.
 ```bash
-vorbere run lint
+vorbere run check
 vorbere run test
 vorbere run build
 ```
@@ -92,7 +92,7 @@ vorbere run build
 | `vorbere run build` | Produce an optimized production build. |
 | `vorbere run build-dev` | Build without minification for easier debugging. |
 | `vorbere run preview` | Serve the production build locally. |
-| `vorbere run lint` | Run static analysis (TypeScript `--noEmit` + ESLint with zero-warning tolerance). |
+| `vorbere run check` | Run static analysis (TypeScript `--noEmit` + ESLint with zero-warning tolerance). |
 | `vorbere run test` | Execute the Vitest unit suite. |
 | `vorbere run clean` | Remove the `dist/` directory. |
 | `vorbere run check-deps` | Detect unused dependencies via `depcheck`. |

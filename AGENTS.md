@@ -25,7 +25,7 @@ Rule of thumb:
 ## Setup Steps
 
 * Recommended: VS Code Dev Container / GitHub Codespaces (use the `.devcontainer/` image).
-* On the first run, execute `vorbere run install` at the project root to make sure dependencies are intact.
+* On the first run, execute `vorbere run setup` at the project root to make sure dependencies are intact.
 * Task runner: `vorbere` (CI uses the `vorbere` tasks described later).
 
 ---
@@ -33,7 +33,7 @@ Rule of thumb:
 ## Build & Run
 
 * Build: `vorbere run build`
-* Lint (includes type check): `vorbere run lint`
+* Check (includes type check): `vorbere run check`
 * Test: `vorbere run test`
 * Run during development: `vorbere run dev`
 * Cleanup: remove build artifacts (such as `./dist/`) with `rm -rf ./dist/` (equivalent to `vorbere run clean`).
@@ -46,7 +46,7 @@ We follow the project layout.
 
 ```
 .
-├─ src/<name>.html         # Rollup entry point
+├─ src/<name>.html        # Rollup entry point
 ├─ src/<name>.tsx
 ├─ src/assets/            # Static assets such as images and stylesheets
 │   └── images/
@@ -71,7 +71,8 @@ We follow the project layout.
 │   ├── robots.txt
 │   └── images/favicon.png
 ├─ dist/                  # Build artifacts (generated; not tracked by Git)
-├─ package.tson           # Build / test / release tasks
+├─ package.json           # Package management file
+├─ vorbere.yaml           # Task definitions for vorbere
 └─ docs/                  # Documentation
 ```
 
@@ -93,8 +94,8 @@ We follow the project layout.
 
 ## Coding Standards
 
-* Always run `vorbere run lint` to ensure code passes lint checks and is properly formatted.
-* Run `vorbere run lint` for static checks and ensure there are no warnings (CI requirement).
+* Always run `vorbere run check` to ensure code passes static checks and is properly formatted.
+* Run `vorbere run check` and ensure there are no warnings (CI requirement).
 * Do not silently discard errors.. Prefer `console.error` for user-facing messages.
 * Extract magic numbers and hard-coded URLs into constants with meaningful names within the module.
 * Avoid large, unrelated refactors and keep the impact of changes minimal.
@@ -110,9 +111,9 @@ We follow the project layout.
 * Unit tests: `vorbere run test`
 * When command behavior changes, keep usage examples in `README.md` and fixtures under `test` consistent.
 
-### Static Analysis / Lint / Vulnerability Scanning
+### Static Analysis / Checks / Vulnerability Scanning
 
-* Static analysis + code quality: `vorbere run lint` (runs TypeScript `--noEmit` and ESLint)
+* Static analysis + code quality: `vorbere run check` (runs TypeScript `--noEmit` and ESLint)
 * Vulnerability scanning: `npm audit`
 
 ---
@@ -121,11 +122,11 @@ We follow the project layout.
 
 GitHub Actions (`.github/workflows/static.yml`) runs the following:
 
-* `vorbere run lint`
+* `vorbere run check`
 * `vorbere run test`
 * `vorbere run build`
 
-Confirm `vorbere run lint` / `vorbere run test` / `vorbere run build` succeed locally before opening a PR. If they fail, format and validate locally, then rerun.
+Confirm `vorbere run check` / `vorbere run test` / `vorbere run build` succeed locally before opening a PR. If they fail, format and validate locally, then rerun.
 
 ---
 
@@ -142,7 +143,7 @@ Confirm `vorbere run lint` / `vorbere run test` / `vorbere run build` succeed lo
 
 * If multiple `AGENTS.md` files exist, reference the one closest to your working directory (this repository only has the top-level file).
 * When instructions conflict, prioritize explicit user prompts and clarify any uncertainties.
-* Before and after your work, confirm `vorbere run lint`, `vorbere run test` and `vorbere run build` succeed. If they fail, report the cause and mitigation.
+* Before and after your work, confirm `vorbere run check`, `vorbere run test` and `vorbere run build` succeed. If they fail, report the cause and mitigation.
 
 ---
 
@@ -248,6 +249,6 @@ For structured authoring (template, checklist), use the skill: `pr-description-a
 
 ## Checklist
 
-* [ ] `vorbere run lint`
+* [ ] `vorbere run check`
 * [ ] `vorbere run test`
 * [ ] `vorbere run build`
