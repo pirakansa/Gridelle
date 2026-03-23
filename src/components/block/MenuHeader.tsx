@@ -124,6 +124,7 @@ export default function MenuHeader({
   const toggleMenu = React.useCallback(() => {
     setMenuCollapsed((prev) => !prev)
   }, [])
+  const workbookTitle = select('Gridelle', 'Gridelle')
 
   React.useLayoutEffect(() => {
     if (!onHeightChange) {
@@ -163,14 +164,20 @@ export default function MenuHeader({
   return (
     <header
       ref={headerRef}
-      className="sticky top-4 z-20 w-full rounded-2xl border border-slate-200 bg-white/90 shadow-sm backdrop-blur"
+      className="sticky top-0 z-20 w-full overflow-hidden rounded-b-xl border-x border-b border-emerald-900/10 bg-white shadow-lg"
     >
-      <div className="flex w-full flex-col gap-4 px-6 py-4 md:px-10">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="border-b border-emerald-700 bg-emerald-700 px-4 py-2 text-white md:px-6">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-base font-semibold text-slate-900">Gridelle</span>
-            <LanguageToggleButton />
+            <span className="text-sm font-semibold text-white">{workbookTitle}</span>
           </div>
+          <div className="flex items-center gap-3">
+            <LanguageToggleButton className="border-white/30 bg-white/10 text-white hover:bg-white/20 focus-visible:outline-white" />
+          </div>
+        </div>
+      </div>
+      <div className="border-b border-slate-200 bg-[#f3f6f3] px-4 py-2 md:px-6">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <MenuTabs
               activeSection={activeMenuSection}
@@ -180,6 +187,8 @@ export default function MenuHeader({
             />
           </div>
         </div>
+      </div>
+      <div className="flex w-full flex-col gap-3 px-4 py-3 md:px-6">
         {isMenuCollapsed && notice && (
           <p
             className={`text-sm ${notice.tone === 'error' ? 'text-red-600' : 'text-emerald-600'}`}
@@ -191,7 +200,7 @@ export default function MenuHeader({
         {!isMenuCollapsed && (
           <div
             id={menuPanelId}
-            className={`${layoutTheme.ribbonShell} p-4`}
+            className={`${layoutTheme.ribbonShell} border-slate-300 bg-[#fbfcfb] p-4 shadow-none`}
             aria-label={select('スプレッドシート操作メニュー', 'Spreadsheet control menu')}
           >
             <div className="flex flex-col gap-4">

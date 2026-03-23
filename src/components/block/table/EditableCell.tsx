@@ -172,7 +172,7 @@ export default function EditableCell({
             value={draftValue}
             onChange={(event) => setDraftValue(event.target.value)}
             data-testid={`cell-${rowIndex}-${column}`}
-            className="w-full flex-1 select-text resize-y rounded border border-blue-100 bg-white px-2 py-2 text-sm leading-relaxed focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            className="w-full flex-1 select-text resize-y rounded-none border border-emerald-300 bg-white px-2 py-1.5 text-sm leading-relaxed focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
             autoFocus
             rows={Math.max(1, draftValue.split('\n').length)}
             onBlur={handleEditorBlur}
@@ -186,7 +186,7 @@ export default function EditableCell({
           />
         ) : (
           <div
-            className="w-full flex-1 select-none whitespace-pre rounded px-2 py-2 text-left text-sm"
+            className="min-h-8 w-full flex-1 select-none whitespace-pre px-2 py-1.5 text-left text-sm"
             data-testid={`cell-display-${rowIndex}-${column}`}
             draggable={false}
             style={cellStyle}
@@ -235,7 +235,7 @@ function deriveCellPresentation({
   const inFillPreview = fillPreview && inActive && !inBase
 
   const className = [
-    'relative border border-slate-200',
+    'relative border border-slate-300 bg-white',
     inActive ? 'selected-cell' : '',
     inFillPreview ? 'fill-preview-cell' : '',
   ]
