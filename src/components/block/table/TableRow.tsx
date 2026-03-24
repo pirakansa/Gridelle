@@ -54,7 +54,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(function T
 ): React.ReactElement {
   const { select } = useI18n()
   return (
-    <tr ref={ref} className="border-t border-slate-200">
+    <tr ref={ref} className="border-t border-slate-300">
       <th scope="row" className="row-number-cell" data-testid={`row-number-${rowIndex}`}>
         <div className="row-number-content">
           <button

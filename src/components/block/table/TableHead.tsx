@@ -18,7 +18,7 @@ export default function TableHead({
     <thead>
       <tr>
         <th className="row-number-header" aria-label={select('行番号', 'Row numbers')}>
-          #
+          <span className="block text-[0.6875rem] font-semibold tracking-wide text-slate-400">#</span>
         </th>
         {columns.map((column, columnIndex) => (
           <th key={column} data-testid="column-header">
@@ -30,7 +30,7 @@ export default function TableHead({
                 aria-label={select(`${column}列を選択`, `Select column ${column}`)}
                 data-testid={`column-select-${columnIndex}`}
               >
-                <span data-testid="column-title" className="font-semibold">
+                <span data-testid="column-title" className="truncate font-semibold uppercase tracking-wide">
                   {column}
                 </span>
               </button>
