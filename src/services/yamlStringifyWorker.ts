@@ -1,5 +1,4 @@
 /// <reference lib="webworker" />
-/* eslint-env worker */
 /* global DedicatedWorkerGlobalScope */
 // File Header: Dedicated worker that serializes sheet data to YAML off the main thread.
 import { stringifyWorkbook, type TableSheet } from './workbookService'

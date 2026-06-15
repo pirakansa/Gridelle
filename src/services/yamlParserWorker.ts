@@ -1,5 +1,4 @@
 /// <reference lib="webworker" />
-/* eslint-env worker */
 /* global DedicatedWorkerGlobalScope */
 // File Header: Dedicated worker that parses YAML workbook text off the main thread.
 import { parseWorkbook } from './workbookService'
