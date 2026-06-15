@@ -38,10 +38,6 @@ export default defineConfig({
         top: resolve(ROOT_DIR, 'top.html'),
         login: resolve(ROOT_DIR, 'login.html'),
       },
-      output: {
-        manualChunks: {},
-      },
     },
   },
-  
 })
