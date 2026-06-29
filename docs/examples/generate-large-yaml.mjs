@@ -28,7 +28,7 @@ if (!Number.isFinite(COLUMN_COUNT) || COLUMN_COUNT <= 0) {
 }
 
 const outputArg = process.argv[2]
-const outputPath = resolve(process.cwd(), outputArg ?? 'docs/sample-large.yaml')
+const outputPath = resolve(process.cwd(), outputArg ?? 'docs/examples/sample-large.yaml')
 
 const columnKeys = Array.from({ length: COLUMN_COUNT }, (_, columnIndex) => `column_${columnIndex + 1}`)
 
