@@ -42,6 +42,25 @@ export type {
   GithubIntegrationSaveNotice,
 } from './githubIntegration/types'
 
+const BLOB_INTEGRATION_SERVICES = {
+  GithubRepositoryAccessError,
+  fetchFileFromBlobUrl,
+}
+
+const REPOSITORY_INTEGRATION_SERVICES = {
+  GithubRepositoryAccessError,
+  verifyRepositoryCollaborator,
+  listRepositoryBranches,
+  fetchRepositoryTree,
+  fetchRepositoryFileContent,
+}
+
+const PULL_REQUEST_INTEGRATION_SERVICES = {
+  GithubRepositoryAccessError,
+  fetchPullRequestDetails,
+  fetchRepositoryFileContent,
+}
+
 export default function GithubIntegrationPanel({
   initialRepositoryUrl = '',
   onRepositoryUrlSubmit,
@@ -84,10 +103,7 @@ export default function GithubIntegrationPanel({
         <BlobUrlIntegrationSection
           onFileSelected={onFileSelected}
           onYamlContentLoaded={onYamlContentLoaded}
-          services={{
-            GithubRepositoryAccessError,
-            fetchFileFromBlobUrl,
-          }}
+          services={BLOB_INTEGRATION_SERVICES}
         />
       )}
 
@@ -100,13 +116,7 @@ export default function GithubIntegrationPanel({
           onBranchSelected={onBranchSelected}
           onFileSelected={onFileSelected}
           onYamlContentLoaded={onYamlContentLoaded}
-          services={{
-            GithubRepositoryAccessError,
-            verifyRepositoryCollaborator,
-            listRepositoryBranches,
-            fetchRepositoryTree,
-            fetchRepositoryFileContent,
-          }}
+          services={REPOSITORY_INTEGRATION_SERVICES}
         />
       )}
 
@@ -114,11 +124,7 @@ export default function GithubIntegrationPanel({
         <PullRequestIntegrationSection
           onFileSelected={onFileSelected}
           onYamlContentLoaded={onYamlContentLoaded}
-          services={{
-            GithubRepositoryAccessError,
-            fetchPullRequestDetails,
-            fetchRepositoryFileContent,
-          }}
+          services={PULL_REQUEST_INTEGRATION_SERVICES}
         />
       )}
     </div>

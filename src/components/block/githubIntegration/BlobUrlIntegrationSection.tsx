@@ -9,6 +9,7 @@ import type {
 } from '../../../services/githubRepositoryAccessService'
 import { type YamlContentPayload } from './types'
 import { useI18n } from '../../../utils/i18n'
+import { useLatestRequest } from './useLatestRequest'
 
 type LocalizedMessage = { ja: string; en: string }
 
@@ -41,6 +42,7 @@ export default function BlobUrlIntegrationSection({
   const [isBlobLoading, setIsBlobLoading] = React.useState<boolean>(false)
   const [blobErrorMessage, setBlobErrorMessage] = React.useState<LocalizedMessage | null>(null)
   const [blobSuccessMessage, setBlobSuccessMessage] = React.useState<LocalizedMessage | null>(null)
+  const blobRequest = useLatestRequest()
   const resolveMessage = React.useCallback(
     (message: LocalizedMessage | null) => (message ? select(message.ja, message.en) : null),
     [select],
@@ -57,9 +59,13 @@ export default function BlobUrlIntegrationSection({
       setIsBlobLoading(true)
       setBlobErrorMessage(null)
       setBlobSuccessMessage(null)
+      const requestId = blobRequest.start()
 
       try {
         const result = await services.fetchFileFromBlobUrl(trimmedUrl)
+        if (!blobRequest.isLatest(requestId)) {
+          return
+        }
         setBlobSuccessMessage(
           createMessage(`${result.coordinates.filePath} を読み込みました。`, `Loaded ${result.coordinates.filePath}.`),
         )
@@ -75,6 +81,9 @@ export default function BlobUrlIntegrationSection({
           mode: 'blob-url',
         })
       } catch (error) {
+        if (!blobRequest.isLatest(requestId)) {
+          return
+        }
         if (error instanceof services.GithubRepositoryAccessError) {
           setBlobErrorMessage(createMessage(error.jaMessage, error.enMessage))
         } else {
@@ -86,10 +95,12 @@ export default function BlobUrlIntegrationSection({
           )
         }
       } finally {
-        setIsBlobLoading(false)
+        if (blobRequest.isLatest(requestId)) {
+          setIsBlobLoading(false)
+        }
       }
     },
-    [blobUrl, onFileSelected, onYamlContentLoaded, services],
+    [blobRequest, blobUrl, onFileSelected, onYamlContentLoaded, services],
   )
 
   return (

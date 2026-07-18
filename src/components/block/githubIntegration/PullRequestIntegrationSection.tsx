@@ -10,6 +10,7 @@ import type {
 } from '../../../services/githubRepositoryAccessService'
 import { type YamlContentPayload } from './types'
 import { useI18n } from '../../../utils/i18n'
+import { useLatestRequest } from './useLatestRequest'
 
 type LocalizedMessage = { ja: string; en: string }
 
@@ -53,7 +54,8 @@ export default function PullRequestIntegrationSection({
   const [isFileLoading, setIsFileLoading] = React.useState<boolean>(false)
   const [fileErrorMessage, setFileErrorMessage] = React.useState<LocalizedMessage | null>(null)
   const [fileSuccessMessage, setFileSuccessMessage] = React.useState<LocalizedMessage | null>(null)
-  const activeFileRequestIdRef = React.useRef<number>(0)
+  const verificationRequest = useLatestRequest()
+  const fileRequest = useLatestRequest()
 
   const resolveMessage = React.useCallback(
     (message: LocalizedMessage | null) => (message ? select(message.ja, message.en) : null),
@@ -80,9 +82,15 @@ export default function PullRequestIntegrationSection({
       setSelectedFilePath(null)
       setFileErrorMessage(null)
       setFileSuccessMessage(null)
+      fileRequest.invalidate()
+      setIsFileLoading(false)
+      const requestId = verificationRequest.start()
 
       try {
         const details = await services.fetchPullRequestDetails(trimmedUrl)
+        if (!verificationRequest.isLatest(requestId)) {
+          return
+        }
         setPullRequestDetails(details)
         setVerificationSuccess(
           createMessage(
@@ -91,6 +99,9 @@ export default function PullRequestIntegrationSection({
           ),
         )
       } catch (error) {
+        if (!verificationRequest.isLatest(requestId)) {
+          return
+        }
         if (error instanceof services.GithubRepositoryAccessError) {
           setVerificationError(createMessage(error.jaMessage, error.enMessage))
         } else {
@@ -102,10 +113,12 @@ export default function PullRequestIntegrationSection({
           )
         }
       } finally {
-        setIsVerifying(false)
+        if (verificationRequest.isLatest(requestId)) {
+          setIsVerifying(false)
+        }
       }
     },
-    [pullRequestUrl, services],
+    [fileRequest, pullRequestUrl, services, verificationRequest],
   )
 
   const handlePullRequestFileSelect = React.useCallback(
@@ -119,13 +132,12 @@ export default function PullRequestIntegrationSection({
       setFileErrorMessage(null)
       setFileSuccessMessage(null)
 
-      const requestId = activeFileRequestIdRef.current + 1
-      activeFileRequestIdRef.current = requestId
+      const requestId = fileRequest.start()
 
       services
         .fetchRepositoryFileContent(pullRequestDetails.head.repository, pullRequestDetails.head.ref, filePath)
         .then((content) => {
-          if (activeFileRequestIdRef.current !== requestId) {
+          if (!fileRequest.isLatest(requestId)) {
             return
           }
 
@@ -140,7 +152,7 @@ export default function PullRequestIntegrationSection({
           })
         })
         .catch((error) => {
-          if (activeFileRequestIdRef.current !== requestId) {
+          if (!fileRequest.isLatest(requestId)) {
             return
           }
 
@@ -156,12 +168,12 @@ export default function PullRequestIntegrationSection({
           }
         })
         .finally(() => {
-          if (activeFileRequestIdRef.current === requestId) {
+          if (fileRequest.isLatest(requestId)) {
             setIsFileLoading(false)
           }
         })
     },
-    [onFileSelected, onYamlContentLoaded, pullRequestDetails, services],
+    [fileRequest, onFileSelected, onYamlContentLoaded, pullRequestDetails, services],
   )
 
   const verificationErrorText = resolveMessage(verificationError)

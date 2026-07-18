@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import GithubIntegrationPanel from '../GithubIntegrationPanel'
 import {
@@ -24,6 +24,21 @@ vi.mock('../../../services/githubRepositoryAccessService', async (importOriginal
     fetchPullRequestDetails: vi.fn(),
   }
 })
+
+// Function Header: Creates a promise whose completion order can be controlled by a test.
+function createDeferred<T>(): {
+  promise: Promise<T>
+  resolve: (_value: T) => void
+  reject: (_reason?: unknown) => void
+} {
+  let resolve!: (_value: T) => void
+  let reject!: (_reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
+}
 
 describe('GithubIntegrationPanel', () => {
     beforeEach(() => {
@@ -192,6 +207,96 @@ describe('GithubIntegrationPanel', () => {
       expect(screen.getByTestId('repository-file-error')).toHaveTextContent(
         'YAMLファイル（.yml / .yaml）のみ選択できます。',
       )
+    })
+
+    it('keeps the latest repository tree when branch responses finish out of order', async () => {
+      const verifyMock = vi.mocked(verifyRepositoryCollaborator)
+      const listBranchesMock = vi.mocked(listRepositoryBranches)
+      const fetchTreeMock = vi.mocked(fetchRepositoryTree)
+      const mainTree = createDeferred<Awaited<ReturnType<typeof fetchRepositoryTree>>>()
+      const developTree = createDeferred<Awaited<ReturnType<typeof fetchRepositoryTree>>>()
+
+      verifyMock.mockResolvedValue({
+        repository: { owner: 'example', repository: 'repo' },
+        username: 'octocat',
+      })
+      listBranchesMock.mockResolvedValue([
+        { name: 'main', commitSha: 'sha-main' },
+        { name: 'develop', commitSha: 'sha-develop' },
+      ])
+      fetchTreeMock.mockImplementation((_repository, branch) =>
+        branch === 'main' ? mainTree.promise : developTree.promise,
+      )
+
+      render(<GithubIntegrationPanel />)
+      fireEvent.change(screen.getByTestId('repository-url-input'), {
+        target: { value: 'https://github.com/example/repo' },
+      })
+      fireEvent.submit(screen.getByTestId('repository-url-form'))
+
+      const branchSelect = await screen.findByTestId('repository-branch-select')
+      await waitFor(() => expect(fetchTreeMock).toHaveBeenCalledWith(
+        { owner: 'example', repository: 'repo' },
+        'main',
+      ))
+      fireEvent.change(branchSelect, { target: { value: 'develop' } })
+      await waitFor(() => expect(fetchTreeMock).toHaveBeenCalledWith(
+        { owner: 'example', repository: 'repo' },
+        'develop',
+      ))
+
+      await act(async () => {
+        developTree.resolve([{ path: 'develop.yaml', sha: 'sha-develop-file', type: 'blob' }])
+        await developTree.promise
+      })
+      expect(await screen.findByRole('button', { name: /develop\.yaml/ })).toBeInTheDocument()
+
+      await act(async () => {
+        mainTree.resolve([{ path: 'main.yaml', sha: 'sha-main-file', type: 'blob' }])
+        await mainTree.promise
+      })
+      expect(screen.getByRole('button', { name: /develop\.yaml/ })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /main\.yaml/ })).not.toBeInTheDocument()
+    })
+
+    it('ignores a file response after the selected branch changes', async () => {
+      const handleYamlLoaded = vi.fn()
+      const verifyMock = vi.mocked(verifyRepositoryCollaborator)
+      const listBranchesMock = vi.mocked(listRepositoryBranches)
+      const fetchTreeMock = vi.mocked(fetchRepositoryTree)
+      const fetchFileMock = vi.mocked(fetchRepositoryFileContent)
+      const fileResponse = createDeferred<string>()
+
+      verifyMock.mockResolvedValue({
+        repository: { owner: 'example', repository: 'repo' },
+        username: 'octocat',
+      })
+      listBranchesMock.mockResolvedValue([
+        { name: 'main', commitSha: 'sha-main' },
+        { name: 'develop', commitSha: 'sha-develop' },
+      ])
+      fetchTreeMock.mockImplementation(async (_repository, branch) => [
+        { path: `${branch}.yaml`, sha: `sha-${branch}`, type: 'blob' },
+      ])
+      fetchFileMock.mockReturnValue(fileResponse.promise)
+
+      render(<GithubIntegrationPanel onYamlContentLoaded={handleYamlLoaded} />)
+      fireEvent.change(screen.getByTestId('repository-url-input'), {
+        target: { value: 'https://github.com/example/repo' },
+      })
+      fireEvent.submit(screen.getByTestId('repository-url-form'))
+
+      const mainFile = await screen.findByRole('button', { name: /main\.yaml/ })
+      fireEvent.click(mainFile)
+      const branchSelect = screen.getByTestId('repository-branch-select')
+      fireEvent.change(branchSelect, { target: { value: 'develop' } })
+      expect(await screen.findByRole('button', { name: /develop\.yaml/ })).toBeInTheDocument()
+
+      await act(async () => {
+        fileResponse.resolve('stale: true\n')
+        await fileResponse.promise
+      })
+      expect(handleYamlLoaded).not.toHaveBeenCalled()
     })
 
     it('reads yaml content via blob url workflow', async () => {
