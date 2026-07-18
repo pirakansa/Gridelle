@@ -1,12 +1,12 @@
 // File Header: React hook exposing WASM macro loading status and registered functions.
 import React from 'react'
 import {
-  listRegisteredFunctions,
+  createCellFunctionRegistry,
+  resolveFunctionTargets,
   type RegisteredFunctionMeta,
 } from '../utils/cellFunctionEngine'
 import {
-  getLoadedWasmModules,
-  loadWasmMacroModule,
+  WasmMacroRuntime,
   type LoadedWasmModule,
 } from '../../../services/wasmMacroService'
 
@@ -17,30 +17,50 @@ type LoadParams = {
 
 // Function Header: Provides macro metadata and exposes a loader for WASM modules.
 export const useMacroManager = () => {
+  const registryRef = React.useRef<ReturnType<typeof createCellFunctionRegistry> | null>(null)
+  if (!registryRef.current) {
+    registryRef.current = createCellFunctionRegistry()
+  }
+  const registry = registryRef.current
+  const runtimeRef = React.useRef<WasmMacroRuntime | null>(null)
+  if (!runtimeRef.current) {
+    runtimeRef.current = new WasmMacroRuntime({
+      registerFunction: registry.register.bind(registry),
+      unregisterFunction: registry.unregister.bind(registry),
+      resolveTargets: resolveFunctionTargets,
+    })
+  }
+  const runtime = runtimeRef.current
   const [registeredFunctions, setRegisteredFunctions] = React.useState<RegisteredFunctionMeta[]>(() =>
-    listRegisteredFunctions(),
+    registry.list(),
   )
-  const [loadedModules, setLoadedModules] = React.useState<LoadedWasmModule[]>(() =>
-    getLoadedWasmModules(),
-  )
+  const [loadedModules, setLoadedModules] = React.useState<LoadedWasmModule[]>([])
 
   const refresh = React.useCallback(() => {
-    setRegisteredFunctions(listRegisteredFunctions())
-    setLoadedModules(getLoadedWasmModules())
-  }, [])
+    setRegisteredFunctions(registry.list())
+    setLoadedModules(runtime.getLoadedModules())
+  }, [registry, runtime])
+
+  React.useEffect(
+    () => () => {
+      runtime.dispose()
+    },
+    [runtime],
+  )
 
   const loadModule = React.useCallback(
     async ({ moduleId, url }: LoadParams): Promise<void> => {
-      await loadWasmMacroModule({ moduleId, url })
+      await runtime.load({ moduleId, url })
       refresh()
     },
-    [refresh],
+    [refresh, runtime],
   )
 
   return {
     registeredFunctions,
     loadedModules,
     loadWasmModule: loadModule,
+    registry,
   }
 }
 
