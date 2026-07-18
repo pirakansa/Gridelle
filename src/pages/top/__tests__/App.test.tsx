@@ -90,11 +90,11 @@ vi.mock('../../services/auth', () => {
   const getAuthClient = vi.fn(() => authClient)
 
   const readTokenMap = () => {
-    if (typeof window === 'undefined' || !window.localStorage) {
+    if (typeof window === 'undefined' || !window.sessionStorage) {
       return {} as Record<string, string>
     }
 
-    const raw = window.localStorage.getItem('gridelle/auth/providerTokens')
+    const raw = window.sessionStorage.getItem('gridelle/auth/providerTokens')
     if (!raw) {
       const legacy = window.localStorage.getItem('gridelle/githubAccessToken')
       return legacy ? { github: legacy } : {}
@@ -109,16 +109,17 @@ vi.mock('../../services/auth', () => {
   }
 
   const writeTokenMap = (map: Record<string, string>) => {
-    if (typeof window === 'undefined' || !window.localStorage) {
+    if (typeof window === 'undefined' || !window.sessionStorage) {
       return
     }
 
     const entries = Object.entries(map).filter(([, value]) => Boolean(value))
     if (entries.length === 0) {
-      window.localStorage.removeItem('gridelle/auth/providerTokens')
+      window.sessionStorage.removeItem('gridelle/auth/providerTokens')
     } else {
-      window.localStorage.setItem('gridelle/auth/providerTokens', JSON.stringify(Object.fromEntries(entries)))
+      window.sessionStorage.setItem('gridelle/auth/providerTokens', JSON.stringify(Object.fromEntries(entries)))
     }
+    window.localStorage.removeItem('gridelle/auth/providerTokens')
     window.localStorage.removeItem('gridelle/githubAccessToken')
   }
 
@@ -231,6 +232,7 @@ beforeEach(() => {
   })
   if (typeof window !== 'undefined' && window.localStorage) {
     window.localStorage.clear()
+    window.sessionStorage.clear()
   }
 })
 

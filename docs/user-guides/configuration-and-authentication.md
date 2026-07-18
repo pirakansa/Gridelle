@@ -42,6 +42,12 @@ VITE_LOGIN_APP=offline vorbere run build
 
 Offline mode exposes a guest session flow and a GitHub personal access token input. This lets repository features use the Octokit client without contacting an external identity provider.
 
+## Token Lifetime
+
+GitHub OAuth and personal access tokens are stored in `sessionStorage`, so they remain available while navigating between Gridelle pages in the same browser tab. Closing the tab ends that token session and requires GitHub authentication again. Tokens are not persisted in `localStorage`.
+
+When Gridelle encounters a token saved by an older release in `localStorage`, it migrates the token to `sessionStorage` for the current tab and removes the old persistent copy. Logging out or clearing the session cache removes the session token immediately.
+
 ## Custom Authentication
 
 To add a custom login variant, create `src/pages/login/App.<variant>.tsx`, configure an auth client with `configureAuthClient()`, and set `VITE_LOGIN_APP=<variant>` for the build that should use it.

@@ -1,12 +1,12 @@
 // File Header: Loads user-provided WASM modules and registers them as spreadsheet macros.
 import {
-  registerCellFunction,
-  resolveFunctionTargets,
   type CellFunctionArgs,
   type CellFunctionContext,
+  type CellFunctionHandler,
   type CellFunctionResult,
   type CellStyleDirectives,
-} from '../pages/top/utils/cellFunctionEngine'
+  type RegisterCellFunctionOptions,
+} from './cellFunctionRegistry'
 
 export type LoadedWasmModule = {
   id: string
@@ -19,31 +19,107 @@ type WasmExport = {
   fn: (..._args: number[]) => number
 }
 
-const wasmModules = new Map<string, LoadedWasmModule>()
-
 const BYTES_PER_F64 = 8
 const WASM_PAGE_BYTES = 65536
 const STYLE_STRUCT_BYTES = 16
 const STYLE_FLAG_TEXT = 1
 const STYLE_FLAG_BG = 2
 
-export const getLoadedWasmModules = (): LoadedWasmModule[] => Array.from(wasmModules.values())
-
-type LoadParams = {
+export type LoadWasmMacroParams = {
   moduleId: string
   url: string
 }
 
-// Function Header: Fetches and instantiates a WASM module, registering exported functions as macros.
-export async function loadWasmMacroModule({ moduleId, url }: LoadParams): Promise<LoadedWasmModule> {
-  const normalizedId = moduleId.trim()
-  if (!normalizedId) {
-    throw new Error('モジュールIDを入力してください。')
+export type WasmMacroRuntimeDependencies = {
+  registerFunction: (
+    _name: string,
+    _handler: CellFunctionHandler,
+    _options?: RegisterCellFunctionOptions,
+  ) => unknown
+  unregisterFunction: (_name: string) => void
+  resolveTargets: (_args: CellFunctionArgs, _context: CellFunctionContext) => Array<{
+    rowIndex: number
+    columnKey: string
+    sheetName?: string
+  }>
+}
+
+// Function Header: Owns loaded WASM modules and their cell function registrations.
+export class WasmMacroRuntime {
+  private readonly modules = new Map<string, LoadedWasmModule>()
+  private readonly macroIdsByModule = new Map<string, string[]>()
+  private readonly dependencies: WasmMacroRuntimeDependencies
+
+  // Function Header: Creates a runtime with explicit registry and target-resolution dependencies.
+  constructor(dependencies: WasmMacroRuntimeDependencies) {
+    this.dependencies = dependencies
   }
-  const normalizedUrl = url.trim()
-  if (!normalizedUrl) {
-    throw new Error('WASMファイルのURLを入力してください。')
+
+  // Function Header: Returns summaries for modules owned by this runtime.
+  getLoadedModules(): LoadedWasmModule[] {
+    return Array.from(this.modules.values())
   }
+
+  // Function Header: Loads a WASM module and replaces registrations owned by the same module identifier.
+  async load({ moduleId, url }: LoadWasmMacroParams): Promise<LoadedWasmModule> {
+    const normalizedId = moduleId.trim()
+    if (!normalizedId) {
+      throw new Error('モジュールIDを入力してください。')
+    }
+    const normalizedUrl = url.trim()
+    if (!normalizedUrl) {
+      throw new Error('WASMファイルのURLを入力してください。')
+    }
+    const { instance, callableExports } = await instantiateWasmModule(normalizedUrl)
+    const memory = extractMemory(instance)
+
+    this.unregisterModuleFunctions(normalizedId)
+    const macroIds = callableExports.map(({ name, fn }) => {
+      const macroId = `wasm:${normalizedId}.${name}`
+      this.dependencies.registerFunction(
+        macroId,
+        createWasmHandler(fn, memory, this.dependencies.resolveTargets),
+        {
+          label: `${normalizedId}.${name}`,
+          description: 'WASMモジュールで定義されたマクロ関数',
+          source: 'wasm',
+          moduleId: normalizedId,
+          exportName: name,
+        },
+      )
+      return macroId
+    })
+
+    const summary: LoadedWasmModule = {
+      id: normalizedId,
+      url: normalizedUrl,
+      exports: callableExports.map((entry) => entry.name),
+    }
+    this.macroIdsByModule.set(normalizedId, macroIds)
+    this.modules.set(normalizedId, summary)
+    return summary
+  }
+
+  // Function Header: Removes all function registrations created by this runtime.
+  dispose(): void {
+    Array.from(this.macroIdsByModule.keys()).forEach((moduleId) => {
+      this.unregisterModuleFunctions(moduleId)
+    })
+    this.modules.clear()
+  }
+
+  // Function Header: Removes registrations associated with one module identifier.
+  private unregisterModuleFunctions(moduleId: string): void {
+    const macroIds = this.macroIdsByModule.get(moduleId) ?? []
+    macroIds.forEach((macroId) => this.dependencies.unregisterFunction(macroId))
+    this.macroIdsByModule.delete(moduleId)
+  }
+}
+
+// Function Header: Fetches and instantiates one WASM module without mutating application registries.
+async function instantiateWasmModule(
+  normalizedUrl: string,
+): Promise<{ instance: WebAssembly.Instance; callableExports: WasmExport[] }> {
   if (typeof fetch === 'undefined') {
     throw new Error('この環境ではWASMを読み込めません。')
   }
@@ -61,31 +137,12 @@ export async function loadWasmMacroModule({ moduleId, url }: LoadParams): Promis
     throw new Error(`WASMの初期化に失敗しました: ${(error as Error).message}`)
   }
 
-  const memory = extractMemory(instance)
   const callableExports = extractFunctionExports(instance)
 
   if (!callableExports.length) {
     throw new Error('呼び出し可能なエクスポートが見つかりませんでした。')
   }
-
-  callableExports.forEach(({ name, fn }) => {
-    const macroId = `wasm:${normalizedId}.${name}`
-    registerCellFunction(macroId, createWasmHandler(fn, memory), {
-      label: `${normalizedId}.${name}`,
-      description: 'WASMモジュールで定義されたマクロ関数',
-      source: 'wasm',
-      moduleId: normalizedId,
-      exportName: name,
-    })
-  })
-
-  const summary: LoadedWasmModule = {
-    id: normalizedId,
-    url: normalizedUrl,
-    exports: callableExports.map((entry) => entry.name),
-  }
-  wasmModules.set(normalizedId, summary)
-  return summary
+  return { instance, callableExports }
 }
 
 const extractMemory = (instance: WebAssembly.Instance): WebAssembly.Memory => {
@@ -111,9 +168,13 @@ const ensureMemoryCapacity = (memory: WebAssembly.Memory, requiredBytes: number)
 }
 
 const createWasmHandler =
-  (fn: (..._args: number[]) => number, memory: WebAssembly.Memory) =>
+  (
+    fn: (..._args: number[]) => number,
+    memory: WebAssembly.Memory,
+    resolveTargets: WasmMacroRuntimeDependencies['resolveTargets'],
+  ) =>
   (args: CellFunctionArgs, context: CellFunctionContext): CellFunctionResult => {
-    const targets = resolveFunctionTargets(args, context)
+    const targets = resolveTargets(args, context)
     const scopedTargets = targets.filter(
       (target) =>
         !(

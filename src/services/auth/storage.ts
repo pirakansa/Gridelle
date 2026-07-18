@@ -1,4 +1,4 @@
-// File Header: Implements persistent storage helpers for authentication data.
+// File Header: Implements session-scoped storage helpers for authentication data.
 import type { LoginMode } from './types'
 
 export const PROVIDER_TOKEN_STORAGE_KEY = 'gridelle/auth/providerTokens'
@@ -7,65 +7,97 @@ export const LOGIN_MODE_STORAGE_KEY = 'gridelle/loginMode'
 
 type ProviderTokenMap = Record<string, string>
 
-/**
- * Function Header: Safely parses the provider token map from localStorage.
- * @returns {ProviderTokenMap} Stored provider token mapping.
- */
-function readProviderTokens(): ProviderTokenMap {
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return {}
-  }
-
-  const raw = window.localStorage.getItem(PROVIDER_TOKEN_STORAGE_KEY)
-  if (!raw) {
-    return migrateLegacyGithubToken({})
+// Function Header: Returns browser storage when it is available without surfacing privacy-mode failures.
+function getBrowserStorage(kind: 'localStorage' | 'sessionStorage'): Storage | null {
+  if (typeof window === 'undefined') {
+    return null
   }
 
   try {
-    const parsed = JSON.parse(raw) as ProviderTokenMap
-    return migrateLegacyGithubToken(parsed ?? {})
+    return window[kind]
   } catch (error) {
-    console.error('Failed to parse stored provider tokens. Resetting cache.', error)
-    return migrateLegacyGithubToken({})
+    console.error(`Failed to access ${kind}.`, error)
+    return null
   }
 }
 
-/**
- * Function Header: Persists the provider token map back to localStorage.
- * @param {ProviderTokenMap} tokens Provider token mapping to persist.
- */
-function writeProviderTokens(tokens: ProviderTokenMap): void {
-  if (typeof window === 'undefined' || !window.localStorage) {
+// Function Header: Parses and filters a provider token map from a storage payload.
+function parseProviderTokens(raw: string | null): ProviderTokenMap {
+  if (!raw) {
+    return {}
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return {}
+    }
+
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        (entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0,
+      ),
+    )
+  } catch (error) {
+    console.error('Failed to parse stored provider tokens. Resetting cache.', error)
+    return {}
+  }
+}
+
+// Function Header: Removes provider token keys left by localStorage-based releases.
+function removeLegacyLocalTokens(localStorageRef: Storage | null): void {
+  if (!localStorageRef) {
     return
   }
 
-  const entries = Object.entries(tokens).filter(([, token]) => Boolean(token))
-  const serialisable = Object.fromEntries(entries)
-  window.localStorage.setItem(PROVIDER_TOKEN_STORAGE_KEY, JSON.stringify(serialisable))
-
-  if (window.localStorage.getItem(LEGACY_GITHUB_TOKEN_STORAGE_KEY)) {
-    window.localStorage.removeItem(LEGACY_GITHUB_TOKEN_STORAGE_KEY)
+  try {
+    localStorageRef.removeItem(PROVIDER_TOKEN_STORAGE_KEY)
+    localStorageRef.removeItem(LEGACY_GITHUB_TOKEN_STORAGE_KEY)
+  } catch (error) {
+    console.error('Failed to remove legacy provider tokens.', error)
   }
 }
 
 /**
- * Function Header: Migrates legacy GitHub token storage into the new provider token map.
- * @param {ProviderTokenMap} current Existing token map.
- * @returns {ProviderTokenMap} Updated token map with migration applied.
+ * Function Header: Reads session tokens and migrates tokens from legacy localStorage keys.
+ * @returns {ProviderTokenMap} Stored provider token mapping.
  */
-function migrateLegacyGithubToken(current: ProviderTokenMap): ProviderTokenMap {
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return current
+function readProviderTokens(): ProviderTokenMap {
+  const sessionStorageRef = getBrowserStorage('sessionStorage')
+  const localStorageRef = getBrowserStorage('localStorage')
+  const sessionTokens = parseProviderTokens(sessionStorageRef?.getItem(PROVIDER_TOKEN_STORAGE_KEY) ?? null)
+  const localTokens = parseProviderTokens(localStorageRef?.getItem(PROVIDER_TOKEN_STORAGE_KEY) ?? null)
+  const legacyGithubToken = localStorageRef?.getItem(LEGACY_GITHUB_TOKEN_STORAGE_KEY) ?? null
+  const migratedTokens = {
+    ...(legacyGithubToken ? { github: legacyGithubToken } : {}),
+    ...localTokens,
+    ...sessionTokens,
   }
 
-  if (!current.github) {
-    const legacy = window.localStorage.getItem(LEGACY_GITHUB_TOKEN_STORAGE_KEY)
-    if (legacy) {
-      return { ...current, github: legacy }
+  if ((Object.keys(localTokens).length > 0 || legacyGithubToken) && sessionStorageRef) {
+    sessionStorageRef.setItem(PROVIDER_TOKEN_STORAGE_KEY, JSON.stringify(migratedTokens))
+  }
+  removeLegacyLocalTokens(localStorageRef)
+  return migratedTokens
+}
+
+/**
+ * Function Header: Persists the provider token map for the current browser tab session.
+ * @param {ProviderTokenMap} tokens Provider token mapping to persist.
+ */
+function writeProviderTokens(tokens: ProviderTokenMap): void {
+  const sessionStorageRef = getBrowserStorage('sessionStorage')
+  const localStorageRef = getBrowserStorage('localStorage')
+  const entries = Object.entries(tokens).filter(([, token]) => Boolean(token))
+  const serialisable = Object.fromEntries(entries)
+  if (sessionStorageRef) {
+    if (entries.length > 0) {
+      sessionStorageRef.setItem(PROVIDER_TOKEN_STORAGE_KEY, JSON.stringify(serialisable))
+    } else {
+      sessionStorageRef.removeItem(PROVIDER_TOKEN_STORAGE_KEY)
     }
   }
-
-  return current
+  removeLegacyLocalTokens(localStorageRef)
 }
 
 /**

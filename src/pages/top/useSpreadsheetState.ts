@@ -217,7 +217,7 @@ export function useSpreadsheetState(): UseSpreadsheetState {
   } = useSpreadsheetDataController(DEFAULT_SHEETS)
 
   const [bulkValue, setBulkValue] = React.useState<string>('')
-  const { registeredFunctions, loadedModules, loadWasmModule } = useMacroManager()
+  const { registeredFunctions, loadedModules, loadWasmModule, registry } = useMacroManager()
   const macroRegistrySignature = React.useMemo(
     () => registeredFunctions.map((fn) => `${fn.id}:${fn.moduleId ?? ''}`).join('|'),
     [registeredFunctions],
@@ -232,8 +232,8 @@ export function useSpreadsheetState(): UseSpreadsheetState {
   }, [sheets])
   const computedRows = React.useMemo(() => {
     void macroRegistrySignature
-    return applyCellFunctions(rows, columns, { workbook: sheets, sheetName: activeSheetName })
-  }, [rows, columns, macroRegistrySignature, sheets, activeSheetName])
+    return applyCellFunctions(rows, columns, { workbook: sheets, sheetName: activeSheetName, registry })
+  }, [rows, columns, macroRegistrySignature, sheets, activeSheetName, registry])
 
   const {
     selection,

@@ -166,5 +166,6 @@ Values less than or equal to zero clear the background color.
 
 - Modules with multiple memories are not supported.
 - Modules with heavy `start` functions are not recommended.
+- Loading a module with an existing module ID replaces all function registrations from the previous module, including exports that no longer exist.
 - Runtime errors are logged and the function cell falls back to an empty value.
 - The ABI is experimental and may change in a future release.

@@ -13,6 +13,7 @@ import type {
 } from '../../../services/githubRepositoryAccessService'
 import { type YamlContentPayload } from './types'
 import { useI18n } from '../../../utils/i18n'
+import { useLatestRequest } from './useLatestRequest'
 
 type LocalizedMessage = { ja: string; en: string }
 
@@ -81,14 +82,22 @@ export default function RepositoryIntegrationSection({
   const [isFileLoading, setIsFileLoading] = React.useState<boolean>(false)
   const [fileErrorMessage, setFileErrorMessage] = React.useState<LocalizedMessage | null>(null)
   const [fileSuccessMessage, setFileSuccessMessage] = React.useState<LocalizedMessage | null>(null)
+  const verificationRequest = useLatestRequest()
+  const branchRequest = useLatestRequest()
+  const treeRequest = useLatestRequest()
+  const fileRequest = useLatestRequest()
   const resolveMessage = React.useCallback(
     (message: LocalizedMessage | null) => (message ? select(message.ja, message.en) : null),
     [select],
   )
 
   const resetRepositoryState = React.useCallback(() => {
+    branchRequest.invalidate()
+    treeRequest.invalidate()
+    fileRequest.invalidate()
     setRepositoryCoordinates(null)
     setBranches([])
+    setIsBranchLoading(false)
     setBranchErrorMessage(null)
     setSelectedBranch('')
     setTreeEntries([])
@@ -98,15 +107,19 @@ export default function RepositoryIntegrationSection({
     setIsFileLoading(false)
     setFileErrorMessage(null)
     setFileSuccessMessage(null)
-  }, [])
+  }, [branchRequest, fileRequest, treeRequest])
 
   const loadBranches = React.useCallback(
     async (coordinates: GithubRepositoryCoordinates) => {
+      const requestId = branchRequest.start()
       setIsBranchLoading(true)
       setBranchErrorMessage(null)
 
       try {
         const fetchedBranches = await services.listRepositoryBranches(coordinates)
+        if (!branchRequest.isLatest(requestId)) {
+          return
+        }
         setBranches(fetchedBranches)
 
         if (fetchedBranches.length > 0) {
@@ -120,6 +133,9 @@ export default function RepositoryIntegrationSection({
           setSelectedBranch('')
         }
       } catch (error) {
+        if (!branchRequest.isLatest(requestId)) {
+          return
+        }
         if (error instanceof services.GithubRepositoryAccessError) {
           setBranchErrorMessage(createMessage(error.jaMessage, error.enMessage))
         } else {
@@ -131,19 +147,23 @@ export default function RepositoryIntegrationSection({
           )
         }
       } finally {
-        setIsBranchLoading(false)
+        if (branchRequest.isLatest(requestId)) {
+          setIsBranchLoading(false)
+        }
       }
     },
-    [services],
+    [branchRequest, services],
   )
 
   const loadRepositoryTree = React.useCallback(
     async (coordinates: GithubRepositoryCoordinates, branchName: string) => {
       if (!branchName) {
+        treeRequest.invalidate()
         setTreeEntries([])
         return
       }
 
+      const requestId = treeRequest.start()
       setIsTreeLoading(true)
       setTreeErrorMessage(null)
       setSelectedFilePath(null)
@@ -153,8 +173,14 @@ export default function RepositoryIntegrationSection({
 
       try {
         const fetchedTree = await services.fetchRepositoryTree(coordinates, branchName)
+        if (!treeRequest.isLatest(requestId)) {
+          return
+        }
         setTreeEntries(fetchedTree)
       } catch (error) {
+        if (!treeRequest.isLatest(requestId)) {
+          return
+        }
         if (error instanceof services.GithubRepositoryAccessError) {
           setTreeErrorMessage(createMessage(error.jaMessage, error.enMessage))
         } else {
@@ -167,10 +193,12 @@ export default function RepositoryIntegrationSection({
         }
         setTreeEntries([])
       } finally {
-        setIsTreeLoading(false)
+        if (treeRequest.isLatest(requestId)) {
+          setIsTreeLoading(false)
+        }
       }
     },
-    [services],
+    [services, treeRequest],
   )
 
   const handleRepositorySubmit = React.useCallback(
@@ -185,9 +213,13 @@ export default function RepositoryIntegrationSection({
       setErrorMessage(null)
       setSuccessMessage(null)
       resetRepositoryState()
+      const requestId = verificationRequest.start()
 
       try {
         const result = await services.verifyRepositoryCollaborator(trimmedUrl)
+        if (!verificationRequest.isLatest(requestId)) {
+          return
+        }
         const canonicalUrl = `https://github.com/${result.repository.owner}/${result.repository.repository}`
         onRepositoryUrlChange(canonicalUrl)
         setSuccessMessage(
@@ -201,6 +233,9 @@ export default function RepositoryIntegrationSection({
         setRepositoryCoordinates(result.repository)
         void loadBranches(result.repository)
       } catch (error) {
+        if (!verificationRequest.isLatest(requestId)) {
+          return
+        }
         if (error instanceof services.GithubRepositoryAccessError) {
           setErrorMessage(createMessage(error.jaMessage, error.enMessage))
         } else {
@@ -212,7 +247,9 @@ export default function RepositoryIntegrationSection({
           )
         }
       } finally {
-        setIsVerifying(false)
+        if (verificationRequest.isLatest(requestId)) {
+          setIsVerifying(false)
+        }
       }
     },
     [
@@ -223,6 +260,7 @@ export default function RepositoryIntegrationSection({
       repositoryUrl,
       resetRepositoryState,
       services,
+      verificationRequest,
     ],
   )
 
@@ -236,11 +274,15 @@ export default function RepositoryIntegrationSection({
   }, [loadRepositoryTree, onBranchSelected, repositoryCoordinates, selectedBranch])
 
   const handleBranchChange = React.useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
+    treeRequest.invalidate()
+    fileRequest.invalidate()
     setSelectedBranch(event.target.value)
     setSelectedFilePath(null)
     setFileErrorMessage(null)
     setFileSuccessMessage(null)
-  }, [])
+    setIsTreeLoading(false)
+    setIsFileLoading(false)
+  }, [fileRequest, treeRequest])
 
   const handleRepositoryFileSelect = React.useCallback(
     (filePath: string) => {
@@ -263,10 +305,14 @@ export default function RepositoryIntegrationSection({
       }
 
       setIsFileLoading(true)
+      const requestId = fileRequest.start()
 
       services
         .fetchRepositoryFileContent(repositoryCoordinates, selectedBranch, filePath)
         .then((content) => {
+          if (!fileRequest.isLatest(requestId)) {
+            return
+          }
           setFileSuccessMessage(
             createMessage(`${filePath} を読み込みました。`, `Loaded ${filePath}.`),
           )
@@ -280,6 +326,9 @@ export default function RepositoryIntegrationSection({
           })
         })
         .catch((error) => {
+          if (!fileRequest.isLatest(requestId)) {
+            return
+          }
           if (error instanceof services.GithubRepositoryAccessError) {
             setFileErrorMessage(createMessage(error.jaMessage, error.enMessage))
           } else {
@@ -292,12 +341,15 @@ export default function RepositoryIntegrationSection({
           }
         })
         .finally(() => {
-          setIsFileLoading(false)
+          if (fileRequest.isLatest(requestId)) {
+            setIsFileLoading(false)
+          }
         })
     },
     [
       onFileSelected,
       onYamlContentLoaded,
+      fileRequest,
       repositoryCoordinates,
       selectedBranch,
       services,

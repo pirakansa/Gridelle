@@ -1,34 +1,25 @@
 // File Header: Evaluates YAML-defined cell functions and provides a registry for macro handlers.
 import { deriveColumns, type TableRow, type TableSheet } from '../../../services/workbookService'
+import {
+  CellFunctionRegistry,
+  defaultCellFunctionRegistry,
+  type CellFunctionArgs,
+  type CellFunctionContext,
+  type CellFunctionHandler,
+  type CellFunctionResult,
+  type CellStyleDirectives,
+  type RegisterCellFunctionOptions,
+  type RegisteredFunctionMeta,
+} from '../../../services/cellFunctionRegistry'
 
-export type CellFunctionArgs = Record<string, unknown> | undefined
-
-export type CellFunctionContext = {
-  rows: TableRow[]
-  columns: string[]
-  rowIndex: number
-  columnKey: string
-  sheetName: string
-  getCellValue: (_rowIndex: number, _columnKey: string, _options?: { sheetName?: string }) => string
-  resolveColumnKey?: (_columnIndex: number, _sheetName?: string) => string | undefined
-}
-
-export type CellStyleDirectives = {
-  color?: string | null
-  bgColor?: string | null
-}
-
-export type CellFunctionResult =
-  | string
-  | number
-  | null
-  | undefined
-  | {
-      value?: string | number | null
-      styles?: CellStyleDirectives
-    }
-
-export type CellFunctionHandler = (_args: CellFunctionArgs, _context: CellFunctionContext) => CellFunctionResult
+export type {
+  CellFunctionArgs,
+  CellFunctionContext,
+  CellFunctionHandler,
+  CellFunctionResult,
+  CellStyleDirectives,
+  RegisteredFunctionMeta,
+} from '../../../services/cellFunctionRegistry'
 
 export type ResolvedCellTarget = {
   rowIndex: number
@@ -36,70 +27,21 @@ export type ResolvedCellTarget = {
   sheetName?: string
 }
 
-export type RegisteredFunctionMeta = {
-  id: string
-  label: string
-  description?: string
-  source: 'builtin' | 'wasm'
-  moduleId?: string
-  exportName?: string
-}
-
-type RegistryRecord = {
-  handler: CellFunctionHandler
-  meta: RegisteredFunctionMeta
-}
-
-const registry: Map<string, RegistryRecord> = new Map()
-
-const normalizeFunctionName = (name: string): string => name.trim().toLowerCase()
-
-type RegisterOptions = {
-  label?: string
-  description?: string
-  source?: RegisteredFunctionMeta['source']
-  moduleId?: string
-  exportName?: string
-}
-
 export function registerCellFunction(
   name: string,
   handler: CellFunctionHandler,
-  options?: RegisterOptions,
+  options?: RegisterCellFunctionOptions,
 ): RegisteredFunctionMeta {
-  const normalized = normalizeFunctionName(name)
-  if (!normalized) {
-    throw new Error('セル関数名が空です。')
-  }
-  const recordMeta: RegisteredFunctionMeta = {
-    id: name,
-    label: options?.label ?? name,
-    description: options?.description ?? '',
-    source: options?.source ?? 'builtin',
-    moduleId: options?.moduleId,
-    exportName: options?.exportName,
-  }
-  registry.set(normalized, {
-    handler,
-    meta: recordMeta,
-  })
-  return recordMeta
+  return defaultCellFunctionRegistry.register(name, handler, options)
 }
 
-const getCellFunctionRecord = (name: string): RegistryRecord | undefined => {
-  if (!name.trim()) {
-    return undefined
-  }
-  return registry.get(normalizeFunctionName(name))
+// Function Header: Removes a function from the default application registry.
+export function unregisterCellFunction(name: string): void {
+  defaultCellFunctionRegistry.unregister(name)
 }
-
-const getCellFunctionHandler = (name: string): CellFunctionHandler | undefined =>
-  getCellFunctionRecord(name)?.handler
 
 export const listRegisteredFunctions = (): RegisteredFunctionMeta[] =>
-  Array.from(registry.values())
-    .map((record) => record.meta)
-    .sort((a, b) => a.label.localeCompare(b.label, 'ja'))
+  defaultCellFunctionRegistry.list()
 
 type EvaluationCacheEntry = {
   value: string
@@ -200,7 +142,10 @@ const buildSheetStateMap = (
   }
 }
 
-const createWorkbookResolver = (sheetStates: SheetStateCollection): WorkbookResolver => {
+const createWorkbookResolver = (
+  sheetStates: SheetStateCollection,
+  registry: CellFunctionRegistry,
+): WorkbookResolver => {
   const { states, nameIndex, activeSheetKey } = sheetStates
   const stack = new Set<string>()
 
@@ -264,7 +209,7 @@ const createWorkbookResolver = (sheetStates: SheetStateCollection): WorkbookReso
       sheet.cache.set(cacheKey, { value: '' })
       return ''
     }
-    const handler = getCellFunctionHandler(cell.func.name)
+    const handler = registry.getHandler(cell.func.name)
     if (!handler) {
       console.warn(`未対応のセル関数です: ${cell.func.name}`)
       sheet.cache.set(cacheKey, { value: '' })
@@ -382,6 +327,7 @@ const normalizeFunctionOutput = (output: CellFunctionResult, fallbackValue: stri
 type ApplyCellFunctionOptions = {
   workbook?: TableSheet[]
   sheetName?: string
+  registry?: CellFunctionRegistry
 }
 
 // Function Header: Applies registered cell functions to produce display-ready rows.
@@ -391,8 +337,9 @@ export function applyCellFunctions(rows: TableRow[], columns: string[], options?
   }
 
   const activeSheetName = options?.sheetName ?? 'Sheet 1'
+  const registry = options?.registry ?? defaultCellFunctionRegistry
   const sheetStates = buildSheetStateMap(rows, columns, options?.workbook, activeSheetName)
-  const resolver = createWorkbookResolver(sheetStates)
+  const resolver = createWorkbookResolver(sheetStates, registry)
   const activeSheetState = sheetStates.states.get(sheetStates.activeSheetKey)
   if (!activeSheetState) {
     return rows
@@ -784,12 +731,6 @@ const sumFunctionHandler: CellFunctionHandler = (args, context) => {
   return total.toString()
 }
 
-registerCellFunction('sum', sumFunctionHandler, {
-  label: 'BIF: sum',
-  source: 'builtin',
-  description: '指定したセル範囲の値を合計します。',
-})
-
 const multiplyFunctionHandler: CellFunctionHandler = (args, context) => {
   const targets = resolveFunctionTargets(args, context)
   const scopedTargets = targets.filter(
@@ -820,8 +761,25 @@ const multiplyFunctionHandler: CellFunctionHandler = (args, context) => {
   return product.toString()
 }
 
-registerCellFunction('multiply', multiplyFunctionHandler, {
-  label: 'BIF: multiply',
-  source: 'builtin',
-  description: '指定したセル範囲の値を掛け合わせます。',
-})
+// Function Header: Adds the built-in functions to an application-owned registry.
+function registerBuiltInFunctions(registry: CellFunctionRegistry): void {
+  registry.register('sum', sumFunctionHandler, {
+    label: 'BIF: sum',
+    source: 'builtin',
+    description: '指定したセル範囲の値を合計します。',
+  })
+  registry.register('multiply', multiplyFunctionHandler, {
+    label: 'BIF: multiply',
+    source: 'builtin',
+    description: '指定したセル範囲の値を掛け合わせます。',
+  })
+}
+
+// Function Header: Creates an isolated registry initialized with built-in functions.
+export function createCellFunctionRegistry(): CellFunctionRegistry {
+  const registry = new CellFunctionRegistry()
+  registerBuiltInFunctions(registry)
+  return registry
+}
+
+registerBuiltInFunctions(defaultCellFunctionRegistry)
