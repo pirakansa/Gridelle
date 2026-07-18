@@ -19,3 +19,5 @@ The service layer for these operations lives under `src/services/githubRepositor
 ## Authentication Notes
 
 Firebase login is the default application login. Offline mode provides a guest session and GitHub personal access token input, which is useful for local experiments where an external identity provider should not be contacted.
+
+GitHub credentials are scoped to the current browser tab through `sessionStorage`. Closing the tab, logging out, or clearing the session cache removes the stored token and requires authentication again. See [Configuration and Authentication](configuration-and-authentication.md#token-lifetime) for migration and lifetime details.

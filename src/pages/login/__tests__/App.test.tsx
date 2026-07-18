@@ -161,6 +161,7 @@ describe('pages/login/App', () => {
 
   afterEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
   })
 
   const renderWithLocale = (): void => {
@@ -246,10 +247,11 @@ describe('pages/login/App', () => {
     await waitFor(() => {
       expect(authMocks.signInWithPopupMock).toHaveBeenCalledTimes(1)
     })
-    const storedTokensRaw = localStorage.getItem(PROVIDER_TOKEN_STORAGE_KEY)
+    const storedTokensRaw = sessionStorage.getItem(PROVIDER_TOKEN_STORAGE_KEY)
     expect(storedTokensRaw).not.toBeNull()
     const storedTokens = storedTokensRaw ? JSON.parse(storedTokensRaw) : {}
     expect(storedTokens.github).toBe('abcd1234efgh5678')
+    expect(localStorage.getItem(PROVIDER_TOKEN_STORAGE_KEY)).toBeNull()
     expect(redirectToTopMock).toHaveBeenCalledTimes(1)
   })
 
