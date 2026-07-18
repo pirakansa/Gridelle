@@ -132,4 +132,61 @@ describe('wasmMacroService', () => {
       },
     ])
   })
+
+  it('removes owned macros on dispose while preserving built-in functions', async () => {
+    const wasmPath = path.resolve(__dirname, '../../../public/macros/sample_macros.wasm')
+    const bytes = await fs.readFile(wasmPath)
+    global.fetch = vi.fn(async () => new Response(bytes.slice(0)))
+    await runtime.load({ moduleId: 'disposable', url: '/macros/sample_macros.wasm' })
+
+    expect(registry.list().some((fn) => fn.id.startsWith('wasm:disposable.'))).toBe(true)
+
+    runtime.dispose()
+
+    const functionIds = registry.list().map((fn) => fn.id)
+    expect(functionIds.some((id) => id.startsWith('wasm:disposable.'))).toBe(false)
+    expect(functionIds).toEqual(expect.arrayContaining(['sum', 'multiply']))
+    expect(runtime.getLoadedModules()).toEqual([])
+  })
+
+  it('keeps cell function registries isolated', () => {
+    const otherRegistry = createCellFunctionRegistry()
+    registry.register('only-in-first', () => 'first')
+
+    expect(registry.getHandler('only-in-first')).toBeDefined()
+    expect(otherRegistry.getHandler('only-in-first')).toBeUndefined()
+    expect(otherRegistry.list().map((fn) => fn.id)).toEqual(expect.arrayContaining(['sum', 'multiply']))
+  })
+
+  it('preserves the previous module when a reload fails', async () => {
+    const bytes = new Uint8Array([0x00]).buffer
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      arrayBuffer: async () => bytes,
+    })) as unknown as typeof fetch
+    const previousInstance = {
+      exports: {
+        memory: new WebAssembly.Memory({ initial: 1 }),
+        stableExport: vi.fn(() => 1),
+      },
+    }
+    const instantiateSpy = vi.spyOn(WebAssembly, 'instantiate')
+    ;(instantiateSpy as unknown as Mock)
+      .mockResolvedValueOnce({ instance: previousInstance, module: {} as WebAssembly.Module })
+      .mockRejectedValueOnce(new Error('invalid replacement'))
+
+    await runtime.load({ moduleId: 'stable', url: '/macros/stable.wasm' })
+    await expect(runtime.load({ moduleId: 'stable', url: '/macros/broken.wasm' })).rejects.toThrow(
+      'WASMの初期化に失敗しました: invalid replacement',
+    )
+
+    expect(registry.list().some((fn) => fn.id === 'wasm:stable.stableExport')).toBe(true)
+    expect(runtime.getLoadedModules()).toEqual([
+      {
+        id: 'stable',
+        url: '/macros/stable.wasm',
+        exports: ['stableExport'],
+      },
+    ])
+  })
 })

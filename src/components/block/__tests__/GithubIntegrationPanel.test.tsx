@@ -342,6 +342,37 @@ describe('GithubIntegrationPanel', () => {
       })
     })
 
+    it('ignores a blob response after switching integration modes', async () => {
+      const handleYamlContentLoaded = vi.fn()
+      const fetchBlobMock = vi.mocked(fetchFileFromBlobUrl)
+      const blobResponse = createDeferred<Awaited<ReturnType<typeof fetchFileFromBlobUrl>>>()
+      fetchBlobMock.mockReturnValue(blobResponse.promise)
+
+      render(<GithubIntegrationPanel onYamlContentLoaded={handleYamlContentLoaded} />)
+      fireEvent.click(screen.getByTestId('github-integration-mode-blob-url'))
+      fireEvent.change(screen.getByTestId('blob-url-input'), {
+        target: { value: 'https://github.com/example/repo/blob/main/config.yaml' },
+      })
+      fireEvent.submit(screen.getByTestId('blob-url-form'))
+
+      fireEvent.click(screen.getByTestId('github-integration-mode-repository'))
+      await act(async () => {
+        blobResponse.resolve({
+          content: 'stale: true\n',
+          coordinates: {
+            owner: 'example',
+            repository: 'repo',
+            ref: 'main',
+            filePath: 'config.yaml',
+          },
+        })
+        await blobResponse.promise
+      })
+
+      expect(handleYamlContentLoaded).not.toHaveBeenCalled()
+      expect(screen.getByTestId('repository-url-input')).toBeInTheDocument()
+    })
+
     it('shows persisted file information when provided', () => {
       render(
         <GithubIntegrationPanel
