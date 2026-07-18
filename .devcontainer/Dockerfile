@@ -8,7 +8,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 USER root
 
 RUN apt update -y && \
-    apt install -y curl git sudo zstd make
+    apt install -y curl git sudo zstd make ripgrep
 
 ARG CONTAINER_USERNAME=node
 ARG CONTAINER_USERID=1000
