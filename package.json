@@ -21,7 +21,7 @@
     "@octokit/rest": "^21.1.1",
     "cookie": "^1.1.1",
     "firebase": "^12.13.0",
-    "js-yaml": "^5.2.2",
+    "js-yaml": "^5.4.1",
     "prop-types": "^15.8.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
