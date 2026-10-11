@@ -24,6 +24,8 @@ VITE_LOGIN_APP=offline
 
 The variables are typed in `src/env.d.ts`, so missing or misspelled keys can be surfaced during type checking.
 
+For GitHub Pages deployments, the deployment workflow sets `VITE_LOGIN_APP: offline` directly in the build job's `env` configuration. No GitHub Environment variable is required. To change the deployed login variant, update `.github/workflows/deploy.yml` and provide any environment variables required by that variant.
+
 ## Login Variants
 
 Login bundles follow the file naming convention `src/pages/login/App.<variant>.tsx`. `VITE_LOGIN_APP` selects the variant during the Vite build.
