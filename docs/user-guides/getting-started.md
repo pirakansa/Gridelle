@@ -48,6 +48,13 @@ vorbere run build
 
 `vorbere run check` runs TypeScript with `--noEmit` and ESLint with zero-warning tolerance.
 
+GitHub Actions uses two separate workflows:
+
+- `Static content CI` (`.github/workflows/static.yml`) runs checks, tests, and a build on pull requests targeting `main` or manual dispatch. It does not use Firebase secrets.
+- `Deploy static content` (`.github/workflows/deploy.yml`) builds and deploys to GitHub Pages when manually dispatched from the Actions tab. The repository's Pages source must be set to GitHub Actions.
+
+The deployment workflow runs three jobs in order: build, tag, and deploy. After a successful build, it creates a tag using the exact `package.json` version (for example, `0.11.3`) on the built commit. Only the tag job has repository write permission. Publication proceeds only after tagging succeeds. Redeploying the same tagged commit is allowed. If that version tag points to another commit, the workflow stops before deployment; update the package version first. If publication fails after tagging, the tag remains and the same commit can be retried.
+
 ## Available Tasks
 
 | Command | Description |

@@ -2,32 +2,19 @@
 name: Static content CI
 
 on:
-  # Runs on pushes targeting the default branch
-  push:
+  # Runs on pull requests targeting the default branch
+  pull_request:
     branches: ["main"]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Pages deployment is disabled after migrating hosting.
 permissions:
   contents: read
-  # pages: write
-  # id-token: write
-
-# concurrency:
-#   group: "pages"
-#   cancel-in-progress: false
 
 jobs:
   build:
-    # environment:
-    #   name: github-pages
-    #   url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    env:
-      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-      VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,14 +41,3 @@ jobs:
 
       - name: Build
         run: vorbere run build
-
-      # Pages deployment is disabled after migrating hosting.
-      # - name: Setup Pages
-      #   uses: actions/configure-pages@v4
-      # - name: Upload artifact
-      #   uses: actions/upload-pages-artifact@v3
-      #   with:
-      #     path: './dist'
-      # - name: Deploy to GitHub Pages
-      #   id: deployment
-      #   uses: actions/deploy-pages@v4

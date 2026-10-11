@@ -1,0 +1,106 @@
+# Build and deploy static content to GitHub Pages on manual dispatch.
+name: Deploy static content
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    environment:
+      name: github-pages
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.tag }}
+      commit: ${{ steps.version.outputs.commit }}
+    env:
+      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "npm"
+
+      - name: Read version and commit
+        id: version
+        run: |
+          # Record the package version and the exact commit used for the build.
+          tag=$(node -p 'JSON.parse(require("node:fs").readFileSync("package.json", "utf8")).version')
+          git check-ref-format "refs/tags/$tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Install vorbere
+        uses: pirakansa/vorbere@v0
+        with:
+          version: v0.3.1
+
+      - name: Install dependency
+        run: vorbere run setup
+
+      - name: Build
+        run: vorbere run build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+  tag:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout built commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build.outputs.commit }}
+
+      - name: Create or validate version tag
+        env:
+          VERSION_TAG: ${{ needs.build.outputs.version }}
+        run: |
+          # Publish only after the version tag exists on the built commit.
+          git check-ref-format "refs/tags/$VERSION_TAG"
+          remote_tag=$(git ls-remote --tags origin "refs/tags/$VERSION_TAG")
+          if [ -n "$remote_tag" ]; then
+            git fetch --depth=1 origin "refs/tags/$VERSION_TAG"
+            if [ "$(git rev-parse 'FETCH_HEAD^{commit}')" != "$(git rev-parse HEAD)" ]; then
+              echo "::error::Version tag $VERSION_TAG already points to another commit. Update package.json before deploying."
+              exit 1
+            fi
+          else
+            git tag "$VERSION_TAG" HEAD
+            git push origin "refs/tags/$VERSION_TAG"
+          fi
+
+  deploy:
+    needs: [build, tag]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
