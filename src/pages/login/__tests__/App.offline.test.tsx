@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll, afterEach } from 'vitest'
 import { LocaleProvider } from '../../../utils/i18n'
 import { resetAuthClient } from '../../../services/auth'
 
@@ -26,10 +26,16 @@ describe('pages/login/App.offline', () => {
   })
 
   beforeEach(() => {
+    vi.stubEnv('VITE_LOGIN_APP', 'offline')
     vi.clearAllMocks()
     localStorage.clear()
     sessionStorage.clear()
     resetAuthClient()
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllEnvs()
   })
 
   const renderOfflineApp = (): void => {
@@ -39,6 +45,15 @@ describe('pages/login/App.offline', () => {
       </LocaleProvider>,
     )
   }
+
+  it.each(['/', '/Gridelle/', '/tools/Gridelle/'])('links back to the landing page under %s', async (base) => {
+    vi.stubEnv('BASE_URL', base)
+    renderOfflineApp()
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'トップへ戻る' })).toHaveAttribute('href', `${base}index.html`)
+    })
+  })
 
   it('認証不要モードボタンでトップページに遷移できる', async () => {
     renderOfflineApp()

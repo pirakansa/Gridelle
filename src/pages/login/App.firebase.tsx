@@ -163,7 +163,7 @@ export default function App(): React.ReactElement {
           </button>
         </section>
         <footer className={styles.footer}>
-          <a className={styles.link} href="/index.html">
+          <a className={styles.link} href={`${import.meta.env.BASE_URL}index.html`}>
             {select('トップへ戻る', 'Back to landing page')}
           </a>
           <a

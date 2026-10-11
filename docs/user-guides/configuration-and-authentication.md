@@ -26,6 +26,18 @@ The variables are typed in `src/env.d.ts`, so missing or misspelled keys can be 
 
 For GitHub Pages deployments, the deployment workflow sets `VITE_LOGIN_APP: offline` directly in the build job's `env` configuration. No GitHub Environment variable is required. To change the deployed login variant, update `.github/workflows/deploy.yml` and provide any environment variables required by that variant.
 
+## Deployment Base Path
+
+The default base path is `/`, suitable for localhost and root-domain hosting. Export `VITE_BASE_PATH` when building for a subdirectory, including a leading and trailing slash:
+
+```bash
+VITE_BASE_PATH=/Gridelle/ VITE_LOGIN_APP=offline vorbere run build
+```
+
+Deeper paths such as `/tools/Gridelle/` are supported. Page links, redirects, built assets, and PWA URLs use the configured base path. This build setting is read from the shell environment; setting it in `.env.local` does not configure the base path.
+
+The deployment workflow obtains the base path from `actions/configure-pages` and passes it to the build. Project Pages deployments therefore use the repository subpath, while root-domain deployments use `/`.
+
 ## Login Variants
 
 Login bundles follow the file naming convention `src/pages/login/App.<variant>.tsx`. `VITE_LOGIN_APP` selects the variant during the Vite build.

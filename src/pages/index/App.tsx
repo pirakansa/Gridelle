@@ -15,7 +15,7 @@ const App: React.FC = () => {
 
   return (
     <main className={styles.root}>
-      <a className={styles.logoLink} href="/login.html" aria-label={loginLinkLabel}>
+      <a className={styles.logoLink} href={`${import.meta.env.BASE_URL}login.html`} aria-label={loginLinkLabel}>
         <img
           className={styles.logoImage}
           src={logoUrl}

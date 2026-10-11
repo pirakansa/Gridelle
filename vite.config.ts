@@ -1,3 +1,4 @@
+// File Header: Configures application builds and the deployment base path.
 import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import { visualizer } from 'rollup-plugin-visualizer'
@@ -10,6 +11,7 @@ import vitePwaConfig from './vite-pwa.config'
 const ROOT_DIR = resolve(__dirname, 'src')
 
 export default defineConfig({
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [
     react(),
     visualizer({ filename: 'bundle-analysis.html' }),
