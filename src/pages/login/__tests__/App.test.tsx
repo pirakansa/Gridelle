@@ -172,6 +172,19 @@ describe('pages/login/App', () => {
     )
   }
 
+  it.each(['/', '/Gridelle/', '/tools/Gridelle/'])('links back to the landing page under %s', async (base) => {
+    const originalBase = import.meta.env.BASE_URL
+    vi.stubEnv('BASE_URL', base)
+    try {
+      renderWithLocale()
+      await waitFor(() => {
+        expect(screen.getByRole('link', { name: 'トップへ戻る' })).toHaveAttribute('href', `${base}index.html`)
+      })
+    } finally {
+      vi.stubEnv('BASE_URL', originalBase)
+    }
+  })
+
   it('言語切り替えボタンで英語表示に切り替えられる', async () => {
     renderWithLocale()
     const toggle = screen.getByRole('button', { name: 'UIを英語表示に切り替える' })
