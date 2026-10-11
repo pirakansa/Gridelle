@@ -5,26 +5,28 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.tag }}
+      commit: ${{ steps.version.outputs.commit }}
     env:
       VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
       VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup node
         uses: actions/setup-node@v4
@@ -32,24 +34,14 @@ jobs:
           node-version: 24
           cache: "npm"
 
-      - name: Validate version tag
+      - name: Read version and commit
         id: version
         run: |
-          # Resolve the package version and prevent reusing it for another commit.
+          # Record the package version and the exact commit used for the build.
           tag=$(node -p 'JSON.parse(require("node:fs").readFileSync("package.json", "utf8")).version')
           git check-ref-format "refs/tags/$tag"
-          remote_tag=$(git ls-remote --tags origin "refs/tags/$tag")
-          create=true
-          if [ -n "$remote_tag" ]; then
-            git fetch --depth=1 origin "refs/tags/$tag"
-            if [ "$(git rev-parse 'FETCH_HEAD^{commit}')" != "$(git rev-parse HEAD)" ]; then
-              echo "::error::Version tag $tag already points to another commit. Update package.json before deploying."
-              exit 1
-            fi
-            create=false
-          fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "create=$create" >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Install vorbere
         uses: pirakansa/vorbere@v0
@@ -62,23 +54,53 @@ jobs:
       - name: Build
         run: vorbere run build
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
 
+  tag:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout built commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build.outputs.commit }}
+
+      - name: Create or validate version tag
+        env:
+          VERSION_TAG: ${{ needs.build.outputs.version }}
+        run: |
+          # Publish only after the version tag exists on the built commit.
+          git check-ref-format "refs/tags/$VERSION_TAG"
+          remote_tag=$(git ls-remote --tags origin "refs/tags/$VERSION_TAG")
+          if [ -n "$remote_tag" ]; then
+            git fetch --depth=1 origin "refs/tags/$VERSION_TAG"
+            if [ "$(git rev-parse 'FETCH_HEAD^{commit}')" != "$(git rev-parse HEAD)" ]; then
+              echo "::error::Version tag $VERSION_TAG already points to another commit. Update package.json before deploying."
+              exit 1
+            fi
+          else
+            git tag "$VERSION_TAG" HEAD
+            git push origin "refs/tags/$VERSION_TAG"
+          fi
+
+  deploy:
+    needs: [build, tag]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-      - name: Tag deployed version
-        if: steps.version.outputs.create == 'true'
-        env:
-          VERSION_TAG: ${{ steps.version.outputs.tag }}
-        run: |
-          # Tag the deployed commit only after Pages deployment succeeds.
-          git tag "$VERSION_TAG" HEAD
-          git push origin "refs/tags/$VERSION_TAG"
