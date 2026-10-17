@@ -1,3 +1,4 @@
+// File Header: Tests offline login without Firebase configuration or external authentication.
 import type { ComponentType } from 'react'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -18,7 +19,9 @@ const redirectToTopMock = vi.mocked(redirectToTop)
 describe('pages/login/App.offline', () => {
   beforeAll(async () => {
     vi.stubEnv('VITE_LOGIN_APP', 'offline')
-    OfflineApp = (await import('../App.offline')).default
+    vi.stubEnv('VITE_FIREBASE_API_KEY', '')
+    vi.stubEnv('VITE_FIREBASE_AUTH_DOMAIN', '')
+    OfflineApp = (await import('../App')).default
   })
 
   afterAll(() => {
@@ -27,6 +30,8 @@ describe('pages/login/App.offline', () => {
 
   beforeEach(() => {
     vi.stubEnv('VITE_LOGIN_APP', 'offline')
+    vi.stubEnv('VITE_FIREBASE_API_KEY', '')
+    vi.stubEnv('VITE_FIREBASE_AUTH_DOMAIN', '')
     vi.clearAllMocks()
     localStorage.clear()
     sessionStorage.clear()

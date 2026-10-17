@@ -1,7 +1,12 @@
+// File Header: Tests Firebase login with isolated environment values and mocked Firebase SDKs.
 import { vi } from 'vitest'
 
-vi.stubEnv('VITE_FIREBASE_API_KEY', 'test-api-key')
-vi.stubEnv('VITE_FIREBASE_AUTH_DOMAIN', 'test.firebaseapp.com')
+// Function Header: Selects Firebase before the login wrapper resolves its module-level variant.
+vi.hoisted(() => {
+  vi.stubEnv('VITE_LOGIN_APP', 'firebase')
+  vi.stubEnv('VITE_FIREBASE_API_KEY', 'test-api-key')
+  vi.stubEnv('VITE_FIREBASE_AUTH_DOMAIN', 'test.firebaseapp.com')
+})
 
 type Spy = ReturnType<typeof vi.fn>
 
@@ -110,6 +115,7 @@ import {
   expect,
   beforeEach,
   afterEach,
+  afterAll,
 } from 'vitest'
 import type { User } from 'firebase/auth'
 import { PROVIDER_TOKEN_STORAGE_KEY, resetAuthClient } from '../../../services/auth'
@@ -134,6 +140,11 @@ function emitAuthError(error: Error): void {
 }
 
 describe('pages/login/App', () => {
+  // Function Header: Restores the environment after the Firebase login suite finishes.
+  afterAll(() => {
+    vi.unstubAllEnvs()
+  })
+
   beforeEach(() => {
     appMocks.mockApps.length = 0
     localStorage.clear()
